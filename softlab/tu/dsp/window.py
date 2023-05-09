@@ -39,7 +39,7 @@ class RectangleWindow(Window):
         ys = np.zeros_like(ts)
         ys[self.get_valids(ts)] = self.amp()
         return ys
-    
+
 class CosineWindow(Window):
 
     def evaluate(self, ts: np.ndarray) -> np.ndarray:
@@ -70,7 +70,7 @@ class GaussianWindow(Window):
     def evaluate(self, ts: np.ndarray) -> np.ndarray:
         valids = self.get_valids(ts)
         ys = np.zeros_like(ts)
-        if np.sum(valids) > 0:
+        if any(valids):
             moved = ts - self.begin()
             ys[valids] = self.amp() * np.exp(
                 - ((moved[valids] - self.duration()*0.5)**2) \
@@ -91,11 +91,11 @@ class HanningWindow(Window):
     def evaluate(self, ts: np.ndarray) -> np.ndarray:
         valids = self.get_valids(ts)
         ys = np.zeros_like(ts)
-        if np.sum(valids) > 0:
+        if any(valids):
             moved = ts - self.begin()
             ys[valids] = self.amp() * 0.5 * (1.0 - np.cos(
                 2.0 * np.pi * moved[valids] / self.duration()
-            )) 
+            ))
         return ys
 
 class HammingWindow(Window):
@@ -103,11 +103,11 @@ class HammingWindow(Window):
     def evaluate(self, ts: np.ndarray) -> np.ndarray:
         valids = self.get_valids(ts)
         ys = np.zeros_like(ts)
-        if np.sum(valids) > 0:
+        if any(valids):
             moved = ts - self.begin()
             ys[valids] = self.amp() * (0.54 -  0.46 * np.cos(
                 2.0 * np.pi * moved[valids] / self.duration()
-            )) 
+            ))
         return ys
 
 class TriangleWindow(Window):
@@ -115,11 +115,11 @@ class TriangleWindow(Window):
     def evaluate(self, ts: np.ndarray) -> np.ndarray:
         valids = self.get_valids(ts)
         ys = np.zeros_like(ts)
-        if np.sum(valids) > 0:
+        if any(valids):
             moved = ts - self.begin()
             ys[valids] = self.amp() * (1.0 - np.abs(
                 2.0 * moved[valids] / self.duration() - 1.0
-            )) 
+            ))
         return ys
 
 class ChebyshevWindow(Window):
@@ -141,7 +141,7 @@ class ChebyshevWindow(Window):
     def evaluate(self, ts: np.ndarray) -> np.ndarray:
         valids = self.get_valids(ts)
         ys = np.zeros_like(ts)
-        if np.sum(valids) > 0:
+        if any(valids):
             t = self.duration()
             if (ts[1] - ts[0]) > 0.0:
                 M = round(t / (ts[1] - ts[0]))
@@ -179,7 +179,7 @@ class BlackmanWindow(Window):
     def evaluate(self, ts: np.ndarray) -> np.ndarray:
         valids = self.get_valids(ts)
         ys = np.zeros_like(ts)
-        if np.sum(valids) > 0:
+        if any(valids):
             moved = ts - self.begin()
             ys[valids] = self.amp() * (0.42 - 0.5 * np.cos(
                 2.0 * np.pi * moved[valids] / self.duration()
@@ -187,7 +187,7 @@ class BlackmanWindow(Window):
                 4.0 * np.pi * moved[valids] / self.duration()
             ))
         return ys
-    
+
 class SlepianWindow(Window):
 
     def __init__(self, name: Optional[str] = None,
@@ -203,7 +203,7 @@ class SlepianWindow(Window):
     def evaluate(self, ts: np.ndarray) -> np.ndarray:
         valids = self.get_valids(ts)
         ys = np.zeros_like(ts)
-        if np.sum(valids) > 0:
+        if any(valids):
             t = self.duration()
             if (ts[1] - ts[0]) > 0.0:
                 M = round(t / (ts[1] - ts[0]))

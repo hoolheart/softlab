@@ -281,7 +281,7 @@ class ChirpSignal(PulseSignal):
 
     def evaluate(self, ts: np.ndarray) -> np.ndarray:
         valids = self.get_valids(ts)
-        if np.sum(valids) > 0:
+        if any(valids):
             moved = ts - self.begin()
             norm = moved / self.duration()
             freqs = np.zeros_like(ts)
@@ -301,7 +301,7 @@ class ExpoChirpSignal(ChirpSignal):
 
     def evaluate(self, ts: np.ndarray) -> np.ndarray:
         valids = self.get_valids(ts)
-        if np.sum(valids) > 0:
+        if any(valids):
             moved = ts - self.begin()
             norm = moved / self.duration()
             freqs = np.zeros_like(ts)
