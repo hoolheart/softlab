@@ -40,10 +40,8 @@ dependencies = [
     "imageio",
     "ipywidgets",
     "pyvisa",
-    "logging",
     "uuid",
     "h5py",
-    "sqlite3",
     "asyncio",
 ]
 
