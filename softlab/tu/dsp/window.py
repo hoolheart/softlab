@@ -59,6 +59,8 @@ class GaussianWindow(Window):
 
     There is another property ``shape_factor``, related to duration and sigma:
         shape_factor = duration / (2 sigma)
+
+    Change on ``shape_factor`` will transformed to the change on sigma
     """
 
     def __init__(self, name: Optional[str] = None,
@@ -85,6 +87,57 @@ class GaussianWindow(Window):
     @shape_factor.setter
     def shape_factor(self, val: float) -> None:
         self.sigma(self.duration() / 2.0 / val)
+
+
+class GaussianFlatTopWindow(Window):
+    """
+    Window with gaussian edge and flat top
+
+    Subclass of ``Window`` with 2 additional argument:
+    - edge_width --- gaussian edge width, positive value, default 0.1, attribute
+    - sigma -- standard error, positive value, default 0.01, attribute
+
+    There is another property ``shape_factor``, related to edge_width and sigma:
+        shape_factor = edge_width / sigma
+
+    Change on ``shape_factor`` will transformed to the change on sigma
+    """
+
+    def __init__(self, name: Optional[str] = None,
+                 edge_width: float = 0.1,
+                 sigma: float = 0.01,
+                 *args: Any, **kwargs: Any) -> None:
+        super().__init__(name, *args, **kwargs)
+        self.add_attribute('edge_width', ValNumber(1e-18), edge_width)
+        self.add_attribute('sigma', ValNumber(1e-18), sigma)
+
+    def evaluate(self, ts: np.ndarray) -> np.ndarray:
+        valids = self.get_valids(ts)
+        ys = np.zeros_like(ts)
+        if any(valids):
+            a = self.amp()
+            ys[valids] = a  # flat top
+            begin, d, w = self.begin(), self.duration(), self.edge_width()
+            mid, end = begin + d*0.5, begin + d
+            c0, c1 = begin + w, end - w
+            m0, m1 = min(mid, c0), max(mid, c1)
+            rise = (ts >= begin) & (ts <= m0)
+            fall = (ts >= m1) & (ts <= end)
+            ss = self.sigma()
+            ss = -0.5 / ss / ss
+            if any(rise):
+                ys[rise] = a * np.exp(ss * ((ts[rise] - c0)**2))
+            if any(fall):
+                ys[fall] = a * np.exp(ss * ((ts[fall] - c1)**2))
+        return ys
+
+    @property
+    def shape_factor(self) -> float:
+        return self.edge_width() / self.sigma()
+
+    @shape_factor.setter
+    def shape_factor(self, val: float) -> None:
+        self.sigma(self.edge_width() / val)
 
 class HanningWindow(Window):
 
