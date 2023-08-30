@@ -6,7 +6,7 @@ from typing import (
     Optional,
 )
 import warnings
-from softlab.jin import (
+from softlab.jin.validator import (
     Validator,
     ValNumber,
     ValAnything,
@@ -293,7 +293,7 @@ class ProxyParameter(Parameter):
         return self._obj.get()
 
 if __name__ == '__main__':
-    from softlab.jin import (
+    from softlab.jin.validator import (
         ValType,
         ValInt,
         ValAnything,

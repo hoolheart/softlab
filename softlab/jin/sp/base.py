@@ -12,11 +12,11 @@ from typing import (
     Union,
     Optional,
 )
-from softlab.jin import (
+from softlab.jin.validator import (
     Validator,
     ValType,
 )
-from softlab.tu import (
+from softlab.jin.misc import (
     Delegated,
     LimitedAttribute,
 )
@@ -46,7 +46,7 @@ class Signal(Delegated):
     def name(self) -> str:
         return self._name
 
-    def add_attribute(self, key: str, 
+    def add_attribute(self, key: str,
                       vals: Validator, initial_value: Any) -> None:
         """
         Add an attribute to the signal
@@ -63,7 +63,7 @@ class Signal(Delegated):
     def __call__(self, ts: np.ndarray) -> np.ndarray:
         """
         Return signal values according to input timestamps
-        
+
         The signal instance is directly callable
         """
         return self.evaluate(ts)
@@ -108,7 +108,7 @@ class Wavement:
         self._ts = ts
         self._ys = ys
         self._pos = 0
-    
+
     def __len__(self):
         """Get length of wavement"""
         return self._ts.shape[0]
@@ -306,12 +306,12 @@ class SumSignal(Signal):
                 self._signals.append(sig)
         if len(self._signals) == 0:
             raise ValueError('No valid signal input')
-    
+
     def append(self, sig: Signal) -> None:
         """Add a signal into sum list"""
         if isinstance(sig, Signal):
             self._signals.append(sig)
-    
+
     def evaluate(self, ts: np.ndarray) -> np.ndarray:
         rst = np.zeros_like(ts)
         for sig in self._signals:
@@ -335,12 +335,12 @@ class ConcatSignal(Signal):
                 self._signals.append(sig)
         if len(self._signals) == 0:
             raise ValueError('No valid signal input')
-    
+
     def append(self, sig: Signal) -> None:
         """Add a signal into sum list"""
         if isinstance(sig, Signal):
             self._signals.append(sig)
-    
+
     def evaluate(self, ts: np.ndarray) -> np.ndarray:
         rst = np.ones_like(ts)
         for sig in self._signals:

@@ -6,7 +6,7 @@ from typing import (
     Optional,
     Callable,
 )
-from softlab.tu.parameter import Parameter
+from softlab.tu.station.parameter import Parameter
 import pyvisa as visa
 import logging
 
@@ -21,7 +21,7 @@ class VisaHandle():
     - timeout --- time-out time, unit: seconds
     - read_termination --- termination in reading
     - write_termination --- termination in writing
-    
+
     Public Methods:
     - open --- open device
     - close --- close device
@@ -100,7 +100,7 @@ class VisaHandle():
         if self._resource:
             return self._resource.timeout
         return None
-    
+
     @timeout.setter
     def timeout(self, timeout: Optional[float]) -> None:
         """Set timeout in seconds"""
@@ -112,7 +112,7 @@ class VisaHandle():
         """Get reading termination"""
         if self._resource:
             return self._resource.read_termination
-    
+
     @read_termination.setter
     def read_termination(self, termination: Optional[str]) -> None:
         """Set reading termination"""
@@ -124,7 +124,7 @@ class VisaHandle():
         """Get writing termination"""
         if self._resource:
             return self._resource.write_termination
-    
+
     @write_termination.setter
     def write_termination(self, termination: Optional[str]) -> None:
         """Set writing termination"""
@@ -151,31 +151,31 @@ class VisaHandle():
         if self._resource:
             return self._resource.read(encoding=encoding)
         raise RuntimeError('Invalid visa resource')
-        
+
     def read_raw(self, size: Optional[int] = None) -> bytes:
         """Read as raw bytes"""
         if self._resource:
             return self._resource.read_raw(size=size)
         raise RuntimeError('Invalid visa resource')
-    
+
     def write(self, message: str, encoding: Optional[str] = None) -> int:
         """Write as string"""
         if self._resource:
             return self._resource.write(message=message, encoding=encoding)
         raise RuntimeError('Invalid visa resource')
-    
+
     def write_raw(self, message: bytes) -> int:
         """Write as raw bytes"""
         if self._resource:
             return self._resource.write(message=message)
         raise RuntimeError('Invalid visa resource')
-    
+
     def query(self, command: str, delay: Optional[float] = None) -> str:
         """Query as string"""
         if self._resource:
             return self._resource.query(command, delay)
         raise RuntimeError('Invalid visa resource')
-    
+
 class VisaParameter(Parameter):
     """
     Simple parameter in visa device, the value can be set and/or get by
@@ -203,7 +203,7 @@ class VisaParameter(Parameter):
         - set_parser --- function to parse value to device readable string
         - read_after_setting --- whether to perform a reading after setting
         - encoding --- encoding in read and write operations, optional
-        - query_delay --- delay when querying value from device 
+        - query_delay --- delay when querying value from device
         """
         super().__init__(name, **kwargs)
         if not isinstance(handle, VisaHandle):
@@ -268,13 +268,13 @@ class VisaParameter(Parameter):
             'get_cmd': self._get_cmd,
             'set_cmd': self._set_cmd,
         }
-    
+
 class VisaCommand(Parameter):
     """
     Simple visa command as a read-only command
     """
 
-    def __init__(self, name: str, 
+    def __init__(self, name: str,
                  handle: VisaHandle, cmd: str,
                  **kwargs) -> None:
         """
@@ -307,7 +307,7 @@ class VisaCommand(Parameter):
             **super().snapshot(),
             'cmd': self._cmd,
         }
-    
+
 class VisaIDN(VisaParameter):
 
     def __init__(self, name: str, handle: VisaHandle, **kwargs) -> None:

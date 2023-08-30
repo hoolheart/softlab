@@ -7,17 +7,17 @@ from typing import(
     Optional,
 )
 from datetime import datetime
-from softlab.tu.device import (
+from softlab.tu.station.device import (
     Device,
     DeviceBuilder,
     get_device_builder,
 )
-from softlab.tu.helpers import Delegated
+from softlab.jin.misc import Delegated
 
 class Station(Delegated):
     """
     Station is an ensemble of devices to perform experiment
-    
+
     Properties:
         name --- station name, given at initialization
         created_at --- datetime when station is created
@@ -45,7 +45,7 @@ class Station(Delegated):
     def name(self) -> str:
         """Get name of station"""
         return self._name
-    
+
     @property
     def created_at(self) -> datetime:
         """Get created timestamp"""
@@ -55,10 +55,10 @@ class Station(Delegated):
     def devices(self) -> Sequence[str]:
         """Get sequence of device names"""
         return self._devices.keys()
-    
+
     def __repr__(self) -> str:
         return f'{type(self)}/{self.name}'
-    
+
     def snapshot(self) -> Dict[str, Any]:
         """Get snapshot of station information"""
         return {
@@ -69,7 +69,7 @@ class Station(Delegated):
                 self._devices,
             ))
         }
-    
+
     def add_device(self, device: Device) -> None:
         """Add ``device`` into station"""
         if not isinstance(device, Device):
@@ -81,11 +81,11 @@ class Station(Delegated):
     def rm_device(self, device_name: str) -> Optional[Device]:
         """Remove a device with name ``device_name`` from station"""
         return self._devices.pop(str(device_name), None)
-    
+
     def device(self, device_name: str) -> Optional[Device]:
         """Access device with name ``device_name``"""
         return self._devices.get(str(device_name), None)
-    
+
     def build_device(self, model: str, name: str, **kwargs: Any) -> None:
         """Build a device and add into station
 
@@ -115,9 +115,9 @@ def set_default_station(station: Station) -> None:
 
 if __name__ == '__main__':
     from pprint import pprint
-    from softlab.tu.parameter import Parameter
-    from softlab.tu.device import register_device_builder
-    from softlab.jin import ValNumber
+    from softlab.tu.station.parameter import Parameter
+    from softlab.tu.station.device import register_device_builder
+    from softlab.jin.validator import ValNumber
     station = default_station()
     print(f'Get default station {station}')
     for i in range(3):
@@ -132,7 +132,7 @@ if __name__ == '__main__':
     set_default_station(Station('demo'))
     print(f'Change default station {default_station()}')
     station = default_station()
-    
+
     class _BuilderDemo(DeviceBuilder):
         def __init__(self) -> None:
             super().__init__('demo')

@@ -8,12 +8,12 @@ from typing import (
     Optional,
     Callable,
 )
-from softlab.jin import (
+from softlab.jin.validator import (
     ValNumber,
     ValType,
 )
 import numpy as np
-from softlab.tu.dsp.base import Signal
+from softlab.jin.sp.base import Signal
 
 class FunctionalSignal(Signal):
     """

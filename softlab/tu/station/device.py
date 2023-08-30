@@ -20,8 +20,8 @@ from typing import (
     Tuple,
     Union,
 )
-from softlab.tu.helpers import Delegated
-from softlab.tu.parameter import Parameter
+from softlab.jin.misc import Delegated
+from softlab.tu.station.parameter import Parameter
 
 class Device(Delegated):
     """
@@ -277,7 +277,7 @@ def get_device_builder(model: str) -> Optional[DeviceBuilder]:
 
 if __name__ == '__main__':
     import pprint
-    from softlab.jin import ValNumber
+    from softlab.jin.validator import ValNumber
     dev = Device('demo')
     for para in [
         Parameter('para0', ValNumber(0.0, 10.0), init_value=3.14),

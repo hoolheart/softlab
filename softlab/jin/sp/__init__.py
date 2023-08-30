@@ -1,5 +1,5 @@
 """
-Signal related module
+Signal process module
 
 Public attributes:
 
@@ -42,7 +42,7 @@ Public attributes:
 - sample_signal, function, Generate a wavement by sampling a signal
 """
 
-from softlab.tu.dsp.base import (
+from softlab.jin.sp.base import (
     Signal,
     Wavement,
     FactorSignal,
@@ -52,7 +52,7 @@ from softlab.tu.dsp.base import (
     ReciprocalSignal,
 )
 
-from softlab.tu.dsp.common import (
+from softlab.jin.sp.common import (
     FunctionalSignal,
     FixedSignal,
     LinearSignal,
@@ -67,7 +67,7 @@ from softlab.tu.dsp.common import (
     ExpoChirpSignal,
 )
 
-from softlab.tu.dsp.window import (
+from softlab.jin.sp.window import (
     Window,
     RectangleWindow,
     CosineWindow,
@@ -81,21 +81,21 @@ from softlab.tu.dsp.window import (
     SlepianWindow,
 )
 
-from softlab.tu.dsp.noise import (
+from softlab.jin.sp.noise import (
     Noise,
     UniformNoise,
     BrownianNoise,
     GaussianNoise,
 )
 
-from softlab.tu.dsp.operate import (
+from softlab.jin.sp.operate import (
     unbias,
     normalize,
     pad,
     sample_signal,
 )
 
-from softlab.tu.dsp.iq_modulation import (
+from softlab.jin.sp.iq_modulation import (
     generate_iq_wavements,
     iq_modulation,
     iq_demodulation,

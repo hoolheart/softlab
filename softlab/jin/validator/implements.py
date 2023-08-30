@@ -1,4 +1,4 @@
-"""Validators for different types of value"""
+"""Common implementations of Validator"""
 
 from typing import (
     Any,
@@ -9,32 +9,10 @@ from typing import (
 )
 import numpy as np
 import re
-
-class Validator():
-    """
-    Base class for all validators
-
-    Every validator should implement ``validate`` method,
-    which checks value validation and raises error if invalid
-
-    Another implementable method is ``__repr__`` which should return
-    specific description of validator
-    """
-
-    def validate(self, value: Any, context: str = '') -> None:
-        raise NotImplementedError
-
-    def __repr__(self) -> str:
-        return f'{type(self)}'
-
-def validate_value(value: Any, validator: Validator, context: str = '') -> bool:
-    """Function to validate value by given validator"""
-    try:
-        validator.validate(value, context)
-    except Exception as e:
-        print(e)
-        return False
-    return True
+from softlab.jin.validator.validator import (
+    Validator,
+    validate_value,
+)
 
 class ValidatorAll(Validator):
     """
@@ -280,7 +258,6 @@ class ValInt(ValType):
     def __repr__(self) -> str:
         return super().__repr__() + f' ({self._min} ~ {self._max})'
 
-
 class ValQuantifiedInt(ValInt):
     """
     Validator accepts quantified integer in given range
@@ -438,7 +415,6 @@ class ValSequence(Validator):
         if isinstance(self._child, Validator):
             return f'<ValSequence({self._child})>'
         return '<ValSequence>'
-
 
 class ValRange(ValType):
     """

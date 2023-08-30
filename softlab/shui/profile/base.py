@@ -12,7 +12,7 @@ from typing import (
 import re
 from datetime import datetime
 import logging
-from softlab.jin import (
+from softlab.jin.validator import (
     ValType,
     ValInt,
     ValNumber,
@@ -34,7 +34,7 @@ _logger = logging.getLogger(__name__)
 class ProfileItem:
     """
     Single profile item
-    
+
     Arguments for creation:
     - profile_id -- ID of belonging profile
     - key -- item key, non empty, match the pattern [_KEY_RE_PATTERN]

@@ -12,11 +12,11 @@ from typing import (
 )
 import logging
 import time
-from softlab.tu import (
+from softlab.jin.misc import (
     Delegated,
     LimitedAttribute,
 )
-from softlab.jin import Validator
+from softlab.jin.validator import Validator
 from softlab.shui.data import DataGroup
 from softlab.huo.scheduler import Action, Scheduler
 from softlab.huo.impl_scheduler import get_scheduler
@@ -60,12 +60,12 @@ class Process(Delegated):
     def name(self) -> str:
         """Get name of process"""
         return self._name
-    
+
     @property
     def data_group(self) -> Optional[DataGroup]:
         """Get binding data group"""
         return self._group
-    
+
     @data_group.setter
     def data_group(self, group: Optional[DataGroup]) -> None:
         """Bind with given data group"""
@@ -80,7 +80,7 @@ class Process(Delegated):
             raise TypeError(f'Invalid data group type: {type(group)}')
         self._group = group
 
-    def add_attribute(self, key: str, 
+    def add_attribute(self, key: str,
                       vals: Validator, initial_value: Any) -> None:
         """
         Add an attribute
@@ -127,7 +127,7 @@ class Process(Delegated):
             'more': self.has_more(),
         }
 
-def run_process(process: Process, scheduler: Optional[Scheduler] = None, 
+def run_process(process: Process, scheduler: Optional[Scheduler] = None,
                 verbose: bool = True) -> Tuple[bool, float]:
     """
     Run a process
@@ -195,7 +195,7 @@ class SimpleProcess(Process):
     def begin_point(self) -> str:
         """Get begin point of process"""
         return self._begin_point
-    
+
     @begin_point.setter
     def begin_point(self, point: str) -> None:
         """Set begin point, can't be called while pending"""
@@ -208,11 +208,11 @@ class SimpleProcess(Process):
         """
         Get end point of process
 
-        Notice that end point is generated when ``commit`` is called, it 
+        Notice that end point is generated when ``commit`` is called, it
         can't be set arbitrarily.
         """
         return self._end_point
-    
+
     @property
     def aborting(self) -> bool:
         """Aborting signal"""
@@ -483,7 +483,7 @@ class SwitchProcess(CompositeProcess):
 class SweepProcess(Process):
     """
     A sweep loop with a loop body and a callable sweeper.
-    
+
     The sweeper is used in every beginning of loop, it takes two arguments:
     1. the corresponding data group;
     2. the body process, in order to adjust the body for next loop.
@@ -549,7 +549,7 @@ class SweepProcess(Process):
 
 if __name__ == '__main__':
     import asyncio
-    from softlab.jin import ValString
+    from softlab.jin.validator import ValString
 
     class SaluteProcess(SimpleProcess):
         def __init__(self, name: Optional[str] = None, **kwargs):
@@ -630,7 +630,7 @@ if __name__ == '__main__':
     sch = get_scheduler()
     sch.start()
     print(sch.snapshot())
-    names = ['aaa', 'bbb', 'ccc', 'Suzhou', 
+    names = ['aaa', 'bbb', 'ccc', 'Suzhou',
              'China', 'Asia', 'Earth', 'universe']
     print(names)
     print('Use single sequence process')

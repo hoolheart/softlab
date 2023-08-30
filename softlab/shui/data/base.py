@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 import uuid
 import datetime as dt
-from softlab.jin import match_dataframes
+from softlab.jin.misc import compare_dataframes
 
 class DataChart():
     """
@@ -26,7 +26,7 @@ class DataChart():
 
     Arguments:
     title -- title of chart
-    
+
     Properties:
     title -- title of chart, gettable, settable
     figure -- chart data array, gettable, but can't be set directly
@@ -60,7 +60,7 @@ class DataChart():
             self._figure = figure
         else:
             raise ValueError(f'{figure} should be non-empty numpy ndarray')
-        
+
     @property
     def shape(self) -> Tuple:
         return self.figure.shape
@@ -91,7 +91,7 @@ class DataChart():
         other = DataChart(self._title)
         other.figure = self._figure
         return other
-    
+
     def snapshot(self) -> Dict[str, Any]:
         return {
             'title': self.title,
@@ -161,7 +161,7 @@ class DataRecord():
         """Set data table"""
         if not isinstance(other, pd.DataFrame):
             raise TypeError(f'Invalid record table type: {type(other)}')
-        if not match_dataframes(other, self._table):
+        if not compare_dataframes(other, self._table):
             raise ValueError('Table columns don\'t match')
         self._table = other.copy()
 
@@ -179,7 +179,7 @@ class DataRecord():
     def shape(self) -> Tuple:
         """Shape of data table"""
         return self._table.shape
-    
+
     def snapshot(self) -> Dict[str, Any]:
         return {
             'name': self.name,
@@ -279,7 +279,7 @@ class DataRecord():
     def add_rows(self, row: Union[pd.DataFrame, Dict[str, Any]]) -> None:
         """
         Append any count rows in data table
-        
+
         Arguments:
         row -- row data, either a dictionary of all columns' data
                or a DataFrame with same columns
@@ -294,7 +294,7 @@ class DataRecord():
                     new_rows = pd.DataFrame([row])
             else:
                 raise ValueError(f'Type of row is invalid {type(row)}')
-            if not match_dataframes(self._table, new_rows):
+            if not compare_dataframes(self._table, new_rows):
                 raise ValueError('Columns of the added rows don\'t match')
             if len(self._table) > 0:
                 data_types = {col: self._table[col].dtype \
@@ -428,12 +428,12 @@ class DataGroup():
             'type': '', 'arguments': {},
         }
         self._records: Dict[str, DataRecord] = {}
-        
+
     @property
     def name(self) -> str:
         """Get group name"""
         return self._name
-    
+
     @name.setter
     def name(self, name: str) -> None:
         name = str(name)
@@ -445,7 +445,7 @@ class DataGroup():
     def id(self) -> uuid.UUID:
         """Get group ID"""
         return self._id
-    
+
     @id.setter
     def id(self, id: uuid.UUID) -> None:
         """Set group ID"""
@@ -457,7 +457,7 @@ class DataGroup():
     def timestamp(self) -> dt.datetime:
         """Get timestamp of activity"""
         return self._timestamp
-    
+
     @timestamp.setter
     def timestamp(self, ts: Union[dt.datetime, float, str]) -> None:
         """
@@ -487,7 +487,7 @@ class DataGroup():
     def backend(self) -> Dict[str, Any]:
         """Get backend information"""
         return self._backend
-    
+
     @backend.setter
     def backend(self, backend: Dict[str, Any]) -> None:
         """
@@ -511,11 +511,11 @@ class DataGroup():
     def meta(self) -> Dict[str, Any]:
         """Get metadata of group"""
         return self._meta
-    
+
     def update_meta(self, key: str, value: Any) -> None:
         """
         Update metadata with ``key`` and ``value``
-        
+
         ``key`` must be non-empty string. If ``value`` is None, the metadata
         with the ``key`` will be removed.
         """
@@ -538,12 +538,12 @@ class DataGroup():
                 self._records,
             )),
         }
-    
+
     @property
     def records(self) -> Sequence[str]:
         """Get name list of containing records"""
         return list(self._records.keys())
-    
+
     def record(self, name: str) -> Optional[DataRecord]:
         """Get record with the given name"""
         if name in self._records:
@@ -561,7 +561,7 @@ class DataGroup():
     def clear_records(self) -> None:
         """Clear all records"""
         self._records.clear()
-    
+
     def pop_record(self, name: str) -> DataRecord:
         """Get and remove the record with the given name from group"""
         return self._records.pop(name)
@@ -572,7 +572,7 @@ class DataGroup():
             self.pop_record(name)
         except Exception:
             print(f'No record with the name "{name}"')
-    
+
     def remove_records(self, names: Sequence[str]) -> None:
         """remove records with given names"""
         for name in names:
@@ -602,6 +602,6 @@ if __name__ == '__main__':
 
     dr1_copy = dr1.copy()
     dr1_copy.add_column('a', np.arange(7).astype(np.float32))
-    dr1_copy.add_rows(pd.DataFrame(np.random.randint(100, size=(10, 4)), 
+    dr1_copy.add_rows(pd.DataFrame(np.random.randint(100, size=(10, 4)),
                                    columns=['x', 'y', 'z', 'a']))
     pprint(dr1_copy.snapshot())

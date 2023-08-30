@@ -2,9 +2,9 @@
 
 from typing import Optional
 import numpy as np
-from softlab.jin import ValNumber
-from softlab.tu.dsp.base import Signal
-from softlab.tu.dsp.operate import (
+from softlab.jin.validator import ValNumber
+from softlab.jin.sp.base import Signal
+from softlab.jin.sp.operate import (
     unbias,
     normalize,
 )

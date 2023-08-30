@@ -7,12 +7,12 @@ from typing import (
 )
 import numpy as np
 from scipy.signal.windows import dpss
-from softlab.jin import (
+from softlab.jin.validator import (
     ValNumber,
     ValInt,
 )
-from softlab.tu.dsp.common import PulseSignal
-from softlab.tu.dsp.operate import normalize
+from softlab.jin.sp.common import PulseSignal
+from softlab.jin.sp.operate import normalize
 
 class Window(PulseSignal):
     """

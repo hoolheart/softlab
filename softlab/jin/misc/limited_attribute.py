@@ -1,6 +1,6 @@
 """Attribute bound by given validator"""
 from typing import Any
-from softlab.jin import Validator
+from softlab.jin.validator import Validator
 
 class LimitedAttribute:
     """
@@ -19,7 +19,7 @@ class LimitedAttribute:
         """Set attribute value, should follows the validator"""
         self._vals.validate(value)
         self._value = value
-    
+
     def get(self) -> Any:
         """Get attribute value"""
         return self._value

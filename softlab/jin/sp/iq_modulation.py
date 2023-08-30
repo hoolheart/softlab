@@ -7,11 +7,11 @@ from typing import (
     Callable,
 )
 import numpy as np
-from softlab.tu.dsp.base import (
+from softlab.jin.sp.base import (
     Signal,
     Wavement,
 )
-from softlab.tu.dsp.common import SineSignal
+from softlab.jin.sp.common import SineSignal
 
 def generate_iq_wavements(
         t: np.ndarray, fc: float,
@@ -103,8 +103,8 @@ def iq_demodulation(
     return (I, Q)
 
 if __name__ == '__main__':
-    from softlab.tu.dsp.common import LinearSignal
-    from softlab.tu.dsp.window import RectangleWindow
+    from softlab.jin.sp.common import LinearSignal
+    from softlab.jin.sp.window import RectangleWindow
     import scipy as sp
     import matplotlib.pyplot as plt
     fc, fm, ff = 5e9, 100e6, 1e9

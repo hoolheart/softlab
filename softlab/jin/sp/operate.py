@@ -3,7 +3,7 @@ Common process of signals and wavements
 """
 from typing import Any
 import numpy as np
-from softlab.tu.dsp.base import (
+from softlab.jin.sp.base import (
     Signal,
     Wavement,
 )
@@ -26,7 +26,7 @@ def normalize(seq: np.ndarray, max: float = 1.0) -> np.ndarray:
             return seq * (max / amp)
     return np.zeros_like(seq)
 
-def pad(seq: np.ndarray, 
+def pad(seq: np.ndarray,
         before: int = 0, after: int = 0,
         fill: Any = 0.0) -> np.ndarray:
     """
@@ -83,7 +83,7 @@ def sample_signal(sig: Signal,
     return Wavement(ts, ys)
 
 if __name__ == '__main__':
-    from softlab.tu.dsp.common import SineSignal, FixedSignal
+    from softlab.jin.sp.common import SineSignal, FixedSignal
     print('Test sampling')
     wave = sample_signal(SineSignal(freq=50.0), 0.0, 1.0, 1001)
     assert(len(wave) == 1001)
