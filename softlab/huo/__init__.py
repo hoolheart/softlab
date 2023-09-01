@@ -1,30 +1,11 @@
 """
 Submodule to organize dynamic processes
 
-
-- ``Action``: wrapper of action committed into scheduler
-- ``Scheduler``: abstract interface of scheduler, can not be instantiated
-                 directly
-- ``get_scheduler``: function to get instance of implemented scheduler
-- ``Process``: interface of any working process
-- ``CompositeProcess``, ``SeriesProcess``, ``ParallelProcess``,
-  ``SwitchProcess``, ``SweepProcess``: special implementations of ``Process``
-  to achieve compositions of subprocesses
+- scheduler: concurrent scheduler of any atomic actions
+- process: dynamic process interface and general implements
 """
 
-from softlab.huo.scheduler import (
-    Action,
-    Scheduler,
-)
-from softlab.huo.impl_scheduler import get_scheduler
-
-from softlab.huo.process import (
-    Process,
-    SimpleProcess,
-    CompositeProcess,
-    SeriesProcess,
-    ParallelProcess,
-    SwitchProcess,
-    SweepProcess,
-    run_process,
+from softlab.huo import (
+    scheduler,
+    process,
 )

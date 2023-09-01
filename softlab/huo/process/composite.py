@@ -1,267 +1,21 @@
-"""
-Process interface and common composition implementations
-"""
-from abc import abstractmethod
+"""Common implementations to treat composition of multiple processes"""
+
 from typing import (
     Any,
     Sequence,
     Dict,
     Callable,
     Optional,
-    Tuple,
 )
 import logging
-import time
-from softlab.jin.misc import (
-    Delegated,
-    LimitedAttribute,
-)
-from softlab.jin.validator import Validator
 from softlab.shui.data import DataGroup
-from softlab.huo.scheduler import Action, Scheduler
-from softlab.huo.impl_scheduler import get_scheduler
+from softlab.huo.scheduler import (
+    Scheduler,
+    get_scheduler,
+)
+from softlab.huo.process.process import Process
 
 _logger = logging.getLogger(__name__)
-
-class Process(Delegated):
-    """
-    Interface of any process
-
-    Properties:
-    - name -- name of process, only can be given in creation
-    - data_group -- binding data group
-
-    As a subclass of `DelegateAttributes`, this interface supports customized
-    attributes. Each attribute is an instance of ``LimitedAttribute``.
-    ``add_attribute`` method is used to add such attribute by given unique key,
-    validator and initial value.
-
-    The methods need be implemented in derived classes:
-    - commit -- commit necessary actions into scheduler
-    - is_pending -- whether there are committed by unfinished actions
-    - join -- wait until all committed actions finish
-    - has_more -- whether there are more actions to run
-    - reset -- reset to initial state
-
-    Usage:
-    1. create and configure a process
-    2. commit actions into scheduler
-    3. wait until all committed actions finish
-    4. check whether there are more actions, if so, back to step 2
-    """
-
-    def __init__(self, name: Optional[str] = None):
-        self._name = '' if name is None else str(name)
-        self._attributes: Dict[str, LimitedAttribute] = {}
-        self.add_delegate_attr_dict('_attributes')
-        self._group: Optional[DataGroup] = None
-
-    @property
-    def name(self) -> str:
-        """Get name of process"""
-        return self._name
-
-    @property
-    def data_group(self) -> Optional[DataGroup]:
-        """Get binding data group"""
-        return self._group
-
-    @data_group.setter
-    def data_group(self, group: Optional[DataGroup]) -> None:
-        """Bind with given data group"""
-        self.set_data_group(group)
-
-    @abstractmethod
-    def set_data_group(self, group: Optional[DataGroup]) -> None:
-        """Bind with given data group"""
-        if self.is_pending():
-            raise RuntimeError(f'Can\'t change data group while pending')
-        if group is not None and not isinstance(group, DataGroup):
-            raise TypeError(f'Invalid data group type: {type(group)}')
-        self._group = group
-
-    def add_attribute(self, key: str,
-                      vals: Validator, initial_value: Any) -> None:
-        """
-        Add an attribute
-
-        Args:
-        - key -- the key of attribute, should be unique in one process
-        - vals -- the validator of attribute,
-        - initial_value -- the initial value of attribute
-        """
-        if key in self._attributes:
-            raise ValueError(f'Already has the attribute with key "{key}"')
-        self._attributes[key] = LimitedAttribute(vals, initial_value)
-
-    @abstractmethod
-    def commit(self, scheduler: Scheduler) -> bool:
-        """Commit actions into scheduler"""
-        raise NotImplementedError
-
-    @abstractmethod
-    def is_pending(self) -> bool:
-        """Whether there are committed-but-unfinished actions"""
-        raise NotImplementedError
-
-    @abstractmethod
-    def join(self, scheduler: Scheduler) -> bool:
-        """Wait until committed actions finish"""
-        raise NotImplementedError
-
-    @abstractmethod
-    def has_more(self) -> bool:
-        """Whether there are more actions to run"""
-        raise NotImplementedError
-
-    @abstractmethod
-    def reset(self) -> None:
-        """Reset to initial state"""
-        raise NotImplementedError
-
-    def snapshot(self) -> Dict[str, Any]:
-        return {
-            'class': self.__class__,
-            'name': self.name,
-            'pending': self.is_pending(),
-            'more': self.has_more(),
-        }
-
-def run_process(process: Process, scheduler: Optional[Scheduler] = None,
-                verbose: bool = True) -> Tuple[bool, float]:
-    """
-    Run a process
-
-    Arguments:
-    - process -- the process to run
-    - scheduler -- the scheduler to perform running, use ``get_scheduler`` if
-                   None is given
-    - verbose -- verbose flag
-
-    Returns a tuple of result and cost time
-    """
-    if not isinstance(process, Process):
-        raise TypeError(f'Invalid process type {type(process)}')
-    if not isinstance(scheduler, Scheduler):
-        scheduler = get_scheduler()
-    verbose = bool(verbose)
-    if verbose:
-        print('---- Run Process ----')
-    process.reset()
-    if verbose:
-        print('Reset process first')
-        for key, value in process.snapshot().items():
-            print(f'{key}: {value}')
-        print()
-    t0 = time.perf_counter()
-    rst = True
-    ticks = 0
-    while process.has_more():
-        process.commit(scheduler)
-        if not process.join(scheduler):
-            if verbose:
-                print(f'Failed to join after {ticks}th commit')
-            rst = False
-            break
-        ticks += 1
-    used = time.perf_counter() - t0
-    if verbose:
-        print('Succeed' if rst else 'Failed')
-        print(f'Commit {ticks} Times')
-        print(f'Used {used} s')
-        print('---- The End ----')
-        print()
-    return rst, used
-
-class SimpleProcess(Process):
-    """
-    Base of simple processes which only concern simple actions
-
-    The derived processes only need to implement asynchronised ``body``
-    method to achieve process action. If a simple process is aborted before
-    finish (i.e. ``reset`` is called), the aborting signal can be obtained
-    by ``aborting`` porperty.
-    """
-
-    def __init__(self, name: Optional[str] = None, **kwargs):
-        super().__init__(name, **kwargs)
-        self._begin_point = ''
-        self._end_point = ''
-        self._finished = False
-        self._running = False
-        self._aborting = False
-
-    @property
-    def begin_point(self) -> str:
-        """Get begin point of process"""
-        return self._begin_point
-
-    @begin_point.setter
-    def begin_point(self, point: str) -> None:
-        """Set begin point, can't be called while pending"""
-        if self._running:
-            raise RuntimeError('Can\'t set begin point while pending')
-        self._begin_point = str(point)
-
-    @property
-    def end_point(self) -> str:
-        """
-        Get end point of process
-
-        Notice that end point is generated when ``commit`` is called, it
-        can't be set arbitrarily.
-        """
-        return self._end_point
-
-    @property
-    def aborting(self) -> bool:
-        """Aborting signal"""
-        return self._aborting
-
-    @abstractmethod
-    async def body(self) -> None:
-        """Process action body, need implementation"""
-        pass
-
-    async def _run(self) -> None:
-        if not self._finished:
-            try:
-                await self.body()
-                self._finished = not self._aborting
-            finally:
-                self._begin_point = ''
-                self._running = False
-                self._aborting = False
-
-    def reset(self) -> None:
-        if self._running:
-            self._aborting = True
-        else:
-            self._finished = False
-
-    def commit(self, scheduler: Scheduler) -> bool:
-        if not self._finished and not self._running:
-            point = scheduler.acquire_point()
-            rst = scheduler.commit_action(Action(
-                self.begin_point, point, func=self._run
-            ))
-            if rst:
-                self._running = True
-                self._aborting = False
-                self._end_point = point
-            return rst
-        return False
-
-    def is_pending(self) -> bool:
-        return self._running
-
-    def join(self, scheduler: Scheduler) -> bool:
-        if len(self._end_point) > 0:
-            return scheduler.wait_point(self._end_point)
-        return False
-
-    def has_more(self) -> bool:
-        return not self._finished
 
 class CompositeProcess(Process):
     """
@@ -550,6 +304,8 @@ class SweepProcess(Process):
 if __name__ == '__main__':
     import asyncio
     from softlab.jin.validator import ValString
+    from softlab.huo.process.process import run_process
+    from softlab.huo.process.simple import SimpleProcess
 
     class SaluteProcess(SimpleProcess):
         def __init__(self, name: Optional[str] = None, **kwargs):
@@ -559,57 +315,6 @@ if __name__ == '__main__':
         async def body(self) -> None:
             print(f'Hello {self.subject()}')
             await asyncio.sleep(1.0)
-
-    class SequenceSaluteProcess(Process):
-        def __init__(self, subjects: Sequence[str],
-                     name: Optional[str] = None, **kwargs):
-            super().__init__(name, **kwargs)
-            self._subjects: list[str] = []
-            self._index = 0
-            self._point = ''
-            for subject in subjects:
-                self.add(subject)
-
-        def add(self, subject: str) -> None:
-            self._subjects.append(str(subject))
-
-        async def salute(self) -> None:
-            if self._index >= 0 and self._index < len(self._subjects):
-                print(f'Hello {self._subjects[self._index]}')
-                await asyncio.sleep(1.0)
-                self._index += 1
-
-        def reset(self) -> None:
-            self._index = 0
-            self._point = ''
-
-        def commit(self, scheduler: Scheduler) -> bool:
-            if self._index == 0 and len(self._subjects) > 0 \
-                    and len(self._point) == 0:
-                points = scheduler.acquire_points(len(self._subjects))
-                assert(len(points) == len(self._subjects))
-                for i in range(len(points)):
-                    if not scheduler.commit_action(Action(
-                        '' if i == 0 else points[i-1], points[i],
-                        func=self.salute,
-                    )):
-                        return False
-                self._point = points[-1]
-                return True
-            return False
-
-        def is_pending(self) -> bool:
-            return len(self._point) > 0
-
-        def join(self, scheduler: Scheduler) -> bool:
-            if len(self._point) > 0:
-                rst = scheduler.wait_point(self._point)
-                self._point = ''
-                return rst
-            return False
-
-        def has_more(self) -> bool:
-            return self._index < len(self._subjects)
 
     class SubjectSweeper:
         def __init__(self, subjects: Sequence[str] = []) -> None:
@@ -629,45 +334,29 @@ if __name__ == '__main__':
 
     sch = get_scheduler()
     sch.start()
-    print(sch.snapshot())
     names = ['aaa', 'bbb', 'ccc', 'Suzhou',
              'China', 'Asia', 'Earth', 'universe']
     print(names)
-    print('Use single sequence process')
-    proc = SequenceSaluteProcess(names, 'single_seq')
-    print(f'Create process: {proc.snapshot()}')
-    t0 = time.perf_counter()
-    proc.commit(sch)
-    print(f'After commit: {proc.snapshot()}')
-    proc.join(sch)
-    print(f'After join: {proc.snapshot()}')
-    print('Used {} s'.format(time.perf_counter() - t0))
-    print()
 
-    print('Use serial of separated processes')
     processes = [SaluteProcess(f'sep{i}') for i in range(len(names))]
     for i in range(len(names)):
         processes[i].subject(names[i])
     series = SeriesProcess(processes, 'series')
     print(f'Create series process: {series.snapshot()}')
     run_process(series, sch)
-    print()
 
     print('Use parallel of separated processes')
     parallel = ParallelProcess(processes, 'parallel')
     print(f'Create parallel process: {parallel.snapshot()}')
     run_process(parallel, sch)
-    print()
 
     print('Use switch process')
     sw = SwitchProcess(lambda x: 5, processes, 'switch')
     print(f'Create switch process: {sw.snapshot()}')
     run_process(sw, sch)
-    print()
 
     print('Use sweep process')
     sweep = SweepProcess(
         SubjectSweeper(names), SaluteProcess('salute'), 'sweep')
     print(f'Create sweep process: {sweep.snapshot()}')
     run_process(sweep, sch)
-    print()
