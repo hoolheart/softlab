@@ -4,6 +4,7 @@ from abc import abstractmethod
 from typing import (
     Any,
     Optional,
+    Callable,
 )
 import warnings
 from softlab.jin.validator import (
@@ -13,6 +14,7 @@ from softlab.jin.validator import (
 )
 import math
 
+
 class Parameter():
     """
     Parameter base class
@@ -20,26 +22,47 @@ class Parameter():
     A parameter represents a single degree of freedom, it can be an attribute
     of a device, a specific measurement or a result of an analysis task.
 
-    There are 5 properties:
-        name --- non-empty string representing the parameter
-        validator --- description of the validator that guards the input of
-                      parameter, read-only
-        settable --- whether the parameter can be set, read-only
-        gettable --- whether the parameter can be get, read-only
-        owner --- the owner object of parameter, e.g. a device or a task
+    There are 5 public properties:
+    - name --- non-empty string representing the parameter
+    - validator --- description of the validator that guards the input of
+                    parameter, read-only
+    - settable --- whether the parameter can be set, read-only
+    - gettable --- whether the parameter can be get, read-only
+    - owner --- the owner object of parameter, e.g. a device or a task
 
-    public methods:
-        snapshot() -> dict --- returns the snapshot dict of parameter
-        set(value: Any) --- set parameter value
-        get() -> Any --- get parameter value
+    Public methods:
+    - snapshot --- get the snapshot dict of parameter
+    - set --- set parameter value
+    - get --- get parameter value
 
-    Abstract methods that should be implemented in derived classes:
-        parse(value: Any) -> Any --- parse the input value, used in ``set``
-        before_set(currennt: Any, next: Any) --- hook function before setting,
-                                                 used in ``set``
-        after_set(value: Any) --- hook function after setting, used in ``set``
-        before_get(value: Any) --- hook function before getting, used in ``get``
-        interprete(value: Any) -> Any --- interprete value, used in ``get``
+    Parameter is callable object, calling without parameter means getting,
+    and calling with parameters means setting (only first parameter is used).
+
+    Stored value can be different with accessed one if parsers are given
+    during initialization:
+    - decoder --- parse setting value into stored value
+    - encoder --- parse stored value into output value
+
+    User can also define three hook functions:
+    - before_set --- hook function before setting, take two parameters:
+                     previous value and next value respectively
+    - after_set --- hook function after setting with new value as parameter
+    - before_get --- hook function to alter stored value before getting,
+                     stored value will be given to such function as parameter
+                     and changed due to function's return
+
+    The process of setting:
+    - check ``settable`` property, throw RuntimeError if not settable
+    - use validator to check input value
+    - if decoder is given, decode value
+    - call before-setting hook function if exist
+    - change stored value
+    - call after-setting hook function if exist
+
+    The process of getting:
+    - check ``gettable`` property, throw RuntimeError if not gettable
+    - if before-getting hook function is given, use it to alter store value
+    - if encoder is given, return encoded value, otherwise return stored one
     """
 
     def __init__(self,
@@ -48,39 +71,60 @@ class Parameter():
                  settable: bool = True,
                  gettable: bool = True,
                  init_value: Optional[Any] = None,
-                 owner: Optional[Any] = None) -> None:
+                 owner: Optional[Any] = None,
+                 decoder: Optional[Callable[[Any], Any]] = None,
+                 encoder: Optional[Callable[[Any], Any]] = None,
+                 before_set: Optional[Callable[[Any, Any], None]] = None,
+                 after_set: Optional[Callable[[Any], None]] = None,
+                 before_get: Optional[Callable[[Any], Any]] = None) -> None:
         """
         Initialize parameter
 
         Args:
-            name --- parameter name, non-empty string
-            validator --- validator for inner value, ``Validator`` instance
-            settable --- whether the parameter can be set
-            gettable --- whether the parameter can be get
-            init_value --- initial value, optional
-            owner --- parameter owner, optional
+        - name --- parameter name, non-empty string
+        - validator --- validator for inner value, ``Validator`` instance
+        - settable --- whether the parameter can be set
+        - gettable --- whether the parameter can be get
+        - init_value --- initial value, optional
+        - owner --- parameter owner, optional
+        - decoder --- callable to parse setting value into the stored one
+        - encoder --- callable to parse stored value into output one
+        - before_set --- hook function before setting, [prev, next] -> None
+        - after_set --- hook function after setting
+        - before_get --- hook function to alter stored value before getting
 
         Note: warning if settable and gettable are both False
         """
-        self._name = str(name) # parameter name
+        self._name = str(name)  # parameter name
         if len(self._name) == 0:
             raise ValueError('Given name is empty')
-        if not isinstance(validator, Validator): # validator
+        if not isinstance(validator, Validator):  # validator
             raise TypeError(f'Invalid validator {type(validator)} for {name}')
         self._validator = validator
-        self._settable = settable if isinstance(settable, bool) else True # access
+        self._settable = settable if isinstance(
+            settable, bool) else True  # access
         self._gettable = gettable if isinstance(gettable, bool) else True
         if not self._settable and not self._gettable:
             warnings.warn(
                 f'Parameter {self.name} is neither settable and gettable')
-        self._value: Any = None # initial value
-        if init_value is not None:
+        self._value: Any = None  # stored value
+        self.owner = owner  # owner
+        self._decoder: Optional[Callable] = decoder if isinstance(
+            decoder, Callable) else None
+        self._encoder: Optional[Callable] = encoder if isinstance(
+            encoder, Callable) else None
+        self._before_set: Optional[Callable] = before_set if isinstance(
+            before_set, Callable) else None
+        self._after_set: Optional[Callable] = after_set if isinstance(
+            after_set, Callable) else None
+        self._before_get: Optional[Callable] = before_get if isinstance(
+            before_get, Callable) else None
+        if init_value is not None:  # initial value
             if self.settable:
                 self.set(init_value)
             else:
                 self._validator.validate(init_value)
                 self._value = init_value
-        self.owner = owner # owner
 
     @property
     def name(self) -> str:
@@ -130,92 +174,39 @@ class Parameter():
         if not self.settable:
             raise RuntimeError(f'Parameter {self.name} is not settable')
         self._validator.validate(value, repr(self))
-        value = self.parse(value)
-        self.before_set(self._value, value)
+        if isinstance(self._decoder, Callable):
+            value = self._decoder(value)
+        if isinstance(self._before_set, Callable):
+            self._before_set(self._value, value)
         self._value = value
-        self.after_set(self._value)
+        if isinstance(self._after_set, Callable):
+            self._after_set(self._value)
 
     def get(self) -> Any:
         """Get parameter value"""
         if not self.gettable:
             raise RuntimeError(f'Parameter {self.name} is not gettable')
-        self._value = self.before_get(self._value)
-        return self.interprete(self._value)
+        if isinstance(self._before_get, Callable):
+            self._value = self._before_get(self._value)
+        if isinstance(self._encoder, Callable):
+            return self._encoder(self._value)
+        return self._value
 
     def __call__(self, *args: Any) -> Any:
         """Get or set parameter value, makes parameter callable"""
         if len(args) == 0:
-            return self.get() # get value
+            return self.get()  # get value
         else:
-            self.set(args[0]) # set value
+            self.set(args[0])  # set value
 
-    @abstractmethod
-    def parse(self, value: Any) -> Any:
-        """
-        Parse value at the beginning of ``set``, implemented in derived class
-
-        Args:
-            value --- the input of setting
-
-        Returns:
-            the parsed result for inner value
-        """
-        return value
-
-    @abstractmethod
-    def before_set(self, current: Any, next: Any) -> None:
-        """
-        Hook function before setting of value, implemented in derived class
-
-        Args:
-            current --- current value of parameter
-            next --- the value prepared to be set
-        """
-        pass
-
-    @abstractmethod
-    def after_set(self, value: Any) -> None:
-        """
-        Hook function after setting of value, implemented in derived class
-
-        Args:
-            value --- new value of parameter
-        """
-        pass
-
-    @abstractmethod
-    def before_get(self, value: Any) -> Any:
-        """
-        Hook function before getting of value, implemented in derived class
-
-        Args:
-            value --- the inner value when ``get`` is called
-
-        Returns:
-            post manipulation value
-        """
-        return value
-
-    @abstractmethod
-    def interprete(self, value: Any) -> Any:
-        """
-        Interprete inner value for getting, implemented in derived class
-
-        Args:
-            value --- inner value
-
-        Returns:
-            the interpreted value for caller of ``get``
-        """
-        return value
 
 class QuantizedParameter(Parameter):
     """
     Parameter with quantized inner data
 
     Additional properties:
-        lsb --- least sigificant bit, aka the step of quantization
-        mode --- quantization mode, round, floor or ceil
+    - lsb --- least sigificant bit, aka the step of quantization
+    - mode --- quantization mode, round, floor or ceil
     """
 
     def __init__(self, name: str,
@@ -228,13 +219,14 @@ class QuantizedParameter(Parameter):
         Initialization
 
         Arguments not in super initialization:
-            min --- minimal value
-            max --- maximal value
-            lsb --- least sigificant bit
-            mode --- quantization mode, round, floor or ceil
+        - min --- minimal value
+        - max --- maximal value
+        - lsb --- least sigificant bit
+        - mode --- quantization mode, round, floor or ceil
         """
         super().__init__(name, ValNumber(min, max),
-                         settable, gettable, init_value, owner)
+                         settable, gettable, init_value, owner,
+                         decoder=self._parse, encoder=self._interprete)
         if not isinstance(min, float) or not isinstance(max, float) or \
                 not isinstance(lsb, float):
             raise TypeError(
@@ -269,11 +261,12 @@ class QuantizedParameter(Parameter):
         s['mode'] = self.mode
         return s
 
-    def parse(self, value: float) -> int:
+    def _parse(self, value: float) -> int:
         return self._quantizer(value / self._lsb)
 
-    def interprete(self, value: int) -> float:
+    def _interprete(self, value: int) -> float:
         return self._lsb * value
+
 
 class ProxyParameter(Parameter):
 
@@ -291,6 +284,7 @@ class ProxyParameter(Parameter):
 
     def get(self) -> Any:
         return self._obj.get()
+
 
 if __name__ == '__main__':
     from softlab.jin.validator import (
@@ -310,7 +304,7 @@ if __name__ == '__main__':
         (Parameter('bool', ValType(bool), owner='pk'), False),
         (QuantizedParameter('adc', False, lsb=100.0/256, init_value=18), 13.2),
         (QuantizedParameter('dac', gettable=False, lsb=150.0/65536), 89.2),
-        (QuantizedParameter('quantizer', min=-20.0, max=20.0, lsb=40.0/65536,
+        (QuantizedParameter('quantizer', min=-20.0, max=20.0, lsb=0.01,
                             owner='pk'), -10.328977345),
         (ProxyParameter('proxy1',
                         Parameter('int1', ValInt(0, 100), gettable=False)), 73),

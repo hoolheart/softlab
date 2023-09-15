@@ -11,7 +11,6 @@ more than one channels generally, and each channel can abstracted into a child
 device of oscilloscope.
 """
 
-from abc import abstractmethod
 from typing import (
     Any,
     Dict,
@@ -23,6 +22,7 @@ from typing import (
 from softlab.jin.misc import Delegated
 from softlab.tu.station.parameter import Parameter
 
+
 class Device(Delegated):
     """
     Device base class
@@ -30,6 +30,24 @@ class Device(Delegated):
     A device has a non-empty name, and contains any count of parameters and
     child devices. By inheriting ``Delegated``, any parameter and child device
     can be accessed directly as an attribute of device.
+
+    Public properties:
+    - name --- device name, should be non-empty and unique in station
+    - parent --- parent device, used for sub-devices, optional
+
+    Public methods:
+    - snapshot --- get the snapshot dict of device
+    - parameter --- get parameter with given name, none if non-exist
+    - child --- get subdevice with given name, none if non-exist
+    - add_parameter --- add a new parameter
+    - rm_parameter --- remove parameter with given name
+    - add_child --- add a new subdevice
+    - rm_child --- remove subdevice with given name
+    - set_parameters --- batch setting of multiple parameters
+
+    Note: parameters of children can be accessed by
+          "<child_name>.<parameter_name>" or even
+          "<child_name>.<child_child_name>.<parameter_name>"
     """
 
     def __init__(self, name: str) -> None:
@@ -37,7 +55,7 @@ class Device(Delegated):
         Initialization
 
         Args:
-            name --- device name, non-empty string
+        - name --- device name, non-empty string, should be unique in station
         """
         name = str(name)
         if len(name) == 0:
@@ -99,10 +117,10 @@ class Device(Delegated):
         Get parameter with given key
 
         Args:
-            key --- parameter key
+        - key --- parameter key
 
         Returns:
-            the parameter instance, None if non-exist
+        - the parameter instance, None if non-exist
 
         Note:
             user can use '.' to link child name,
@@ -127,10 +145,9 @@ class Device(Delegated):
         Get child device with given key
 
         Args:
-            key --- child device key
+        - key --- child device key
 
-        Returns:
-            the device instance, None if non-exist
+        Returns: the device instance, None if non-exist
         """
         if key in self._devices:
             return self._devices[key]
@@ -141,40 +158,40 @@ class Device(Delegated):
         Add a parameter into device
 
         Args:
-            para --- parameter instance, its name as its key should not be used
-                     in existing parameter dict and child device dict
-            visible --- whether the parameter is visible from outside, if not,
-                        its key put into omitting attribute names
+        - para --- parameter instance, its name as its key should not be used
+                   in existing parameter dict and child device dict
+        - visible --- whether the parameter is visible from outside, if not,
+                      its key put into omitting attribute names
         """
-        if not isinstance(para, Parameter): # check
+        if not isinstance(para, Parameter):  # check
             raise TypeError(f'Invalid parameter type {type(para)}')
-        key = para.name # use parameter name as key
+        key = para.name  # use parameter name as key
         if key in self._parameters or key in self._devices:
             raise ValueError(f'Parameter with key {key} has exist')
-        self._parameters[key] = para # update
+        self._parameters[key] = para  # update
         para.owner = self
         if not visible:
-            self.add_omit_delegate_attrs(key) # invisible parameter
+            self.add_omit_delegate_attrs(key)  # invisible parameter
 
     def add_child(self, child: "Device", visible: bool = True) -> None:
         """
         Add a child device into device
 
         Args:
-            child --- child device instance, its name as its key should not be
-                      used in existing parameter dict and child device dict
-            visible --- whether the child is visible from outside, if not,
-                        its key put into omitting attribute names
+        - child --- child device instance, its name as its key should not be
+                    used in existing parameter dict and child device dict
+        - visible --- whether the child is visible from outside, if not,
+                      its key put into omitting attribute names
         """
-        if not isinstance(child, Device): # check
+        if not isinstance(child, Device):  # check
             raise TypeError(f'Invalid child device type {type(child)}')
-        key = child.name # use device name as key
+        key = child.name  # use device name as key
         if key in self._devices or key in self._parameters:
             raise ValueError(f'Child device with key {key} has exist')
-        self._devices[key] = child # update
+        self._devices[key] = child  # update
         child.parent = self
         if not visible:
-            self.add_omit_delegate_attrs(key) # invisible child device
+            self.add_omit_delegate_attrs(key)  # invisible child device
 
     def rm_parameter(self, key: str) -> Optional[Parameter]:
         """Remove parameter from device and return it (None if non-exist)"""
@@ -196,10 +213,10 @@ class Device(Delegated):
         Set any number of parameters
 
         Args:
-            settings --- setting information, either be the sequence of
-                         key-value pairs or dictionary of keys and values,
-                         note that the sequence form can control the setting
-                         order
+        - settings --- setting information, either be the sequence of
+                       key-value pairs or dictionary of keys and values,
+                       note that the sequence form can control the setting
+                       order
         """
         if isinstance(settings, Dict):
             settings = settings.items()
@@ -210,21 +227,13 @@ class Device(Delegated):
             else:
                 raise KeyError(f'Invalid parameter key {key}')
 
-    @abstractmethod
-    def open(self) -> None:
-        """Open/connect the device, needs implementation"""
-        pass
-
-    @abstractmethod
-    def close(self) -> None:
-        """Close/disconnect the device, needs implementation"""
-        pass
 
 class DeviceBuilder():
     """
-    Builder to gerenate specific device.
+    Builder interface to gerenate specific device.
 
-    Different builders differ due to their different models.
+    Every available subclass must implement ``build`` function.
+    Different builders differ due to their different ``model`` properties.
     """
 
     def __init__(self, model: str) -> None:
@@ -232,7 +241,7 @@ class DeviceBuilder():
         Initialization
 
         Args:
-            model --- builder model
+        - model --- builder model
         """
         model = str(model)
         if len(model) == 0:
@@ -249,31 +258,35 @@ class DeviceBuilder():
 
     def build(self, name: str, **kwargs: Any) -> Device:
         """
-        Generate a device, implemented in sub classes
+        Generate a device, implemented in subclasses
 
         Args:
-            name --- device name
-            kwargs --- key specific arguments to create device
+        - name --- device name
+        - kwargs --- key specific arguments to create device
 
-        Returns:
-            a device corresponding to such builder
+        Returns: a device corresponding to such builder
         """
         raise NotImplementedError
 
+
 _device_builders: Dict[str, DeviceBuilder] = {}
 """Global dictionary of device builders"""
+
 
 def register_device_builder(builder: DeviceBuilder) -> None:
     """Register device builder"""
     if not isinstance(builder, DeviceBuilder):
         raise TypeError(f'Invalid device builder type {type(builder)}')
     if builder.model in _device_builders:
-        raise ValueError(f'Device builder with model {builder.model} has exist')
+        raise ValueError(
+            f'Device builder with model {builder.model} has exist')
     _device_builders[builder.model] = builder
+
 
 def get_device_builder(model: str) -> Optional[DeviceBuilder]:
     """Get device builder with given ``model``, return None if non-exist"""
     return _device_builders.get(model, None)
+
 
 if __name__ == '__main__':
     import pprint
@@ -315,7 +328,7 @@ if __name__ == '__main__':
                 Parameter('percentage', ValNumber(0.0, 100.0), init_value=3.14))
             return dev
 
-    builder = _BuilderDemo() # create a demo builder
+    builder = _BuilderDemo()  # create a demo builder
     print(f'Create demo builder {builder}')
     dev2 = builder.build('built')
     print(f'Use builder to generate a device')

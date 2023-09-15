@@ -16,19 +16,22 @@ from softlab.jin.misc import Delegated
 
 class Station(Delegated):
     """
-    Station is an ensemble of devices to perform experiment
+    Station is an ensemble of devices to perform experiment.
+
+    By inheriting ``Delegated``, any device  can be accessed directly as
+    an attribute of station.
 
     Properties:
-        name --- station name, given at initialization
-        created_at --- datetime when station is created
-        devices --- sequence of containing device names
+    - name --- station name, given at initialization
+    - created_at --- datetime when station is created
+    - devices --- sequence of containing device names
 
     Public methods:
-        add_device --- add a device into station
-        rm_device --- remove a device from station
-        device --- access a device from station
-        build_device --- build a device by using device builder
-        snapshot --- return snapshot of station information
+    - add_device --- add a device into station
+    - rm_device --- remove a device from station
+    - device --- access a device with given name, none if non-exist
+    - build_device --- build a device by using device builder
+    - snapshot --- return snapshot of station information
     """
 
     def __init__(self, name: str) -> None:
@@ -90,9 +93,9 @@ class Station(Delegated):
         """Build a device and add into station
 
         Args:
-            model --- builder model
-            name --- device name
-            kwargs --- arguments to build device
+        - model --- builder model
+        - name --- device name
+        - kwargs --- arguments to build device
         """
         builder = get_device_builder(model) # get builder
         if not isinstance(builder, DeviceBuilder):

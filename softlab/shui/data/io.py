@@ -21,14 +21,14 @@ import logging
 
 _logger = logging.getLogger(__name__) # prepare logger
 
-def load_groups(type: str, 
+def load_groups(type: str,
                 args: Optional[Dict[str, Any]] = None) -> Sequence[DataGroup]:
     """
     Load all groups from the backend with the given type and arguments
 
     Arguments:
-    type -- backend type
-    args -- connect arguments
+    - type -- backend type
+    - args -- connect arguments
 
     Returns:
     list of loaded groups
@@ -50,7 +50,7 @@ def reload_group(group: DataGroup) -> Optional[DataGroup]:
     Reload a data group
 
     Arguments:
-    group -- current data group
+    - group -- current data group
 
     Returns:
     Reloaded data group, ``None`` if the reloading failed
@@ -74,10 +74,10 @@ def save_group(group: DataGroup,
     Save a data group
 
     Arguments:
-    group -- the data group to save
-    backend_type -- type of backend, ``None`` if to use backend info stored
-                    in the data group
-    backend_args -- connect arguments
+    - group -- the data group to save
+    - backend_type -- type of backend, ``None`` if to use backend info stored
+                      in the data group
+    - backend_args -- connect arguments
 
     Returns:
     Whether the saving succeeded

@@ -12,6 +12,7 @@ import logging
 
 _logger = logging.getLogger(__name__)
 
+
 class VisaHandle():
     """
     Simple handle of VISA connection
@@ -176,20 +177,25 @@ class VisaHandle():
             return self._resource.query(command, delay)
         raise RuntimeError('Invalid visa resource')
 
+
 class VisaParameter(Parameter):
     """
     Simple parameter in visa device, the value can be set and/or get by
-    using simple commands
+    using simple commands.
+
+    The stored value of a parameter in VISA device is generally a string.
+    So ``decoder`` and/or ``encoder`` are needed to parse between stored string
+    and meaningful accessed value.
     """
 
     def __init__(self, name: str, handle: VisaHandle,
                  get_cmd: str = '', set_cmd: str = '',
-                 get_parser: Optional[Callable] = None,
-                 set_parser: Optional[Callable] = None,
                  read_after_setting: bool = False,
                  encoding: Optional[str] = None,
                  query_delay: Optional[float] = None,
                  pre_cmd: str = '', post_cmd: str = '',
+                 decoder: Optional[Callable] = None,
+                 encoder: Optional[Callable] = None,
                  **kwargs) -> None:
         """
         Initialization
@@ -199,20 +205,23 @@ class VisaParameter(Parameter):
         - handle --- visa device handle
         - get_cmd --- command to get value, use buffered value if empty
         - set_cmd --- command to set value, no actual setting if empty
-        - get_parser --- function to parse got string into meaningful value
-        - set_parser --- function to parse value to device readable string
         - read_after_setting --- whether to perform a reading after setting
         - encoding --- encoding in read and write operations, optional
         - query_delay --- delay when querying value from device
+        - decoder --- function to parse value to device readable string
+        - encoder --- function to parse got string into meaningful value
         """
-        super().__init__(name, **kwargs)
+        super().__init__(name,
+                         decoder=decoder,
+                         encoder=encoder,
+                         before_set=self.before_set,
+                         before_get=self.before_get,
+                         **kwargs)
         if not isinstance(handle, VisaHandle):
             raise TypeError(f'Invalid visa handle {type(handle)}')
         self._handle = handle
         self._get_cmd = str(get_cmd)
         self._set_cmd = str(set_cmd)
-        self._get_parser = get_parser
-        self._set_parser = set_parser
         self._read_after_setting = read_after_setting
         self._encoding = encoding
         self._delay = query_delay
@@ -222,11 +231,6 @@ class VisaParameter(Parameter):
     @property
     def handle(self) -> VisaHandle:
         return self._handle
-
-    def parse(self, value: Any) -> Any:
-        if isinstance(self._set_parser, Callable):
-            return self._set_parser(value)
-        return super().parse(value)
 
     def before_set(self, current: Any, next: Any) -> None:
         if len(self._set_cmd) > 0:
@@ -241,7 +245,6 @@ class VisaParameter(Parameter):
                 self._handle.write(self._post_cmd)
                 if self._read_after_setting:
                     self._handle.read()
-        return super().before_set(current, next)
 
     def before_get(self, value: Any) -> Any:
         if len(self._get_cmd) > 0:
@@ -255,12 +258,7 @@ class VisaParameter(Parameter):
                 if self._read_after_setting:
                     self._handle.read()
             return value
-        return super().before_get(value)
-
-    def interprete(self, value: Any) -> Any:
-        if isinstance(self._get_parser, Callable):
-            return self._get_parser(value)
-        return super().interprete(value)
+        return value
 
     def snapshot(self) -> dict:
         return {
@@ -268,6 +266,7 @@ class VisaParameter(Parameter):
             'get_cmd': self._get_cmd,
             'set_cmd': self._set_cmd,
         }
+
 
 class VisaCommand(Parameter):
     """
@@ -285,7 +284,11 @@ class VisaCommand(Parameter):
         - handle --- visa device handle
         - cmd --- command string, non-empty
         """
-        super().__init__(name, settable=False, **kwargs)
+        super().__init__(name,
+                         settable=False,
+                         before_get=self.before_get,
+                         init_value=True,
+                         **kwargs)
         if not isinstance(handle, VisaHandle):
             raise TypeError(f'Invalid visa handle {type(handle)}')
         self._handle = handle
@@ -300,7 +303,7 @@ class VisaCommand(Parameter):
 
     def before_get(self, value: Any) -> Any:
         self._handle.write(self._cmd)
-        return super().before_get(value)
+        return value
 
     def snapshot(self) -> dict:
         return {
@@ -308,11 +311,14 @@ class VisaCommand(Parameter):
             'cmd': self._cmd,
         }
 
+
 class VisaIDN(VisaParameter):
 
     def __init__(self, name: str, handle: VisaHandle, **kwargs) -> None:
         super().__init__(name, handle,
-                         get_cmd='*IDN?', settable=False,
+                         get_cmd='*IDN?',
+                         encoder=self.interprete,
+                         settable=False,
                          **kwargs)
 
     def interprete(self, value: str) -> Dict[str, str]:
