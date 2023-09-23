@@ -27,11 +27,11 @@ class Signal(Delegated):
     Abstract class representing a signal
 
     A subclass can define a specific signal from two aspects:
-        - implement `evaluate` method
-        - add specific attributes, the `Signal` class is derived from
-          `DelegateAttributes`, the added attributes can be called
-          by its name, a.k.a `<obj>.<attr_name>` can be read and written
-          as well
+    - implement `evaluate` method
+    - add specific attributes, the `Signal` class is derived from
+      `Delegated`, the added attributes can be called
+      by its name, a.k.a `<obj>.<attr_name>` can be read and written
+      as well
 
     Args:
         - name, the name of signal, optional
