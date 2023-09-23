@@ -8,6 +8,7 @@ from softlab.tu.physics import (
     electrodynamics,
     thermodynamics,
     quantum,
+    relativity,
     QED,
     HEP,
 )
