@@ -6,14 +6,14 @@ from typing import (
     Optional,
     Dict,
 )
-from triq.profile.backend.base import ProfileBackend
-from triq.profile.backend.memory import MemoryProfileBackend
-from triq.profile.backend.json_profile import JsonProfileBackend
+from softlab.shui.profile.backend.base import ProfileBackend
+from softlab.shui.profile.backend.memory import MemoryProfileBackend
+from softlab.shui.profile.backend.json_profile import JsonProfileBackend
 import logging
 
 _logger = logging.getLogger(__name__) # prepare logger
 
-def get_profile_backend(type: str, 
+def get_profile_backend(type: str,
                         args: Optional[Dict[str, Any]] = None,
                         connect: bool = True) -> ProfileBackend:
     """
@@ -47,7 +47,7 @@ def get_profile_backend(type: str,
             _logger.warning(f'Failed to connect: {backend.last_error}')
     return backend
 
-def get_profile_backend_by_info(info: Dict[str, Any], 
+def get_profile_backend_by_info(info: Dict[str, Any],
                                 connect: bool = True) -> ProfileBackend:
     """
     Get profile backend by using the given information
