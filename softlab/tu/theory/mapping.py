@@ -71,6 +71,25 @@ class Mapping:
             raise RuntimeError('Result type or shape is invalid')
         return rst
 
+def batch_mapping(m: Mapping, d: np.ndarray) -> np.ndarray:
+    """Split data and run mapping as a batch"""
+    if not isinstance(m, Mapping) or not isinstance(d, np.ndarray):
+        raise TypeError(f'Invalid type {type(m)} or {type(d)}')
+    in_shape = m.in_shape
+    out_shape = m.out_shape
+    ndim = len(in_shape)
+    if ndim != len(out_shape) or ndim != len(d.shape):
+        raise ValueError('Batch failed due to inconsistent shapes')
+    return _batch_piece(m, d, 0)
+
+def _batch_piece(m: Mapping, d: np.ndarray, axis: int) -> np.ndarray:
+    pieces = np.split(d, d.shape[axis] / m.in_shape[axis], axis)
+    if axis < len(m.in_shape) - 1:
+        return np.concatenate(
+            list(map(lambda p: _batch_piece(m, p, axis + 1), pieces)), axis)
+    else:
+        return np.concatenate(list(map(m, pieces)), axis)
+
 if __name__ == '__main__':
     def _test_mapping(x: np.ndarray) -> np.ndarray:
         return x**2
@@ -94,3 +113,8 @@ if __name__ == '__main__':
             print(rst)
         except:
             print('Failed')
+
+    block = np.arange(16).reshape(4, 4)
+    print(block)
+    batched = batch_mapping(m, block)
+    print(batched)
