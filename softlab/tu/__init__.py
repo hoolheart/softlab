@@ -2,5 +2,5 @@
 
 from softlab.tu import (
     station,
-    physics,
+    theory,
 )

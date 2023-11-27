@@ -1,4 +1,4 @@
-"""Abstract interface for any physics model"""
+"""Abstract interface for any theoretical model"""
 
 from typing import (
     Any,
@@ -11,10 +11,11 @@ from softlab.jin.misc import (
     Delegated,
     LimitedAttribute,
 )
+from softlab.tu.theory.mapping import Mapping
 
-class PhysicsModel(Delegated):
+class TheoryModel(Delegated):
     """
-    Abstract interface of any physics model
+    Abstract interface of any theoretical model
 
     Inherited from ``Delegated`` and making dict of ``LimitedAttribute``
     as deleagted attribute dict, which means any attribute added by
@@ -26,8 +27,8 @@ class PhysicsModel(Delegated):
     The ``features`` porperty is used to get any calculated model features,
     the calculation should be implemented in ``calculate_features`` method.
 
-    Physics model can produce any calllable calculator in method
-    ``get_calculator`` which should be implemented in derived classes.
+    Theoretical model can produce any mapping in method
+    ``get_mapping`` which should be implemented in derived classes.
     """
 
     def __init__(self, name: Optional[str] = None) -> None:
@@ -68,9 +69,9 @@ class PhysicsModel(Delegated):
         prefix = f'"{self.name}"' if len(self.name) > 0 else ''
         return f'{prefix}{self.__class__}'
 
-    def get_calculator(self,
-                       type: str,
-                       conditions: Dict[str, Any] = {}) -> Callable:
+    def get_mapping(self,
+                    type: str,
+                    conditions: Dict[str, Any] = {}) -> Mapping:
         """
         Get any callable calculator due to ``type`` and optional ``conditions``
         """
@@ -84,7 +85,7 @@ if __name__ == '__main__':
     from softlab.jin.validator import ValNumber
     import numpy as np
 
-    class Motion1D(PhysicsModel):
+    class Motion1D(TheoryModel):
 
         def __init__(self,
                      name: Optional[str] = None,
@@ -94,12 +95,13 @@ if __name__ == '__main__':
                 mass = 1.0
             self.add_attribute('mass', ValNumber(1e-18), mass)
 
-        def get_calculator(self,
-                           type: str,
-                           conditions: Dict[str, Any] = {}) -> Callable:
+        def get_mapping(self,
+                        type: str,
+                        conditions: Dict[str, Any] = {}) -> Callable:
             if type == 'diff':
-                return lambda x: self._diff(x, conditions['force'])
-            return super().get_calculator(type, conditions)
+                return Mapping((2,1), (2,1),
+                               lambda x: self._diff(x, conditions['force']))
+            return super().get_mapping(type, conditions)
 
         def calculate_features(self) -> Dict[str, Any]:
             return {'weight': self.mass() * 9.8}
@@ -113,7 +115,7 @@ if __name__ == '__main__':
     print(f'Create 1D motion model {m}')
     print(f'Mass: {m.mass()}')
     print(f'Features: {m.features}')
-    calc = m.get_calculator('diff', {'force': 1.0})
+    calc = m.get_mapping('diff', {'force': 1.0})
     x0 = np.zeros((2, 1))
     x0[1, 0] = -10.0
     print(f'Initial state: {x0}')
