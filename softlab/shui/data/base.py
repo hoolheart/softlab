@@ -107,8 +107,8 @@ class DataRecord():
     contains its relevant charts, too.
 
     Arguments:
-    name -- name of record
-    columns -- information of all columns, each column includes 4 parts:
+    - name -- name of record
+    - columns -- information of all columns, each column includes 4 parts:
         - name
             name of column, corresponding to column head in table, necessary
         - label
@@ -120,11 +120,11 @@ class DataRecord():
             boolean, optional, default is False
 
     Properties:
-    name -- name of record
-    table -- data table
-    columns -- information of all columns
-    shape -- shape of data table, not settable
-    charts -- list of relevant chart titles, not settable
+    - name -- name of record
+    - table -- data table
+    - columns -- information of all columns
+    - shape -- shape of data table, not settable
+    - charts -- list of relevant chart titles, not settable
 
     **Note**: set ``columns`` property will re-initialize the whole table
     """
@@ -180,6 +180,9 @@ class DataRecord():
         """Shape of data table"""
         return self._table.shape
 
+    def __len__(self) -> int:
+        return len(self._table.index)
+
     def snapshot(self) -> Dict[str, Any]:
         return {
             'name': self.name,
@@ -204,6 +207,9 @@ class DataRecord():
         if index >= 0 and index < len(self._table.index):
             return self._table.loc[self._table.index[index]].to_dict()
         return {}
+
+    def has_column(self, name: str) -> bool:
+        return name in self._table.columns
 
     def column(self, name: str) -> pd.DataFrame:
         """Get column of given name"""

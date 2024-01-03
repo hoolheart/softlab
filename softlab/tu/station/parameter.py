@@ -141,9 +141,9 @@ class Parameter():
             raise ValueError(f'New name is empty (current name: {self._name})')
 
     @property
-    def validator(self) -> str:
+    def validator(self) -> Validator:
         """Get description of validator"""
-        return repr(self._validator)
+        return self._validator
 
     @property
     def settable(self) -> bool:
@@ -165,7 +165,7 @@ class Parameter():
             'type': type(self),
             'settable': self.settable,
             'gettable': self.gettable,
-            'validator': self.validator,
+            'validator': repr(self.validator),
             'owner': str(self.owner),
         }
 
