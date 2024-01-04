@@ -1,5 +1,6 @@
 """Common implementations to treat composition of multiple processes"""
 
+from abc import abstractmethod
 from typing import (
     Any,
     Sequence,
@@ -234,6 +235,54 @@ class SwitchProcess(CompositeProcess):
         self._current = None
         self._decided = False
 
+class ProcessSweeper:
+    """
+    Abstract interface of any sweeper of process.
+
+    The derived sweepers must implement two methods:
+    - `reset()` --- reset sweeping loop
+    - `sweep(process)` --- perform sweeping, control process for the next
+        job or return false to terminate loop
+
+    Sweeper is callable and its direct call is equivalent to call its `sweep`
+    method.
+    """
+
+    @abstractmethod
+    def reset(self) -> None:
+        """Reset sweeping loop, need implementation"""
+        raise NotImplementedError
+
+    @abstractmethod
+    def sweep(self, process: Process) -> bool:
+        """Sweep process or return False to terminate, need implementation"""
+        raise NotImplementedError
+
+    def __call__(self, *args: Any) -> bool:
+        if len(args) > 0:
+            process = args[0]
+            if isinstance(process, Process):
+                rst = self.sweep(process)
+                return rst if isinstance(rst, bool) else True
+        raise RuntimeError('Must called with sweeping process')
+
+class WrappedSweeper(ProcessSweeper):
+    """Sweeper implementation by wrapping reset and sweep functions"""
+
+    def __init__(self, reset: Callable, sweep: Callable) -> None:
+        if not isinstance(reset, Callable):
+            raise TypeError(f'Reset must be callable: {type(reset)}')
+        self._reset = reset
+        if not isinstance(sweep, Callable):
+            raise TypeError(f'Sweep must be callable: {type(sweep)}')
+        self._sweep = sweep
+
+    def reset(self) -> None:
+        self._reset()
+
+    def sweep(self, process: Process) -> bool:
+        return self._sweep(process)
+
 class SweepProcess(Process):
     """
     A sweep loop with a loop body and a callable sweeper.
@@ -246,17 +295,25 @@ class SweepProcess(Process):
     True means continue, False means finished.
     """
 
-    def __init__(self, sweeper: Callable, body: Process,
+    def __init__(self, sweeper: ProcessSweeper, body: Process,
                  name: Optional[str] = None) -> None:
         super().__init__(name)
         if not isinstance(body, Process):
             raise TypeError(f'Sweep body must be a process: {type(body)}')
         self._body = body
-        if not isinstance(sweeper, Callable):
-            raise TypeError(f'Sweeper must be callable: {type(sweeper)}')
+        if not isinstance(sweeper, ProcessSweeper):
+            raise TypeError(f'Invalid sweeper: {type(sweeper)}')
         self._sweeper = sweeper
         self._in_loop = False
         self._finished = False
+
+    @property
+    def sweeper(self) -> ProcessSweeper:
+        return self._sweeper
+
+    @property
+    def child(self) -> Process:
+        return self._body
 
     def set_data_group(self, group: DataGroup) -> None:
         """Override to synchronize with sweep body"""
@@ -268,7 +325,7 @@ class SweepProcess(Process):
             return self._body.commit(scheduler)
         elif not self._finished:
             try:
-                decision = bool(self._sweeper(self.data_group, self._body))
+                decision = bool(self._sweeper(self._body))
             except Exception as e:
                 _logger.critical(f'Failed to call sweeper: {e}')
                 return False
@@ -298,6 +355,7 @@ class SweepProcess(Process):
 
     def reset(self) -> None:
         self._body.reset()
+        self._sweeper.reset()
         self._in_loop = False
         self._finished = False
 
@@ -316,7 +374,7 @@ if __name__ == '__main__':
             print(f'Hello {self.subject()}')
             await asyncio.sleep(1.0)
 
-    class SubjectSweeper:
+    class SubjectSweeper(ProcessSweeper):
         def __init__(self, subjects: Sequence[str] = []) -> None:
             self._subjects = list(subjects)
             self._index = 0
@@ -324,13 +382,28 @@ if __name__ == '__main__':
         def reset(self):
             self._index = 0
 
-        def __call__(self, _: DataGroup, proc: SaluteProcess) -> bool:
+        def sweep(self, proc: SaluteProcess) -> bool:
             if self._index < len(self._subjects):
                 proc.subject(self._subjects[self._index])
                 self._index += 1
                 return True
             else:
                 return False
+
+    sweep_index = 0
+
+    def reset_sweep():
+        global sweep_index
+        sweep_index = 0
+
+    def perform_sweep(proc: SaluteProcess) -> bool:
+        global sweep_index
+        if sweep_index < len(names):
+            proc.subject(names[sweep_index])
+            sweep_index += 1
+            return True
+        else:
+            return False
 
     sch = get_scheduler()
     sch.start()
@@ -360,3 +433,12 @@ if __name__ == '__main__':
         SubjectSweeper(names), SaluteProcess('salute'), 'sweep')
     print(f'Create sweep process: {sweep.snapshot()}')
     run_process(sweep, sch)
+
+    print('Use wrapped sweeper')
+    wrapped_sweep = SweepProcess(
+        WrappedSweeper(reset_sweep, perform_sweep),
+        SaluteProcess('salute'),
+        'wrapped_sweeper'
+    )
+    print(f'Create wrapped sweep process: {wrapped_sweep.snapshot()}')
+    run_process(wrapped_sweep, sch)

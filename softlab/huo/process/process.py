@@ -89,6 +89,10 @@ class Process(Delegated):
             raise ValueError(f'Already has the attribute with key "{key}"')
         self._attributes[key] = LimitedAttribute(vals, initial_value)
 
+    def attribute(self, key: str) -> Optional[LimitedAttribute]:
+        """Get attribute with given key"""
+        return self._attributes.get(str(key), None)
+
     @abstractmethod
     def commit(self, scheduler: Scheduler) -> bool:
         """Commit actions into scheduler"""
