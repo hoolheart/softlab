@@ -3,6 +3,7 @@ from typing import (
     Any,
     Dict,
     Optional,
+    Callable,
     Tuple,
     Optional,
     Sequence,
@@ -13,7 +14,6 @@ from datetime import datetime
 from softlab.huo.process.process import Process
 from softlab.huo.process.simple import SimpleProcess
 from softlab.huo.process.composite import (
-    ProcessSweeper,
     SweepProcess,
     WrappedSweeper,
 )
@@ -32,14 +32,121 @@ from softlab.jin.misc import LimitedAttribute
 ParameterSet = Union[Sequence[Parameter],
                      Dict[str, Parameter],
                      Sequence[Tuple[str, Parameter]]]
+"""Possible type union to define a parameter set"""
 
 SetterSeq = Sequence[Tuple[str, Parameter, Any]]
+"""
+Sequence type of setter info, each info is a tuple with 3 elements:
+- key, corresponding column name in DataRecord
+- parameter to set
+- value to set to the parameter
+"""
 
 GetterSeq = Sequence[Tuple[str, Parameter]]
+"""
+Sequence type of getter info, each info is a tuple with 2 element:
+- key, corresponding column name in DataRecord
+- parameter to get
+"""
 
 ValueDict = Dict[str, Any]
+"""Dictionary type of setter key and setter value"""
+
+
+def parse_getters(getters: ParameterSet) -> GetterSeq:
+    """Parse any possible parameter set into a getter info sequence"""
+    if isinstance(getters, Sequence) and len(getters) > 0:
+        if isinstance(getters[0], Tuple):
+            return getters
+        return list(map(lambda para: (para.name, para), getters))
+    elif isinstance(getters, Dict):
+        return getters.items()
+    return []
+
+
+def parse_setters(setters: ParameterSet) -> SetterSeq:
+    """Parse any possible parameter set into a setter info sequence"""
+    if isinstance(setters, Sequence) and len(setters) > 0:
+        if isinstance(setters[0], Tuple):
+            return list(map(
+                lambda pair: (pair[0], pair[1], pair[1]()), setters))
+        return list(map(
+            lambda para: (para.name, para, para()), setters))
+    elif isinstance(setters, Dict):
+        return list(map(
+            lambda pair: (pair[0], pair[1], pair[1]()), setters.items()))
+    return []
+
+
+def parse_setters_with_values(
+        setters: ParameterSet, values: ValueDict) -> SetterSeq:
+    """
+    Parse any possible parameter set and given dictionary of values
+    into a setter info sequence
+    """
+    if isinstance(setters, Sequence) and len(setters) > 0:
+        if isinstance(setters[0], Tuple):
+            return list(map(
+                lambda pair: (
+                    pair[0], pair[1],
+                    values[pair[0]] if pair[0] in values else pair[1]()),
+                setters))
+        return list(map(
+            lambda para: (
+                para.name,
+                para,
+                values[para.name] if para.name in values else para()),
+            setters))
+    elif isinstance(setters, Dict):
+        return list(map(
+            lambda pair: (pair[0],
+                          pair[1],
+                          values[pair[0]] if pair[0] in values else pair[1]()),
+            setters.items()))
+    return []
+
 
 class AtomJob(SimpleProcess):
+    """
+    Atom job with one time of setting and getting of given parameters.
+
+    The job is defined by sequence of setter info tuples and getter info tuples,
+    they must be given at initialziation.
+
+    Each setter corresponds an attribute of job. Such attribute uses key of
+    setter as name and shares the same validator of parameter of setter. The
+    value of such attribute will be given to the setting parameter at the
+    setting phase.
+
+    Three delays can be controlled in initialization and
+    treat as attributes as well:
+    - delay_begin --- delay before all setting and getting
+    - delay_after_set --- delay after setting action, ignored if no setting
+    - delay_end --- delay after all setting and getting
+
+    Every atom job can be given a DataRecord or use `prepare_record` method
+    to generate such DataRecord to record actions. The DataRecord is composed
+    by three parts:
+    - timestamp of action, after delay of beginning
+    - values to set, column names are keys of setters
+    - values got, column names are keys of getters
+
+    `t0` attribute is used to control timestamp of record, which will be
+    calculated by utc time minus t0 value.
+
+    Units of t0, record timestamps and all delays are second.
+
+    Three important properties:
+    - setters --- dictionary of key and parameter of setters, read-only
+    - getters --- dictionary of key and parameter of getters, read-only
+    - record --- DataRecord to record data
+
+    Users can also define hooks before or after setting and getting. The hook
+    functions are given at initialization.
+
+    Another important attribute is `is_dryrun`. When it is True, the job
+    only performs begin and end delays without any setting, getting or record.
+    """
 
     def __init__(self,
                  setters: SetterSeq = [],
@@ -47,6 +154,10 @@ class AtomJob(SimpleProcess):
                  delay_begin: float = 0.0,
                  delay_after_set: float = 0.0,
                  delay_end: float = 0.0,
+                 hook_before_set: Optional[Callable] = None,
+                 hook_after_set: Optional[Callable] = None,
+                 hook_before_get: Optional[Callable] = None,
+                 hook_after_get: Optional[Callable] = None,
                  name: Optional[str] = None) -> None:
         super().__init__(name)
         self.add_attribute('t0', ValNumber(), 0.0)
@@ -60,7 +171,8 @@ class AtomJob(SimpleProcess):
             delay_end = 0.0
         self.add_attribute('delay_end', ValNumber(0.0), delay_end)
         self.add_attribute('is_dryrun', ValType(bool), False)
-        self._columns = [{'name': 'timestamp', 'unit': 's', 'dependent': False}]
+        self._columns = [{'name': 'timestamp',
+                          'unit': 's', 'dependent': False}]
         self._setters: Dict[str, Parameter] = {}
         if isinstance(setters, Sequence):
             for setter in setters:
@@ -80,7 +192,7 @@ class AtomJob(SimpleProcess):
             for getter in getters:
                 if isinstance(getter, Tuple) and len(getter) == 2:
                     key = str(getter[0])
-                    para = setter[1]
+                    para = getter[1]
                     if len(key) > 0 and isinstance(para, Parameter):
                         self._getters[key] = para
                         self._columns.append({
@@ -88,17 +200,28 @@ class AtomJob(SimpleProcess):
                             'dependent': True,
                         })
         self._record: Optional[DataRecord] = None
+        self._hook_before_set = hook_before_set \
+            if isinstance(hook_before_set, Callable) else None
+        self._hook_after_set = hook_after_set \
+            if isinstance(hook_after_set, Callable) else None
+        self._hook_before_get = hook_before_get \
+            if isinstance(hook_before_get, Callable) else None
+        self._hook_after_get = hook_after_get \
+            if isinstance(hook_after_get, Callable) else None
 
     @property
     def setters(self) -> Dict[str, Parameter]:
+        """Dictionary of key and parameter of setters, read-only"""
         return self._setters
 
     @property
     def getters(self) -> Dict[str, Parameter]:
+        """Dictionary of key and parameter of getters, read-only"""
         return self._getters
 
     @property
     def record(self) -> Optional[DataRecord]:
+        """DataRecord to record data"""
         return self._record
 
     @record.setter
@@ -112,6 +235,13 @@ class AtomJob(SimpleProcess):
         self._record = record
 
     def prepare_record(self, record_name: str, rebuild: bool = False) -> None:
+        """
+        Prepare record with given name
+
+        New record is built only when current record is None or `rebuild` flag
+        is True, if the data group has been given, the new generated record
+        will be add to group automatically.
+        """
         if self._record is None or rebuild:
             self._record = DataRecord(record_name, self._columns)
             if isinstance(self.data_group, DataGroup):
@@ -124,23 +254,49 @@ class AtomJob(SimpleProcess):
         values = {'timestamp': datetime.now().timestamp() - self.t0()}
         dryrun = self.is_dryrun()
         if len(self._setters) > 0 and not dryrun:
+            if isinstance(self._hook_before_set, Callable):
+                self._hook_before_set()
             for key, para in self._setters.items():
                 attr = self.attribute(key)
                 para(attr())
                 values[key] = attr()
+            if isinstance(self._hook_after_set, Callable):
+                self._hook_after_set()
             delay = self.delay_after_set()
             if delay > 0.0:
                 await asyncio.sleep(delay)
         if len(self._getters) > 0 and not dryrun:
+            if isinstance(self._hook_before_get, Callable):
+                self._hook_before_get()
             for key, para in self._getters.items():
                 values[key] = para()
+            if isinstance(self._hook_after_get, Callable):
+                self._hook_after_get()
         if isinstance(self._record, DataRecord) and not dryrun:
             self._record.add_rows(values)
         delay = self.delay_end()
         if delay > 0.0:
             await asyncio.sleep(delay)
 
+
 class AtomJobSweeper(SweepProcess):
+    """
+    Abstract sweeper of an atom job
+
+    The parameters to initialize an atom job are given at initialization,
+    such as `setters`, `getters` and `delay_after_set`. Note that, `delay_begin`
+    and `delay_end` don't corresponds to the delays with same names in atom job.
+    They, along with `delay_gap`, are used to control the whole sweep.
+
+    The sweeping process is controlled by `reset_sweep` and `adapt` methods,
+    which must be implemented in derived classes.
+
+    The atom job can be accessed by `child` property and its `setters`,
+    `getters` and `record` properites are all proxied by the sweeper.
+
+    Whether the sweeping procedure is ongoing is reflected by
+    `sweeping` property.
+    """
 
     def __init__(self,
                  setters: SetterSeq = [],
@@ -149,14 +305,24 @@ class AtomJobSweeper(SweepProcess):
                  delay_after_set: float = 0.0,
                  delay_gap: float = 0.0,
                  delay_end: float = 0.0,
+                 hook_before_set: Optional[Callable] = None,
+                 hook_after_set: Optional[Callable] = None,
+                 hook_before_get: Optional[Callable] = None,
+                 hook_after_get: Optional[Callable] = None,
                  name: Optional[str] = None) -> None:
+        job_name: Optional[str] = None
+        if isinstance(name, str) and len(name) > 0:
+            job_name = f'{name}_job'
         super().__init__(
-            WrappedSweeper(self.reset_sweep, self.perform_sweep),
+            WrappedSweeper(self._reset_sweep, self._perform_sweep),
             AtomJob(setters,
                     getters,
                     delay_after_set=delay_after_set,
-                    name=f'{name}_job' if isinstance(name, str) and \
-                        len(name) > 0 else None),
+                    hook_before_set=hook_before_set,
+                    hook_after_set=hook_after_set,
+                    hook_before_get=hook_before_get,
+                    hook_after_get=hook_after_get,
+                    name=job_name),
             name,
         )
         self.add_attribute('t0', ValNumber(), 0.0)
@@ -176,10 +342,22 @@ class AtomJobSweeper(SweepProcess):
 
     @property
     def sweeping(self) -> bool:
+        """Whether the sweeping procedure is ongoing"""
         return self._sweeping
 
     @property
+    def setters(self) -> Dict[str, Parameter]:
+        """Dictionary of key and parameter of setters, read-only"""
+        return self.child._setters
+
+    @property
+    def getters(self) -> Dict[str, Parameter]:
+        """Dictionary of key and parameter of getters, read-only"""
+        return self.child._getters
+
+    @property
     def record(self) -> Optional[DataRecord]:
+        """DataRecord to record data"""
         return self.child._record
 
     @record.setter
@@ -187,29 +365,41 @@ class AtomJobSweeper(SweepProcess):
         self.child._record = record
 
     def prepare_record(self, record_name: str, rebuild: bool = False) -> None:
+        """
+        Prepare record with given name
+
+        New record is built only when current record is None or `rebuild` flag
+        is True, if the data group has been given, the new generated record
+        will be add to group automatically.
+        """
         self.child.prepare_record(record_name, rebuild)
 
     @abstractmethod
-    def reset(self) -> None:
+    def reset_sweep(self) -> None:
+        """Reset sweeping, need implementation"""
         raise NotImplementedError
 
     @abstractmethod
-    def adaptive(self, record: Optional[DataRecord]) -> ValueDict:
+    def adapt(self, record: Optional[DataRecord]) -> ValueDict:
+        """
+        Adapt values of setters, return empty dictionary if sweeping ends,
+        need implementation
+        """
         raise NotImplementedError
 
-    def reset_sweep(self) -> None:
+    def _reset_sweep(self) -> None:
         self.child.t0(self.t0())
         self.child.delay_begin(self.delay_begin())
         self.child.delay_after_set(self.delay_after_set())
         self.child.delay_end(0.0)
         self.child.is_dryrun(False)
         self._sweeping = False
-        self.reset()
+        self.reset_sweep()
 
-    def perform_sweep(self, job: AtomJob) -> bool:
+    def _perform_sweep(self, job: AtomJob) -> bool:
         if job.is_dryrun():
             return False
-        values = self.adaptive(job.record)
+        values = self.adapt(job.record)
         if len(values) > 0:
             for key, value in values.items():
                 attr = job.attribute(key)
@@ -225,46 +415,6 @@ class AtomJobSweeper(SweepProcess):
             job.is_dryrun(True)
         return True
 
-def parse_getters(getters: ParameterSet) -> GetterSeq:
-    if isinstance(getters, Sequence) and len(getters) > 0:
-        if isinstance(getters[0], Tuple):
-            return getters
-        return list(map(lambda para: (para.name, para), getters))
-    elif isinstance(getters, Dict):
-        return getters.items()
-    return []
-
-def parse_setters(setters: ParameterSet) -> SetterSeq:
-    if isinstance(setters, Sequence) and len(setters) > 0:
-        if isinstance(setters[0], Tuple):
-            return list(map(lambda key, para: (key, para, para()), setters))
-        return list(map(lambda para: (para.name, para, para()), setters))
-    elif isinstance(setters, Dict):
-        return list(map(lambda key, para: (key, para, para()), setters.items()))
-    return []
-
-def parse_setters_with_values(
-        setters: ParameterSet, values: ValueDict) -> SetterSeq:
-    if isinstance(setters, Sequence) and len(setters) > 0:
-        if isinstance(setters[0], Tuple):
-            return list(map(
-                lambda key, para: (key,
-                                   para,
-                                   values[key] if key in values else para()),
-                setters))
-        return list(map(
-            lambda para: (
-                para.name,
-                para,
-                values[para.name] if para.name in values else para()),
-            setters))
-    elif isinstance(setters, Dict):
-        return list(map(
-            lambda key, para: (key,
-                               para,
-                               values[key] if key in values else para()),
-            setters.items()))
-    return []
 
 class Counter(AtomJobSweeper):
 
@@ -274,11 +424,15 @@ class Counter(AtomJobSweeper):
                  delay_begin: float = 0,
                  delay_gap: float = 0,
                  delay_end: float = 0,
+                 hook_before_get: Optional[Callable] = None,
+                 hook_after_get: Optional[Callable] = None,
                  name: Optional[str] = None) -> None:
         super().__init__(getters=parse_getters(getters),
                          delay_begin=delay_begin,
                          delay_gap=delay_gap,
                          delay_end=delay_end,
+                         hook_before_get=hook_before_get,
+                         hook_after_get=hook_after_get,
                          name=name)
         if len(self.child.getters) < 1:
             raise ValueError('No getter in count process')
@@ -293,15 +447,43 @@ class Counter(AtomJobSweeper):
     def index(self) -> int:
         return self._index
 
-    def reset(self) -> None:
+    def reset_sweep(self) -> None:
         self._index = 0
 
-    def adaptive(self, _: Optional[DataRecord]) -> ValueDict:
+    def adapt(self, _: Optional[DataRecord]) -> ValueDict:
         if self._index < self.times():
             self._index += 1
             return {'running': True}
         else:
             return {}
+
+
+def count(name: Optional[str] = None,
+          group: Optional[DataGroup] = None,
+          record: Optional[DataRecord] = None,
+          *args, **kwargs) -> Process:
+    if 'getters' in kwargs:
+        proc = Counter(name=name, **kwargs)
+    else:
+        getters: list = []
+        key: str = ''
+        for arg in args:
+            if isinstance(arg, Parameter):
+                if len(key) > 0:
+                    getters.append((key, arg))
+                else:
+                    getters.append((arg.name, arg))
+                key = ''
+            elif isinstance(arg, str) and len(key) == 0:
+                key = arg
+            else:
+                raise ValueError(f'Invalid argument: {arg}')
+        proc = Counter(name=name, getters=getters, **kwargs)
+    _assign_group_and_record(
+        proc, group, record,
+        name if isinstance(name, str) and len(name) > 0 else 'count')
+    return proc
+
 
 class Scanner(AtomJobSweeper):
 
@@ -313,6 +495,10 @@ class Scanner(AtomJobSweeper):
                  delay_after_set: float = 0,
                  delay_gap: float = 0,
                  delay_end: float = 0,
+                 hook_before_set: Optional[Callable] = None,
+                 hook_after_set: Optional[Callable] = None,
+                 hook_before_get: Optional[Callable] = None,
+                 hook_after_get: Optional[Callable] = None,
                  name: Optional[str] = None) -> None:
         super().__init__(parse_setters_with_values(setters, values[0]),
                          parse_getters(getters),
@@ -320,6 +506,10 @@ class Scanner(AtomJobSweeper):
                          delay_after_set,
                          delay_gap,
                          delay_end,
+                         hook_before_set,
+                         hook_after_set,
+                         hook_before_get,
+                         hook_after_get,
                          name)
         self._values = values
         self._index = 0
@@ -342,15 +532,61 @@ class Scanner(AtomJobSweeper):
     def __len__(self) -> int:
         return len(self._values)
 
-    def reset(self) -> None:
+    def reset_sweep(self) -> None:
         self._index = 0
 
-    def adaptive(self, _: Optional[DataRecord]) -> ValueDict:
+    def adapt(self, _: Optional[DataRecord]) -> ValueDict:
         if self._index < len(self._values):
             self._index += 1
             return self._values[self._index - 1]
         else:
             return {}
+
+
+def scan(name: Optional[str] = None,
+         getters: ParameterSet = [],
+         group: Optional[DataGroup] = None,
+         record: Optional[DataRecord] = None,
+         *args, **kwargs) -> Process:
+    if 'setters' in kwargs and 'values' in kwargs:
+        proc = Scanner(name=name, getters=getters, **kwargs)
+    else:
+        key: str = ''
+        para: Optional[Parameter] = None
+        setters: list = []
+        values: list = []
+        count = 0
+        for arg in args:
+            if isinstance(arg, str) and len(key) == 0:
+                key = arg
+            elif isinstance(arg, Parameter) and para is None:
+                para = arg
+                if len(key) == 0:
+                    key = arg.name
+            elif isinstance(arg, Sequence) and isinstance(para, Parameter):
+                if len(arg) == 0:
+                    raise ValueError(f'Empty value sequence for {key}')
+                elif count > 0 and len(arg) != count:
+                    raise ValueError(
+                        f'Value count {arg} of {key} doesn\'t match {count}')
+                if count == 0:
+                    count = len(arg)
+                    values = [{} for _ in range(count)]
+                setters.append((key, para))
+                for i in range(count):
+                    values[i][key] = arg[i]
+                key = ''
+                para = None
+            else:
+                raise ValueError('Invalid setting of setters')
+        if count == 0:
+            raise ValueError('No setter info')
+        proc = Scanner(setters, values, getters, name=name, **kwargs)
+    _assign_group_and_record(
+        proc, group, record,
+        name if isinstance(name, str) and len(name) > 0 else 'scan')
+    return proc
+
 
 class GridScanner(AtomJobSweeper):
 
@@ -362,6 +598,10 @@ class GridScanner(AtomJobSweeper):
                  delay_after_set: float = 0,
                  delay_gap: float = 0,
                  delay_end: float = 0,
+                 hook_before_set: Optional[Callable] = None,
+                 hook_after_set: Optional[Callable] = None,
+                 hook_before_get: Optional[Callable] = None,
+                 hook_after_get: Optional[Callable] = None,
                  name: Optional[str] = None) -> None:
         super().__init__(
             parse_setters_with_values(setters, dict(map(
@@ -372,6 +612,10 @@ class GridScanner(AtomJobSweeper):
             delay_after_set,
             delay_gap,
             delay_end,
+            hook_before_set,
+            hook_after_set,
+            hook_before_get,
+            hook_after_get,
             name)
         if not GridScanner._check_grid(values):
             raise ValueError('Empty value grid to scan')
@@ -398,11 +642,11 @@ class GridScanner(AtomJobSweeper):
     def index(self) -> Tuple[int]:
         return tuple(self._index[:-1])
 
-    def reset(self) -> None:
+    def reset_sweep(self) -> None:
         for i in range(len(self._index)):
             self._index[i] = 0
 
-    def adaptive(self, _: Optional[DataRecord]) -> ValueDict:
+    def adapt(self, _: Optional[DataRecord]) -> ValueDict:
         if self._index[-1] == 0:
             values: ValueDict = {}
             for i in range(len(self._grid)):
@@ -426,3 +670,49 @@ class GridScanner(AtomJobSweeper):
                    not isinstance(e[1], Sequence) or len(e[1]) == 0:
                     return False
         return True
+
+
+def grid_scan(name: Optional[str] = None,
+              getters: ParameterSet = [],
+              group: Optional[DataGroup] = None,
+              record: Optional[DataRecord] = None,
+              *args, **kwargs) -> Process:
+    key: str = ''
+    para: Optional[Parameter] = None
+    setters: list = []
+    values: list = []
+    for arg in args:
+        if isinstance(arg, str) and len(key) == 0:
+            key = arg
+        elif isinstance(arg, Parameter) and para is None:
+            para = arg
+            if len(key) == 0:
+                key = arg.name
+        elif isinstance(arg, Sequence) and isinstance(para, Parameter):
+            if len(arg) == 0:
+                raise ValueError(f'Empty value sequence for {key}')
+            setters.append((key, para))
+            values.append((key, arg))
+            key = ''
+            para = None
+        else:
+            raise ValueError('Invalid setting of setters')
+    if len(setters) == 0:
+        raise ValueError('No setter info')
+    proc = GridScanner(setters, values, getters, name=name, **kwargs)
+    _assign_group_and_record(
+        proc, group, record,
+        name if isinstance(name, str) and len(name) > 0 else 'grid_scan')
+    return proc
+
+
+def _assign_group_and_record(proc: AtomJobSweeper,
+                             group: Optional[DataGroup] = None,
+                             record: Optional[DataRecord] = None,
+                             record_name: str = 'sweeper'):
+    if isinstance(group, DataGroup):
+        proc.data_group = group
+    if isinstance(record, DataRecord):
+        proc.record = record
+    else:
+        proc.prepare_record(record_name)

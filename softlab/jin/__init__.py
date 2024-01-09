@@ -5,4 +5,5 @@ from softlab.jin import (
     validator,
     sp,
     dp,
+    vis,
 )
