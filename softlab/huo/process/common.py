@@ -238,7 +238,7 @@ class AtomJob(SimpleProcess):
         """
         Prepare record with given name
 
-        New record is built only when current record is None or `rebuild` flag
+        New record is built only when current record is None or "rebuild" flag
         is True, if the data group has been given, the new generated record
         will be add to group automatically.
         """
@@ -283,19 +283,33 @@ class AtomJobSweeper(SweepProcess):
     """
     Abstract sweeper of an atom job
 
-    The parameters to initialize an atom job are given at initialization,
-    such as `setters`, `getters` and `delay_after_set`. Note that, `delay_begin`
-    and `delay_end` don't corresponds to the delays with same names in atom job.
-    They, along with `delay_gap`, are used to control the whole sweep.
+    The parameters to initialize an atom job and to control sweeping process
+    are given at initialization:
+    - setters --- sequence of setter info
+    - getters --- sequence of getter info
+    - delay_begin --- delay time before the whole process
+    - delay_after_set --- delay time after each setting, ignored if no setting
+    - delay_gap --- delay time between two executions of job
+    - delay_end --- delay time after the whole process
+    - hook_before_set --- hook function before setting, ignored if no setting
+    - hook_after_set --- hook function after setting, ignored if no setting
+    - hook_before_get --- hook function before getting, ignored if no getting
+    - hook_after_get --- hook function after getting, ignored if no getting
+    - name --- optional process name
 
-    The sweeping process is controlled by `reset_sweep` and `adapt` methods,
+    Note that, "delay_begin" and "delay_end" don't corresponds to the delays
+    with same names in atom job. They, along with "delay_gap", are used to
+    control the whole sweep.
+
+    The sweeping process is controlled by ``reset_sweep`` and ``adapt`` methods,
     which must be implemented in derived classes.
 
-    The atom job can be accessed by `child` property and its `setters`,
-    `getters` and `record` properites are all proxied by the sweeper.
+    The atom job can be accessed by ``child`` property and its ``setters``,
+    ``getters`` and ``record`` properites can also be directly accessed via
+    sweeper itself.
 
-    Whether the sweeping procedure is ongoing is reflected by
-    `sweeping` property.
+    Another property is the boolean variable ``sweeping`` indicating
+    whether the sweeping procedure is ongoing.
     """
 
     def __init__(self,
@@ -368,7 +382,7 @@ class AtomJobSweeper(SweepProcess):
         """
         Prepare record with given name
 
-        New record is built only when current record is None or `rebuild` flag
+        New record is built only when current record is None or "rebuild" flag
         is True, if the data group has been given, the new generated record
         will be add to group automatically.
         """
@@ -398,6 +412,7 @@ class AtomJobSweeper(SweepProcess):
 
     def _perform_sweep(self, job: AtomJob) -> bool:
         if job.is_dryrun():
+            self._sweeping = False
             return False
         values = self.adapt(job.record)
         if len(values) > 0:
@@ -417,6 +432,24 @@ class AtomJobSweeper(SweepProcess):
 
 
 class Counter(AtomJobSweeper):
+    """
+    A counter measures given parameters given times and records result
+    if record property is set.
+
+    Arguments:
+    - getters --- sequence of getter info, non-empty
+    - times --- measure times, at least 1
+    - delay_begin --- delay time before the whole process
+    - delay_gap --- delay time between two measurements
+    - delay_end --- delay time after the whole process
+    - hook_before_get --- hook function before getting
+    - hook_after_get --- hook function after getting
+    - name --- optional process name
+
+    ``times`` can also be accessed and modified after initialization as an
+    attribute of counter. The property ``index`` indicates current index of
+    counting, 0 (not begin) ~ times (last one has been triggered).
+    """
 
     def __init__(self,
                  getters: ParameterSet,
@@ -445,6 +478,7 @@ class Counter(AtomJobSweeper):
 
     @property
     def index(self) -> int:
+        """Current index of counting"""
         return self._index
 
     def reset_sweep(self) -> None:
@@ -462,6 +496,19 @@ def count(name: Optional[str] = None,
           group: Optional[DataGroup] = None,
           record: Optional[DataRecord] = None,
           *args, **kwargs) -> Process:
+    """
+    Convinent function to generate a counter process
+
+    Arguments are split into 3 parts:
+    - Optional process name, using data group and data record, if record is
+      None, the function will let the process to prepare itself.
+    - Non-keyword arguments to put any parameters to count, following
+      key-parameter pattern, where key can be ignored, such as
+      <key1>, <parameter1>, <parameter2>, ...
+    - Keyword arguments to pass other necessary parameter of ``Counter``, such
+      as "times", "delay_begin", "delay_gap", "delay_end", "hook_before_get" and
+      "hook_after_get".
+    """
     if 'getters' in kwargs:
         proc = Counter(name=name, **kwargs)
     else:
@@ -486,6 +533,28 @@ def count(name: Optional[str] = None,
 
 
 class Scanner(AtomJobSweeper):
+    """
+    A scanner sweeps setters through given values and measures getters after
+    each setting, recording both setting and getting if record property is set.
+
+    Arguments:
+    - setters --- sequence of setter info, non-empty
+    - values --- sequence of values to sweep, matching setters, non-empty
+    - getters --- sequence of getter info
+    - delay_begin --- delay time before the whole process
+    - delay_after_set --- delay time after each setting
+    - delay_gap --- delay time between two executions of job
+    - delay_end --- delay time after the whole process
+    - hook_before_set --- hook function before setting
+    - hook_after_set --- hook function after setting
+    - hook_before_get --- hook function before getting, ignored if no getting
+    - hook_after_get --- hook function after getting, ignored if no getting
+    - name --- optional process name
+
+    ``values`` can also be accessed and modified after initialization as a
+    property. The total times of sweeping can be got as length of scanner and
+    the property ``index`` indicates current index of scanning.
+    """
 
     def __init__(self,
                  setters: ParameterSet,
@@ -516,6 +585,7 @@ class Scanner(AtomJobSweeper):
 
     @property
     def values(self) -> Sequence[ValueDict]:
+        """Sequence of values to sweep, matching setters, non-empty"""
         return self._values
 
     @values.setter
@@ -527,9 +597,11 @@ class Scanner(AtomJobSweeper):
 
     @property
     def index(self) -> int:
+        """Current index of scanning"""
         return self._index
 
     def __len__(self) -> int:
+        """Total times to scan"""
         return len(self._values)
 
     def reset_sweep(self) -> None:
@@ -548,6 +620,23 @@ def scan(name: Optional[str] = None,
          group: Optional[DataGroup] = None,
          record: Optional[DataRecord] = None,
          *args, **kwargs) -> Process:
+    """
+    Convinent function to generate a scanner process
+
+    Arguments are split into 3 parts:
+    - Optional process name, sequence of getter info, using data group and
+      data record, if record is None, the function will let the process to
+      prepare itself.
+    - Non-keyword arguments to put any parameters to scan, following
+      key-parameter-values pattern, where key can be ignored, such as
+      <key1>, <parameter1>, <values1>, <parameter2>, <values2> ... Note that
+      every "values" is a non-empty sequence and all values must have the
+      same size.
+    - Keyword arguments to pass other necessary parameter of ``Scanner``, such
+      as "delay_begin", "delay_after_set", "delay_gap", "delay_end",
+      "hook_before_set", "hook_after_set", "hook_before_get" and
+      "hook_after_get".
+    """
     if 'setters' in kwargs and 'values' in kwargs:
         proc = Scanner(name=name, getters=getters, **kwargs)
     else:
@@ -589,10 +678,38 @@ def scan(name: Optional[str] = None,
 
 
 class GridScanner(AtomJobSweeper):
+    """
+    A grid scanner sweeps setters through any combination of given values
+    and measures getters after each setting, recording both setting and getting
+    if record property is set.
+
+    Arguments:
+    - setters --- sequence of setter info, non-empty
+    - grid --- sequence of key-values tuples, matching setters, non-empty
+    - getters --- sequence of getter info
+    - delay_begin --- delay time before the whole process
+    - delay_after_set --- delay time after each setting
+    - delay_gap --- delay time between two executions of job
+    - delay_end --- delay time after the whole process
+    - hook_before_set --- hook function before setting
+    - hook_after_set --- hook function after setting
+    - hook_before_get --- hook function before getting, ignored if no getting
+    - hook_after_get --- hook function after getting, ignored if no getting
+    - name --- optional process name
+
+    The value sequence of each setter can has different but non-zero size.
+    The whole scanning can be measured as a tuple of sizes of all values.
+    Such tuple can be accessed by read-only property ``shape`` and current
+    scanning step is indicated by read-only property ``index``, which is also a
+    tuple with the same size of ``shape``.
+
+    ``grid`` can also be accessed and modified after initialization as a
+    property.
+    """
 
     def __init__(self,
                  setters: ParameterSet,
-                 values: Sequence[Tuple[str, Sequence[Any]]],
+                 grid: Sequence[Tuple[str, Sequence[Any]]],
                  getters: ParameterSet = [],
                  delay_begin: float = 0,
                  delay_after_set: float = 0,
@@ -605,7 +722,7 @@ class GridScanner(AtomJobSweeper):
                  name: Optional[str] = None) -> None:
         super().__init__(
             parse_setters_with_values(setters, dict(map(
-                lambda key, seq: (key, seq[0]), values
+                lambda pair: (pair[0], pair[1][0]), grid
             ))),
             parse_getters(getters),
             delay_begin,
@@ -617,29 +734,32 @@ class GridScanner(AtomJobSweeper):
             hook_before_get,
             hook_after_get,
             name)
-        if not GridScanner._check_grid(values):
+        if not GridScanner._check_grid(grid):
             raise ValueError('Empty value grid to scan')
-        self._grid = values
-        self._shape = tuple(map(lambda _, seq: len(seq), values))
-        self._index = [0] * (len(values) + 1)
+        self._grid = grid
+        self._shape = tuple(map(lambda pair: len(pair[1]), grid))
+        self._index = [0] * (len(grid) + 1)
 
     @property
     def grid(self) -> Sequence[Tuple[str, Sequence[Any]]]:
+        """Sequence of key-values tuples, matching setters, non-empty"""
         return self._grid
 
     @grid.setter
     def grid(self, values: Sequence[Tuple[str, Sequence[Any]]]) -> None:
         if not self.sweeping and GridScanner._check_grid(values):
             self._grid = values
-            self._shape = tuple(map(lambda _, seq: len(seq), values))
+            self._shape = tuple(map(lambda pair: len(pair[1]), values))
             self._index = [0] * (len(values) + 1)
 
     @property
     def shape(self) -> Tuple[int]:
+        """Tuple of sizes of all values"""
         return self._shape
 
     @property
     def index(self) -> Tuple[int]:
+        """Current scanning step, tuple with the same size of `shape`"""
         return tuple(self._index[:-1])
 
     def reset_sweep(self) -> None:
@@ -653,7 +773,9 @@ class GridScanner(AtomJobSweeper):
                 values[self._grid[i][0]] = self.grid[i][1][self._index[i]]
             for i in range(len(self._index)):
                 self._index[i] += 1
-                if self._index[i] < self._shape[i]:
+                if i >= len(self._shape):
+                    break
+                elif self._index[i] < self._shape[i]:
                     break
                 self._index[i] = 0
             return values
@@ -677,6 +799,26 @@ def grid_scan(name: Optional[str] = None,
               group: Optional[DataGroup] = None,
               record: Optional[DataRecord] = None,
               *args, **kwargs) -> Process:
+    """
+    Convinent function to generate a grid scanner process
+
+    Arguments are split into 3 parts:
+    - Optional process name, sequence of getter info, using data group and
+      data record, if record is None, the function will let the process to
+      prepare itself.
+    - Non-keyword arguments to put any parameters to scan, following
+      key-parameter-values pattern, where key can be ignored, such as
+      <key1>, <parameter1>, <values1>, <parameter2>, <values2> ... Note that
+      every "values" is a non-empty sequence and they can have different sizes.
+    - Keyword arguments to pass other necessary parameter of ``GridScanner``,
+      such as "delay_begin", "delay_after_set", "delay_gap", "delay_end",
+      "hook_before_set", "hook_after_set", "hook_before_get" and
+      "hook_after_get".
+
+    Note that "values" in non-keyword arguments should be Sequence type, if the
+    users create them by using numpy ndarrays, should transform them into lists
+    first (call ``tolist()``).
+    """
     key: str = ''
     para: Optional[Parameter] = None
     setters: list = []
