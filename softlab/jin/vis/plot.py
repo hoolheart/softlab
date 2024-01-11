@@ -1,11 +1,8 @@
 from typing import (
-    Any,
     Optional,
     Sequence,
     Tuple,
-    Dict,
 )
-import pandas as pd
 import matplotlib.pylab as plt
 from matplotlib.figure import Figure
 from softlab.shui.data import DataRecord
