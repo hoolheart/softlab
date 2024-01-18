@@ -11,7 +11,7 @@ import os
 import logging
 import json
 from datetime import datetime
-from softlab.shui.profile.backend.base import ProfileBackend
+from softlab.shui.profile.backend import ProfileBackend
 from softlab.shui.profile.base import (
     Profile,
     ProfileItem,

@@ -12,15 +12,15 @@ from datetime import datetime
 import uuid
 from softlab.shui import DatabaseBackend
 from softlab.shui.profile.base import Profile
-from softlab.shui.profile.backend.base import ProfileBackend
-from softlab.shui.profile.backend.getter import get_profile_backend
+from softlab.shui.profile.backend import ProfileBackend
+from softlab.shui.profile.io import get_profile_backend
 
 _logger = logging.getLogger(__name__)
 
 class ProfileInfo:
     """
     Information of a profile
-    
+
     Properties:
     - profile_id -- ID of profile
     - name -- readable name

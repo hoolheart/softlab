@@ -8,7 +8,7 @@ from typing import (
     Sequence,
     Dict,
 )
-from softlab.shui.profile.backend.base import ProfileBackend
+from softlab.shui.profile.backend import ProfileBackend
 from softlab.shui.profile.base import Profile
 
 _profiles: Dict[str, Profile] = {}

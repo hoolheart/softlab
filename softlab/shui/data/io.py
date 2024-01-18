@@ -8,18 +8,74 @@ from typing import (
     Optional,
     Sequence,
 )
+import logging
 from softlab.shui.data.base import (
     DataGroup,
     DataRecord,
     DataChart,
 )
-from softlab.shui.data.backend import (
-    get_data_backend,
-    get_data_backend_by_info,
-)
-import logging
+from softlab.shui.data.backend import DataBackend
+from softlab.shui.data.hdf5 import HDF5DataBackend
+from softlab.shui.data.sqlite3 import Sqlite3DataBackend
 
-_logger = logging.getLogger(__name__) # prepare logger
+_logger = logging.getLogger(__name__)  # prepare logger
+
+
+def get_data_backend(type: str,
+                     args: Optional[Dict[str, Any]] = None,
+                     connect: bool = True) -> DataBackend:
+    """
+    Get data backend
+
+    Arguments:
+    - type -- backend type
+    - args -- connect arguments
+    - connect -- whether to connect at beginning
+
+    Returns:
+    the backend with the given type
+
+    Throws:
+    - If the given type is empty, raise a value error
+    - If there is no backend implementation of the given type, raise a
+      not-implemented error
+    """
+    backend_type = str(type)
+    if len(backend_type) == 0:
+        raise ValueError('Backend type is empty')
+    if backend_type == 'hdf5':
+        backend = HDF5DataBackend()
+    elif backend_type == 'sqlite3':
+        backend = Sqlite3DataBackend()
+    else:
+        raise NotImplementedError(
+            f'Backend of type {type} is not implemented'
+        )
+    if connect:
+        if not backend.connect(args):
+            _logger.warning(f'Failed to connect: {backend.last_error}')
+    return backend
+
+
+def get_data_backend_by_info(info: Dict[str, Any],
+                             connect: bool = True) -> DataBackend:
+    """
+    Get data backend by using the given information
+
+    Arguments:
+    - info -- backend information, 'type' key is necessary, and the optional
+            key 'arguments' related to connect arguments
+    - connect -- whether to connect at beginning
+
+    Returns:
+    the backend with the given type
+
+    Throws:
+    - If the given info is not a dictionary, raise a type error
+    """
+    if not isinstance(info, Dict):
+        raise TypeError(f'Type of info is invalid: {type(info)}')
+    return get_data_backend(info['type'], info.get('arguments', None), connect)
 
 def load_groups(type: str,
                 args: Optional[Dict[str, Any]] = None) -> Sequence[DataGroup]:

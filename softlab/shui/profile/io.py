@@ -6,9 +6,9 @@ from typing import (
     Optional,
     Dict,
 )
-from softlab.shui.profile.backend.base import ProfileBackend
-from softlab.shui.profile.backend.memory import MemoryProfileBackend
-from softlab.shui.profile.backend.json_profile import JsonProfileBackend
+from softlab.shui.profile.backend import ProfileBackend
+from softlab.shui.profile.memory import MemoryProfileBackend
+from softlab.shui.profile.json_profile import JsonProfileBackend
 import logging
 
 _logger = logging.getLogger(__name__) # prepare logger

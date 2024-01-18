@@ -13,10 +13,10 @@ from softlab.shui.profile.manage import (
     ProfileManage,
 )
 
-from softlab.shui.profile.backend import (
-    ProfileBackend,
-    JsonProfileBackend,
-    MemoryProfileBackend,
+from softlab.shui.profile.backend import ProfileBackend
+from softlab.shui.profile.json_profile import JsonProfileBackend
+from softlab.shui.profile.memory import MemoryProfileBackend
+from softlab.shui.profile.io import (
     get_profile_backend,
     get_profile_backend_by_info,
 )
