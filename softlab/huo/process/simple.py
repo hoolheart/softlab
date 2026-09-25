@@ -1,5 +1,6 @@
 """Simple implement of process, all actions are wrapped into single body"""
 
+import asyncio
 from abc import abstractmethod
 from typing import (
     Optional,

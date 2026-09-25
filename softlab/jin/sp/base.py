@@ -264,7 +264,7 @@ class Wavement:
         return Wavement(self._ts, self._ys * win.evaluate(self._ts - d))
 
     def quantize(self, step: float, mode: str = '',
-                 min: float = -np.Inf, max: float = np.Inf) -> "Wavement":
+                 min: float = -np.inf, max: float = np.inf) -> "Wavement":
         """
         Quantize wavement to generate a new wavement
 
@@ -282,9 +282,9 @@ class Wavement:
                 ys = np.ceil(self._ys / step) * step
             else:
                 ys = np.floor(self._ys / step) * step
-            if min > -np.Inf:
+            if min > -np.inf:
                 ys[ys < min] = min
-            if max < np.Inf:
+            if max < np.inf:
                 ys[ys > max] = max
             return Wavement(self._ts, ys)
         else:

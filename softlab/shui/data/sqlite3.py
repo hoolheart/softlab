@@ -13,6 +13,7 @@ import uuid
 import json
 import sqlite3
 import io
+from datetime import datetime
 from softlab.shui.data.base import (
     DataGroup,
     DataRecord,
@@ -79,6 +80,10 @@ class Sqlite3DataBackend(DataBackend):
         sqlite3.register_converter('array', convert_array)
         sqlite3.register_adapter(pd.DataFrame, adapt_dataframe)
         sqlite3.register_converter('dataframe', convert_dataframe)
+        sqlite3.register_adapter(
+            datetime, lambda value: value.isoformat(sep=' '))
+        sqlite3.register_converter(
+            'timestamp', lambda value: datetime.fromisoformat(value.decode()))
         sqlite3.register_adapter(dict, lambda d: json.dumps(d))
         sqlite3.register_converter('dict', lambda d: json.loads(d))
         sqlite3.register_adapter(list, lambda d: json.dumps(d))

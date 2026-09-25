@@ -7,7 +7,7 @@ name = "softlab"
 dynamic = ["version", "readme"]
 description = "Toolkit to build software-defined laboratory"
 license = {text = "MIT"}
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 authors = [
     { name = "Edward Chou", email = "prettyage.new@gmail.com" },
 ]
@@ -24,11 +24,10 @@ classifiers = [
     "Operating System :: MacOS",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
@@ -40,9 +39,14 @@ dependencies = [
     "imageio",
     "ipywidgets",
     "pyvisa",
-    "uuid",
     "h5py",
-    "asyncio",
+]
+
+[project.optional-dependencies]
+notebooks = [
+    "jupyterlab",
+    "nest_asyncio",
+    "pyvisa-sim",
 ]
 
 [project.urls]
