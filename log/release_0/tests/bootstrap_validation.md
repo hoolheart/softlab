@@ -99,3 +99,53 @@ target, not proof of compatibility. Remote jobs must pass before integration.
 No packaging build, notebooks, real hardware, Windows, additional Python
 versions, lint/static analysis or warning-as-error gate were executed here.
 Therefore this report makes no global zero-warning or cross-platform claim.
+
+## Final bootstrap verification
+
+Tester: sw-mike. Candidate: `44cb265acbb6cafe93eacfe268b12b857ee9ed87`.
+Date: 2026-09-26. Verdict: **PASS for the applicable bootstrap validation**.
+This verdict does not replace product acceptance or principle inspection.
+
+- Required principles, current-state architecture, AGENTS guidance, backlog,
+  seven reusable templates, CI and independent review artifacts exist.
+  A Python pathlib/regular-expression check inspected 17 Markdown files and
+  found zero missing repository-relative Markdown link destinations.
+- `git diff --name-only main..HEAD` contains documentation and CI only; no
+  production Python, tests, dependencies or version metadata changed.
+  `git diff --check 83e85c4..HEAD` exited 0 with no output.
+- `git branch -vv` confirms `dev` tracks `origin/dev`, and the task branch
+  tracks `origin/codex/workflow-preparation` at the inspected candidate.
+  Integration and release are still separate pending operations.
+- Repeated the three local validation commands above using a fresh writable
+  temporary cache and `MPLBACKEND=Agg`, preceded by
+  `.venv/bin/python -c 'import pyvisa_sim'`. Simulator import succeeded;
+  unittest ran **5 tests in 0.076 seconds, zero failures/errors/skips**;
+  compileall was silent; import printed `0.3.0`. The shell exited 0.
+  First-use font-cache informational output appeared; earlier unwritable-cache
+  diagnostics did not recur. No hardware was accessed.
+- Coordinator-owned sprint-board and principle report are committed alongside
+  this evidence unchanged; their pending gates are not tester PASS claims.
+
+### Remote CI evidence and failure closure
+
+GitHub's public Actions API reports the inspected candidate's
+[run 36252706086](https://github.com/hoolheart/softlab/actions/runs/36252706086)
+completed successfully. Both matrix jobs and all required validation steps
+(simulator import, regression suite, compilation and project import) succeeded:
+
+- [Ubuntu Python 3.9](https://github.com/hoolheart/softlab/actions/runs/36252706086/job/108433606627)
+- [Ubuntu Python 3.13](https://github.com/hoolheart/softlab/actions/runs/36252706086/job/108433606751)
+
+The initial invalid-workflow failure at `6fbd1f8`
+([run 36252511432](https://github.com/hoolheart/softlab/actions/runs/36252511432))
+is **CLOSED by sw-mike**: corrected cache initialization at `f95b5cc` executed
+successfully in [run 36252582324](https://github.com/hoolheart/softlab/actions/runs/36252582324),
+and the reviewed candidate repeated both successful matrix jobs. The original
+failure remains in the history; it is not reclassified as a successful run.
+
+Evidence was retrieved with bounded `curl --max-time 20` requests to the Actions
+runs/jobs endpoints. The first sandbox request could not resolve the host;
+the permitted escalated read succeeded. Job statuses prove required CI steps
+passed; logs were not audited for a global zero-warning assertion. No packaging,
+notebook, real-device, lint/static-analysis or additional platform validation
+is claimed. Subsequent commits still require their own CI before integration.
