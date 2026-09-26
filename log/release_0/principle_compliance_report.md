@@ -9,7 +9,8 @@ not at task start; the timing is recorded rather than claiming otherwise.
 
 ## Pre-integration inspection
 
-Verdict: **PENDING** final tester evidence and product-owner acceptance.
+Verdict: **PASS for preparation scope**, inspected through `2ab2750`.
+Integration additionally requires successful CI on the final candidate commit.
 
 | Principle | Evidence / status |
 | --- | --- |
@@ -17,13 +18,13 @@ Verdict: **PENDING** final tester evidence and product-owner acceptance.
 | 2 Compatibility | No production changes; future characterization is TU-001. |
 | 3 Documented gates | User-approved docs/config bootstrap; baseline plan, implementation notes and independent review exist. Production TDD and UI design are not applicable. |
 | 4 One active task | BOOT-001 only; `main` unchanged, task targets `dev`. |
-| 5 Roles | Architect authored architecture/backlog; developer CI/templates; reviewer approved; tester owns result closure; PO acceptance pending. |
-| 6 Pushed evidence | Existing role artifacts committed/pushed through `44cb265`; this report and board require commit/push before next handoff. |
-| 7 Verification | Baseline five tests, compile and import passed; final CI verification pending. |
-| 8 Baseline | Sandbox cache diagnostics recorded and resolved with writable caches; initial CI configuration failure requires final tester closure. |
+| 5 Roles | Architect authored architecture/backlog; developer CI/templates; reviewer approved; tester closed validation failures in `6d77369`; PO accepted preparation in `2ab2750`. |
+| 6 Pushed evidence | Role artifacts committed/pushed through `2ab2750`; this final coordinator update must be committed/pushed before integration. |
+| 7 Verification | Five local tests, simulator import, compile and import passed. Tester verified both Python 3.9/3.13 jobs at `44cb265`; final-candidate CI remains an integration precondition. |
+| 8 Baseline | Sandbox cache diagnostics recorded and resolved with writable caches; initial CI configuration failure closed by tester after successful corrected runs. |
 | 9 Safety | Simulation and temporary data only; no real instrument actions. |
 | 10 Minimality | No runtime dependency/support changes or production modifications. |
-| 11 Delivery | Integration blocked until final tests/CI, PO acceptance and this inspection are complete. |
+| 11 Delivery | Review, tester checks, PO acceptance and scope inspection passed. Developer must verify final-candidate CI before integrating into `dev`, and verify remote refs afterward. |
 
 This is preparation-task evidence, not acceptance of a `tu` release. Subsequent
 tasks must create start-gate records before implementation.
