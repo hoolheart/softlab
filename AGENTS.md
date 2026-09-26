@@ -108,12 +108,13 @@ python -c "import softlab; print(softlab.__version__)"
 - [principles.md](principles.md) 是项目开发原则；[arch.md](arch.md) 描述当前架构，
   未来设计必须明确标记为计划，不能当作已有能力。
 - [log/README.md](log/README.md) 说明记录布局；模板位于 `log/templates/`。
-  当前准备任务及尚未授权实现的 `tu` 待办见 [tasks.md](log/release_0/tasks.md)。
+  准备历史见 [tasks.md](log/release_0/tasks.md)；当前已授权的 `tu` 改进范围见
+  [Release 1 requirements](log/release_1/prd.md)。
 - 顺序为需求与验收条件 → 测试方案及开发者审查 → 详细设计及架构审查 →
   实现 → 独立审查 → 测试 → 原则检查 → 集成。UI 门禁仅适用于 UI 变更。
 - 改变公共行为前先阅读调用方并建立兼容性特征测试。纯文档/CI 准备按配置和
   文档验证执行，不为其虚构生产代码测试；必须记录适用性与实际证据。
 - 过程记录在活动任务分支创建，每次完成更新立即以 `docs(log):` 提交并推送，
   然后交接。审查者关闭审查问题，测试者关闭测试失败；未运行的门禁不能标为通过。
-- 记录基线缺陷、警告、跳过项和环境限制；不能静默豁免，也不要越过准备范围修复。
+- 记录基线缺陷、警告、跳过项和环境限制；不能静默豁免，也不要越过已授权范围修复。
   `dev` 集成前须对应候选提交 CI 通过，`main` 提升还须发布验收。

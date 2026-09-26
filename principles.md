@@ -2,8 +2,9 @@
 
 These project rules adapt the requested `onepiece:sw-prod-workflow` to the
 user-approved Python-library workflow. They take precedence over its generic
-Rust/Flutter preferences and direct-to-main task merges. This preparation does
-not authorize implementation of the future `tu` backlog.
+Rust/Flutter preferences and direct-to-main task merges. Preparation was recorded
+in `log/release_0/`; the subsequently authorized compatible `tu` work is scoped by
+[Release 1 requirements](log/release_1/prd.md).
 
 1. **Preserve the five-element architecture.** `tu` defines device/model
    abstractions; `huo` executes processes; `shui` persists data/configuration;
