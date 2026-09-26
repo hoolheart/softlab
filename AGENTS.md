@@ -63,7 +63,9 @@ python -c "import softlab; print(softlab.__version__)"
 
 ## 验证方式
 
-`tests/test_compatibility.py` 是 `unittest` 回归测试，目前没有仓库内 CI 配置。
+`tests/test_compatibility.py` 是 `unittest` 回归测试。
+`.github/workflows/ci.yml` 在 Ubuntu 的 Python 3.9/3.13 上运行回归、编译和导入检查；
+矩阵配置不等于已验证，实际结果以对应提交的 CI 为准。
 不要把 Notebook 存在或模块示例打印成功视为完整测试通过。
 
 按修改范围选择验证，并在交付时记录实际命令、结果和未验证项：
@@ -88,7 +90,9 @@ python -c "import softlab; print(softlab.__version__)"
 
 ## 提交消息格式
 
-- 本个人项目仅约定提交消息格式，不要求 Gitflow 分支模型。
+- 本项目采用用户确认的分支流程：`codex/<task>` → `dev` → `main`。
+  任务从 `dev` 创建，经审查、测试、原则检查和 CI 通过后集成至 `dev`；
+  发布验收通过后才将发布内容提升至 `main`。同一时间只有一个活动任务。
 - 提交消息采用 Conventional Commits：`<type>(<scope>): <summary>`；
   常用类型有 `feat`、`fix`、`docs`、`test`、`chore`。主题用英文祈使句，
   准确描述本次改动；必要时在正文解释原因、行为变化和验证结果。
@@ -98,3 +102,18 @@ python -c "import softlab; print(softlab.__version__)"
 - 检查 `git diff --check` 与 `git status --short`，保留用户已有修改。
 - 仅提交任务相关改动；不要顺手重命名五行模块、清理占位包或重写历史示例。
 - 交付说明交代改动内容、验证结果，以及缺失依赖、硬件或环境导致的验证限制。
+
+## 工作流与过程文档
+
+- [principles.md](principles.md) 是项目开发原则；[arch.md](arch.md) 描述当前架构，
+  未来设计必须明确标记为计划，不能当作已有能力。
+- [log/README.md](log/README.md) 说明记录布局；模板位于 `log/templates/`。
+  当前准备任务及尚未授权实现的 `tu` 待办见 [tasks.md](log/release_0/tasks.md)。
+- 顺序为需求与验收条件 → 测试方案及开发者审查 → 详细设计及架构审查 →
+  实现 → 独立审查 → 测试 → 原则检查 → 集成。UI 门禁仅适用于 UI 变更。
+- 改变公共行为前先阅读调用方并建立兼容性特征测试。纯文档/CI 准备按配置和
+  文档验证执行，不为其虚构生产代码测试；必须记录适用性与实际证据。
+- 过程记录在活动任务分支创建，每次完成更新立即以 `docs(log):` 提交并推送，
+  然后交接。审查者关闭审查问题，测试者关闭测试失败；未运行的门禁不能标为通过。
+- 记录基线缺陷、警告、跳过项和环境限制；不能静默豁免，也不要越过准备范围修复。
+  `dev` 集成前须对应候选提交 CI 通过，`main` 提升还须发布验收。
