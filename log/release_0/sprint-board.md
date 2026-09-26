@@ -5,7 +5,7 @@ not authorized for execution. Dates below use the session date, 2026-09-26.
 
 | Task | Owner | Phase | Started | Target | Integration | Blockers |
 | --- | --- | --- | --- | --- | --- | --- |
-| BOOT-001 Workflow preparation | Coordinator; role-specific executors | Integration ready | 2026-09-26 | This preparation session | Pending final-candidate CI and fast-forward to dev | No product/review/test findings outstanding |
+| BOOT-001 Workflow preparation | Coordinator; role-specific executors | Done | 2026-09-26 | This preparation session | 9c67f86 (fast-forward to remote dev) | None |
 
 ## Phase evidence
 
@@ -21,9 +21,11 @@ not authorized for execution. Dates below use the session date, 2026-09-26.
 - Coordinator principle inspection: PASS for preparation scope; final-candidate
   CI required before integration.
 
-Completion is defined by this accepted task history being reachable from remote
-`dev` and successful candidate CI. The developer verifies those facts after the
-fast-forward; this pre-integration board deliberately does not invent a merge
-hash or claim integration has already occurred.
+Accepted candidate `9c67f86ca19f33aa729ec4f9f24bff27d8f82442` passed both Python
+3.9 and 3.13 jobs in [CI run 36253102330](https://github.com/hoolheart/softlab/actions/runs/36253102330).
+The developer then fast-forwarded and pushed `dev` to that candidate. No merge
+commit was created. `main` remains unchanged. This completion record follows
+that actual integration; it will also pass candidate CI before its own dev
+fast-forward. Future TU tasks remain unauthorized.
 
 No production implementation, release promotion or future TU task has started.

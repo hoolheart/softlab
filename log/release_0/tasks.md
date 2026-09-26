@@ -2,14 +2,14 @@
 
 ## Authorized bootstrap
 
-Only **BOOT-001** is authorized and active. This preparation changes workflow,
+Only **BOOT-001** was authorized; it is now complete. This preparation changes workflow,
 documentation and CI, not production APIs. User approval includes remote pushes
 and the project-specific integration flow: task branch -> `dev`; approved release
 -> `main`. Future tasks below are proposals, not permission to implement them.
 
 | ID | Task | State | Acceptance criteria |
 | --- | --- | --- | --- |
-| BOOT-001 | Prepare project workflow | In progress | `principles.md`, current-state `arch.md`, updated `AGENTS.md`, requirements/backlog, process templates and CI exist; baseline commands/results and limitations are recorded; `dev` and task branch are pushed; review and acceptance evidence are recorded before integration; production code is unchanged. |
+| BOOT-001 | Prepare project workflow | Done | `principles.md`, current-state `arch.md`, updated `AGENTS.md`, requirements/backlog, process templates and CI exist; baseline commands/results and limitations are recorded; `dev` and task branch are pushed; review and acceptance evidence are recorded before integration; production code is unchanged. |
 
 Preparation artifacts are on `codex/workflow-preparation`. The coordinator owns
 phase tracking and integration authorization. `main` is not the task integration
@@ -47,3 +47,11 @@ assertions in addition to the existing regression suite. Fixtures must use
 synthetic data, temporary paths and simulated hardware. Release records must
 identify actual Python/dependency versions and commands, failures, warnings,
 skips and unverified platforms; a source reading is not a passing test result.
+
+## Bootstrap integration evidence
+
+Accepted candidate: `9c67f86ca19f33aa729ec4f9f24bff27d8f82442`.
+Both Python matrix jobs passed [run 36253102330](https://github.com/hoolheart/softlab/actions/runs/36253102330).
+`dev` was fast-forwarded and pushed to that candidate after review, tester,
+product-owner and principle gates. No merge commit or main promotion was made.
+The completion-record commit follows the same CI-before-integration requirement.
