@@ -26,3 +26,11 @@ not a designer/architect approval or independent review. Bootstrap is documentat
 and CI preparation under principle 3; no production interfaces are designed here.
 Independent review, final testing, principle inspection, acceptance and actual CI
 remain separate gates before integration. No merge is performed by this step.
+
+## CI configuration correction
+
+The first pushed workflow at `6fbd1f8` completed with failure before starting
+checks (run 36252511432). Job-level environment expressions cannot use the
+runner context. Cache configuration now uses a shell step writing RUNNER_TEMP
+paths to GITHUB_ENV before validation. Remote execution must still be verified;
+the initial failed run is not a passing test result.
