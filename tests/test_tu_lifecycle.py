@@ -67,6 +67,27 @@ class _FailingDevice(Device):
         self._resource.release()
 
 
+class _FlakyDevice(Device):
+    """Test device whose preparation fails once, then succeeds."""
+
+    def __init__(self, name, resource, error):
+        super().__init__(name)
+        self._resource = resource
+        self._error = error
+        self.prepare_calls = 0
+        self.cleanup_calls = 0
+
+    def _prepare_impl(self):
+        self.prepare_calls += 1
+        self._resource.acquire()
+        if self.prepare_calls == 1:
+            raise self._error
+
+    def _cleanup_impl(self):
+        self.cleanup_calls += 1
+        self._resource.release()
+
+
 class _BorrowingDevice(Device):
     """Test device holding an externally-owned (borrowed) resource."""
 
@@ -152,6 +173,22 @@ class LifecycleTests(unittest.TestCase):
         self.assertEqual(resource.release.call_count, 1)
         device.cleanup()  # still idempotent after failure
         self.assertEqual(device.cleanup_calls, 1)
+
+    def test_failed_prepare_recovery_cycle(self):
+        # Recovery within the contract: after a failed prepare, one cleanup
+        # settles the partial acquisition, and a later prepare succeeds.
+        resource = Mock()
+        device = _FlakyDevice("flaky", resource, RuntimeError("boom"))
+        with self.assertRaises(RuntimeError):
+            device.prepare()
+        self.assertFalse(device.initialized)
+        device.cleanup()  # releases the partial acquisition exactly once
+        self.assertEqual(device.cleanup_calls, 1)
+        self.assertEqual(resource.release.call_count, 1)
+        device.prepare()  # re-preparation after cleanup succeeds
+        self.assertTrue(device.initialized)
+        self.assertEqual(device.prepare_calls, 2)
+        self.assertEqual(device.cleanup_calls, 1)  # release hook unchanged
 
     def test_borrowed_resource_not_released_by_non_owner(self):
         borrowed = Mock()  # owned by an external party, never acquired here
