@@ -89,6 +89,39 @@ class DescriptionTests(unittest.TestCase):
         result["metadata"]["lab_custom"]["tags"].append("changed")
         self.assertEqual(metadata["lab_custom"]["tags"], ["a", None, True, 1, 2.5])
 
+    def test_indirect_device_cycle_is_rejected(self):
+        root, child = Device("root"), Device("child")
+        root.add_child(child)
+        child.add_child(root)
+        describe = root.describe
+        with self.assertRaises(ValueError):
+            describe()
+
+    def test_shared_device_is_not_a_cycle_and_results_are_independent(self):
+        root, left, right = Device("root"), Device("left"), Device("right")
+        shared = Device("shared")
+        shared.add_parameter(Parameter("reading"))
+        root.add_child(left)
+        root.add_child(right)
+        left.add_child(shared)
+        right.add_child(shared)
+        result = root.describe()
+        a = result["children"]["left"]["children"]["shared"]
+        b = result["children"]["right"]["children"]["shared"]
+        self.assertEqual(a, b)
+        self.assertIsNot(a, b)
+        a["parameters"]["reading"]["metadata"]["local"] = True
+        self.assertEqual(b["parameters"]["reading"]["metadata"], {})
+        self.assert_json(result)
+
+    def test_metadata_cycle_is_rejected(self):
+        p = Parameter("reading")
+        describe = p.describe
+        metadata = {"items": []}
+        metadata["items"].append(metadata)
+        with self.assertRaises(ValueError):
+            describe(metadata=metadata)
+
     def test_unsupported_metadata_is_rejected_without_coercion(self):
         p = Parameter("reading")
         # Resolve API before error assertions, so missing API is the red cause.
