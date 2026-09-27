@@ -7,7 +7,7 @@ No main promotion, real hardware, or mu/huo implementation is included.
 | Task | State | Owner | Evidence |
 | --- | --- | --- | --- |
 | TU-001 | Done | Product owner, architect, developer, tester, reviewer | tests b5599ff; review 1c2886e APPROVED; dev integrated 6f39f78 after CI 36302785650 |
-| TU-002 | Design | Tester, developer, designer, architect | codex/tu-002-descriptions from d5b7df9; tests and design gates pending |
+| TU-002 | Development | Developer | codex/tu-002-descriptions from d5b7df9; test gate c01d20b, design gate dcb4a29 approved; implementation next |
 | TU-003 | Backlog | Unassigned | Explicit operations |
 | TU-004 | Backlog | Unassigned | Optional lifecycle/capabilities |
 | TU-005 | Backlog | Unassigned | Measurement semantics |
