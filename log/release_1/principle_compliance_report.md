@@ -92,3 +92,24 @@ and pushed.
 
 No hardware, no new dependency, no VISA change (OBS-003 stays deferred to
 TU-006). Integration candidate must pass CI before dev fast-forward.
+
+## TU-005 completion inspection
+
+PASS for measurement-semantics scope. Serial gates observed on
+codex/tu-005-measurements: test gate (RED 84716ac, implementability ACCEPTED
+b2a14da), design gate (9ef0cd2 proposed, 7967464 architect APPROVED, three
+non-blocking observations discharged in docstrings), development (e36247b,
++173/+1 lines, additive-only, get() untouched byte-for-byte), code review
+(1faf8dd APPROVED, zero issues), testing gate (a957b4a field-state extension,
+7b7d87d green evidence: 10/10 focused, 60/60 full suite under -W error,
+compile/import clean, independent rerun).
+
+Principle 1: tests preceded design, design preceded implementation, all
+reports exist, committed and pushed. Principle 2: zero open issues anywhere.
+Principle 3: no skipped environment component; mocked PyVISA only. Principle
+4: N/A. Principle 5: warnings-as-errors full suite green; pre-existing
+parameter.py __main__ baseline warnings unchanged and recorded. Principle 6:
+every log/release_1 artifact committed with docs(log): messages and pushed.
+
+No hardware, no new dependency, no huo/mu change. Integration candidate must
+pass CI before dev fast-forward.
