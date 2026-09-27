@@ -39,8 +39,9 @@ Group B --- timeout units and defaults (resolves OBS-001 additively):
   untouched (an explicitly supplied raw ``timeout`` is never rescaled,
   per OBS-001 "do not silently rescale existing callers"). Guard case 1
   pins raw forwarding of an explicitly supplied ``timeout=5.0``; guard
-  case 6 pins raw forwarding of set/get on the legacy ``timeout``
-  property.
+  case 6 constructs its first block with an explicit ``timeout=5.0``
+  (mirroring case 1) to pin explicit-value raw forwarding, then pins
+  raw forwarding of set/get on the legacy ``timeout`` property.
 - Additive, explicit ``timeout_seconds`` property expresses the timeout in
   seconds and converts to the PyVISA millisecond convention (x1000) on the
   resource, in both directions; ``None`` disables the timeout. The
@@ -225,7 +226,15 @@ class VisaTimeoutTests(unittest.TestCase):
 
     def test_legacy_timeout_raw_forwarding_unchanged(self):
         # Compatibility guard: passes against unchanged production code.
-        handle, resource, manager, _ = make_resource(self, "TEST@sim")
+        # Pins raw forwarding of set/get on the legacy ``timeout``
+        # property: the first block constructs with an EXPLICIT
+        # ``timeout=5.0`` (mirroring guard case 1) so it pins
+        # explicit-value raw forwarding and stays green under the
+        # ``timeout=None`` sentinel semantics, where default construction
+        # instead applies the seconds default (5000 ms on the resource,
+        # pinned by case 7).
+        handle, resource, manager, _ = make_resource(
+            self, "TEST@sim", timeout=5.0)
         self.assertEqual(resource.timeout, 5.0)
         other = VisaHandle("CUSTOM@sim", timeout=12.5)
         self.addCleanup(other.close)
