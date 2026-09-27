@@ -270,9 +270,10 @@ class VisaTimeoutTests(unittest.TestCase):
         handle, resource, _, _ = make_resource(self, "TEST@sim")
         self.assertEqual(handle.timeout_seconds, 5.0)
         self.assertEqual(resource.timeout, 5000)
-        quick, _, _, _ = make_resource(self, "FAST@sim", timeout_seconds=1.5)
+        quick, quick_resource, _, _ = make_resource(
+            self, "FAST@sim", timeout_seconds=1.5)
         self.assertEqual(quick.timeout_seconds, 1.5)
-        self.assertEqual(resource.timeout, 1500)
+        self.assertEqual(quick_resource.timeout, 1500)
 
     def test_timeout_error_propagates_original_cause(self):
         handle, resource, _, _ = make_resource(self, "TEST@sim")
