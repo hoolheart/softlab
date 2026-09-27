@@ -339,3 +339,80 @@ cases are expected RED), does not implement anything, and does not
 claim detailed-design approval, independent review, or testing gates;
 those remain pending. Re-review of the test plan is required after
 Issues 1 and 2 are resolved.
+
+## Re-review (scoped, revision `8a99d2b` + `6f9202e`, tip `6f9202e`)
+
+Reviewer: sw-tom. Verdict: **CHANGES REQUESTED** (1 blocking issue —
+incomplete resolution of Issue 1; Issue 2 fully resolved; no other new
+contradictions; 4 non-blocking observations correctly handed off).
+
+Reproduced the revised red evidence on the tip: `.venv/bin/python -m
+unittest discover -s tests -p 'test_tu_visa_contracts.py'` gives **4
+pass, 13 fail (10 errors + 3 failures) of 17**, matching the gate
+record; verified production still carries the OBS-002 defect
+(`VisaHandle.write_raw` forwards to `resource.write(message=bytes)`,
+`softlab/tu/station/visa.py`), so the new case 16 is RED for the right
+reason.
+
+### Issue 2 — RESOLVED
+
+New case 16 `test_write_raw_targets_raw_resource_write` is a live
+mocked `write_raw` disposition case pinning the explicit fix direction:
+`resource.write_raw` called once with the identical bytes object
+(`assertIs` on the call argument), return value forwarded, transport
+errors as identical objects, `resource.write.assert_not_called()`. It
+is RED against the current defect and recorded separately from the
+intended contract in the case docstring, mirroring the TU-001
+characterization convention. Composes with case 15: the post-cleanup
+`RuntimeError` precedes any resource access, so the zero-I/O policy is
+unaffected.
+
+### Issue 1 — INCOMPLETE: the contradiction moved from case 1 to case 6
+
+Case 1 was correctly revised: it now constructs with an explicit
+`timeout=5.0` and pins raw forwarding of that explicit value — sound.
+Cases 7, 8, 9 (`@sim` half), and 17 are mutually consistent on the
+sentinel path: default construction (no explicit raw `timeout`) →
+resource 5000 ms, `timeout_seconds` reads 5.0.
+
+**But guard case 6 was not revised.** Its first block still constructs
+with defaults and asserts `resource.timeout == 5.0`:
+
+```python
+handle, resource, manager, _ = make_resource(self, "TEST@sim")
+self.assertEqual(resource.timeout, 5.0)
+```
+
+Under the revised sentinel contract, that identical default
+construction must write 5000 ms — case 7 now asserts exactly that on
+the same construction shape. Case 6's first assertion and case 7's new
+assertion are mutually unpassable once step B goes green. This is the
+same latent-contradiction class as the original Issue 1, relocated
+from case 1 to case 6; it is invisible in the red run only because
+case 6 is green against unchanged production (the legacy `timeout=5.0`
+signature default forwards raw). It will surface the moment the
+sentinel lands and turn guard case 6 RED, violating the gate's
+"guards stay green" incremental invariant. The revision narrative also
+misstates the guard's scope: it claims "case 6 pins raw forwarding of
+set/get on the legacy `timeout` property", but only case 6's later
+blocks (explicit `timeout=12.5` constructor, set/get 25.0/37.5,
+`None`) pin set/get; its first block pins default-construction raw
+forwarding, which the sentinel path removes.
+
+**Requested change (minimal).** Revise case 6's first block to
+construct with an explicit `timeout=5.0` (mirroring case 1), so the
+guard pins raw forwarding of an *explicit* value and stays green under
+the sentinel semantics. One line of construction plus, optionally, a
+comment noting that the legacy implicit-default raw 5.0 is superseded
+by the sentinel path. The rest of case 6 is already correct and
+unaffected. Step B remains gated until this lands.
+
+### No other new contradictions; handoffs correct
+
+- Renumbering is integral: groups A 1–5, B 6–9, C 10–13, D 14–17;
+  guards 1, 6, 10, 14 (count 4) unchanged in role; old case 16 (`@sim`
+  end-to-end) correctly renumbered to 17 with its default-construction
+  readback updated to 5000 ms / 5.0 s.
+- Case 16 (OBS-002) vs case 15 (post-cleanup zero-I/O) compose.
+- All 4 non-blocking observations are correctly recorded as designer
+  handoffs and deliberately not encoded as new assertions.
