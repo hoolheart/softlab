@@ -152,6 +152,20 @@ class DeviceContracts(unittest.TestCase):
         self.assertIs(child.rm_child("leaf"), leaf)
         self.assertIsNone(leaf.parent)
 
+    def test_batch_settings_preserve_sequence_order(self):
+        events = []
+        device = Device("device")
+        device.add_parameter(Parameter(
+            "first", after_set=lambda value: events.append(("first", value)),
+        ))
+        device.add_parameter(Parameter(
+            "second", after_set=lambda value: events.append(("second", value)),
+        ))
+        device.set_parameters([("second", 2), ("first", 1)])
+        self.assertEqual(events, [("second", 2), ("first", 1)])
+        self.assertEqual(device.first(), 1)
+        self.assertEqual(device.second(), 2)
+
     def test_station_builder_registry_and_default_are_restored(self):
         module = importlib.import_module("softlab.tu.station.device")
 
@@ -204,6 +218,19 @@ class VisaContracts(unittest.TestCase):
         self.resource.query.assert_called_once_with("READ?", 0.1)
         self.handle.close()
         self.resource.close.assert_called_once_with()
+
+    def test_timeout_values_are_forwarded_without_conversion(self):
+        # Legacy numeric forwarding only; OBS-001 still tracks unit semantics.
+        self.assertEqual(self.resource.timeout, 5.0)
+        handle = VisaHandle("CUSTOM@sim", timeout=12.5)
+        self.addCleanup(handle.close)
+        self.assertEqual(self.resource.timeout, 12.5)
+        handle.timeout = 25.0
+        self.assertEqual(self.resource.timeout, 25.0)
+        self.resource.timeout = 37.5
+        self.assertEqual(handle.timeout, 37.5)
+        handle.timeout = None
+        self.assertIsNone(self.resource.timeout)
 
     def test_parameter_commands_codecs_and_snapshot(self):
         p = VisaParameter("voltage", self.handle, get_cmd="V?", set_cmd="V {}", decoder=str, encoder=float)
