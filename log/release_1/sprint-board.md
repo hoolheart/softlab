@@ -6,7 +6,7 @@ No main promotion, real hardware, or mu/huo implementation is included.
 
 | Task | State | Owner | Evidence |
 | --- | --- | --- | --- |
-| TU-001 | Requirements | Product owner | codex/tu-001-characterization from db256b0 |
+| TU-001 | Integration gate | Product owner, architect, developer, tester, reviewer | tests b5599ff; review 1c2886e APPROVED; CI pending |
 | TU-002 | Backlog | Unassigned | Portable descriptions |
 | TU-003 | Backlog | Unassigned | Explicit operations |
 | TU-004 | Backlog | Unassigned | Optional lifecycle/capabilities |
