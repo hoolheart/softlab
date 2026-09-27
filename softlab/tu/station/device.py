@@ -101,6 +101,8 @@ class Device(Delegated):
     Public properties:
     - name --- device name, should be non-empty and unique in station
     - parent --- parent device, used for sub-devices, optional
+    - initialized --- readiness flag, True only between a successful
+      ``prepare()`` and the next ``cleanup()``
 
     Public methods:
     - snapshot --- get the snapshot dict of device
@@ -111,10 +113,24 @@ class Device(Delegated):
     - add_child --- add a new subdevice
     - rm_child --- remove subdevice with given name
     - set_parameters --- batch setting of multiple parameters
+    - supports --- side-effect-free capability detection
+    - prepare --- explicit preparation, opt-in for subclasses
+    - cleanup --- explicit, idempotent release of owned resources only
 
     Note: parameters of children can be accessed by
           "<child_name>.<parameter_name>" or even
           "<child_name>.<child_child_name>.<parameter_name>"
+
+    Lifecycle notes:
+    - The lifecycle contract (``supports``, ``prepare``, ``initialized``,
+      ``cleanup``) is single-threaded: no locking is performed and no
+      atomicity across threads is guaranteed; device authors needing
+      concurrent access must serialize externally.
+    - The lifecycle names above are real members of ``Device``, so they
+      take precedence over delegated parameter/child attribute access
+      (OBS-006 category): a parameter or child named e.g. ``"prepare"``
+      is shadowed for attribute-style access, while explicit lookup via
+      ``parameter("prepare")`` / ``child("prepare")`` remains available.
     """
 
     def __init__(self, name: str) -> None:
@@ -133,6 +149,8 @@ class Device(Delegated):
         self._devices: Dict[str, Device] = {}
         self.add_delegate_attr_dict('_devices')
         self._parent: Optional[Device] = None
+        self._initialized: bool = False
+        self._needs_cleanup: bool = False
 
     @property
     def name(self) -> str:
@@ -164,6 +182,174 @@ class Device(Delegated):
 
     def __repr__(self) -> str:
         return f'{type(self)}/{self.name}'
+
+    def supports(self, capability: str) -> bool:
+        """
+        Detect whether a capability is supported, side-effect-free
+
+        Base vocabulary: ``'prepare'`` and ``'cleanup'`` are supported,
+        ``'connection'`` is not (a base device is virtual and has no
+        connection to open), and any other string — including the empty
+        string — is an unknown capability and is not supported. Detection
+        is a pure string-membership test: it never performs I/O, never
+        touches a resource manager, and never raises for unknown names.
+
+        Args:
+        - capability --- capability name to test, arbitrary string
+
+        Returns:
+        - True if the capability is supported, False otherwise
+
+        Extension rule for subclasses: a subclass may override this
+        method to advertise additional capabilities, but it must remain
+        side-effect-free and must never raise for unknown capability
+        strings (unknown names return False). The recommended form is
+        additive over the base result, e.g.
+        ``return capability in ('trigger',) or super().supports(capability)``.
+        A subclass that drops ``'prepare'``/``'cleanup'`` from its result
+        while still inheriting the base hooks is out of contract.
+
+        Side-effects: none.
+        """
+        return capability in ('prepare', 'cleanup')
+
+    def prepare(self) -> None:
+        """
+        Explicit preparation (opt-in lifecycle)
+
+        Runs the subclass acquisition hook ``_prepare_impl()`` and, on
+        success, marks the device initialized. For the base virtual
+        device the hook is a no-op, so ``prepare()`` acquires and opens
+        nothing: no resource manager, no connection, zero I/O.
+
+        Idempotence: if the device is already initialized, this is a
+        no-op — the hook is not re-run, no exception is raised, and
+        readiness stays True. Re-preparation after a ``cleanup()`` runs
+        the hook again: the lifecycle is a repeatable cycle, not a
+        one-shot.
+
+        Failure: the release path is armed before the hook runs, so if
+        the hook raises, the device is not initialized but holds a
+        partial acquisition that the first subsequent ``cleanup()``
+        releases exactly once. The original exception object propagates
+        unchanged — no wrapping, no chaining, no implicit cleanup.
+
+        After a failed ``prepare()`` (the hook raised), the device holds
+        a pending partial acquisition: ``cleanup()`` MUST be called
+        before calling ``prepare()`` again. Re-preparation without an
+        intervening ``cleanup()`` is outside the lifecycle contract and
+        its behavior is not guaranteed.
+
+        This contract is single-threaded: no locking is performed and
+        concurrent calls are outside the contract.
+
+        Returns: None
+
+        Errors:
+        - any exception raised by ``_prepare_impl()`` propagates
+          unchanged; the device is left not initialized
+
+        Side-effects: for the base class, state fields only; subclasses
+        may perform arbitrary acquisition in ``_prepare_impl()``.
+        """
+        if self._initialized:
+            return
+        self._needs_cleanup = True
+        self._prepare_impl()
+        self._initialized = True
+
+    @property
+    def initialized(self) -> bool:
+        """
+        Readiness flag of the device (read-only)
+
+        Transitions: False on a freshly constructed device; False to
+        True only on a successful ``prepare()``; True to False on
+        ``cleanup()`` of an initialized device; stays False through a
+        failed ``prepare()``. Outside those transitions the value is
+        unchanged.
+
+        Returns:
+        - True if the device has been successfully prepared and not
+          cleaned up since, False otherwise
+
+        Side-effects: none.
+        """
+        return self._initialized
+
+    def cleanup(self) -> None:
+        """
+        Explicit, idempotent release of owned resources only
+
+        Safe to call at any point. If no acquisition has been attempted
+        (the device is a non-owner), this is a no-op: the subclass hook
+        is not invoked, so borrowed (externally owned) resources are
+        never released by a non-owner. Otherwise the release is
+        discharged exactly once per acquisition attempt, including a
+        failed preparation: the pending state is cleared before the hook
+        runs, so a repeated ``cleanup()`` is a no-op even if the hook
+        raises, and the release is never implicitly retried.
+
+        If the subclass release hook ``_cleanup_impl()`` raises, the
+        exception propagates unchanged; the pending state is already
+        cleared, so a failing release is never retried implicitly.
+
+        This contract is single-threaded: no locking is performed and
+        concurrent calls are outside the contract.
+
+        Returns: None
+
+        Errors:
+        - any exception raised by ``_cleanup_impl()`` propagates
+          unchanged
+
+        Side-effects: for the base class, state fields only; subclasses
+        may release owned resources in ``_cleanup_impl()``.
+        """
+        if not self._needs_cleanup:
+            return
+        self._needs_cleanup = False
+        self._initialized = False
+        self._cleanup_impl()
+
+    def _prepare_impl(self) -> None:
+        """
+        Acquisition hook, invoked by ``prepare()`` — base no-op
+
+        The base implementation acquires nothing, which is why a plain
+        ``Device`` performs zero I/O at every point. Subclasses opting
+        into the lifecycle override this hook to perform actual
+        acquisition; raising signals failure with a partial acquisition
+        permitted (releasable by the first subsequent ``cleanup()``).
+        Subclasses express acquisition here only and must release only
+        what this hook acquired, in ``_cleanup_impl()``. Subclasses must
+        not override ``prepare()`` itself.
+
+        Returns: None
+
+        Side-effects: none for the base implementation.
+        """
+        pass
+
+    def _cleanup_impl(self) -> None:
+        """
+        Release hook, invoked by ``cleanup()`` — base no-op
+
+        The base implementation releases nothing. Subclasses opting into
+        the lifecycle override this hook to release owned resources;
+        borrowed (externally owned) resources must not be released here
+        — the base gating guarantees the hook never runs for a device
+        that never attempted acquisition. The hook is invoked at most
+        once per acquisition attempt (successful or failed), and never
+        when no attempt was made. If it raises, the exception propagates
+        unchanged and is never implicitly retried. Subclasses must not
+        override ``cleanup()`` itself.
+
+        Returns: None
+
+        Side-effects: none for the base implementation.
+        """
+        pass
 
     def snapshot(self) -> Dict[str, Any]:
         """Get snapshot of device information"""
