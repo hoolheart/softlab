@@ -52,6 +52,23 @@ class OperationTests(unittest.TestCase):
         self.assertNotIn("*RST", json.dumps(info))
         self.assertEqual(self.resource.mock_calls, [])
 
+    def test_operation_description_detached_across_calls(self):
+        command = VisaCommand("reset", self.handle, "*RST")
+        describe_operation = command.describe_operation
+        self.resource.reset_mock()
+        info = describe_operation()
+        info["name"] = "mutated"
+        info["extra"] = True
+        fresh = describe_operation()
+        self.assert_json(fresh)
+        self.assertEqual(fresh, {
+            "schema_version": 1,
+            "name": "reset",
+            "effect": "write",
+            "executions_per_call": 1,
+        })
+        self.assertEqual(self.resource.mock_calls, [])
+
     def test_legacy_invocation_permissions_and_execution_counts_unchanged(self):
         command = VisaCommand("reset", self.handle, "*RST")
         self.resource.reset_mock()
