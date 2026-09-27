@@ -9,7 +9,7 @@ No main promotion, real hardware, or mu/huo implementation is included.
 | TU-001 | Done | Product owner, architect, developer, tester, reviewer | tests b5599ff; review 1c2886e APPROVED; dev integrated 6f39f78 after CI 36302785650 |
 | TU-002 | Done | Developer, tester, reviewer, designer, architect | tests 86a6063 33/33 green; review b613f2a APPROVED; dev integrated 8794cb7 after CI 36306104192 |
 | TU-003 | Done | Developer, tester, reviewer, designer, architect | tests ffc5f25 40/40 green; review 9002b68 APPROVED; dev integrated d24da5c after CI 36320621031 |
-| TU-004 | Backlog | Unassigned | Optional lifecycle/capabilities |
+| TU-004 | Design | Tester, developer, designer, architect | codex/tu-004-lifecycle from 112a49c; test cases first |
 | TU-005 | Backlog | Unassigned | Measurement semantics |
 | TU-006 | Backlog | Unassigned | VISA operation contracts |
 | TU-007 | Backlog | Unassigned | Theory contracts |
