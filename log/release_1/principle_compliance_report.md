@@ -69,3 +69,26 @@ artifact committed with docs(log): messages and pushed.
 
 No hardware, no new dependency, no huo/mu change. Integration candidate must
 pass CI before dev fast-forward.
+
+## TU-004 completion inspection
+
+PASS for optional-lifecycle scope. Serial gates observed on
+codex/tu-004-lifecycle: test gate (RED 692b422, implementability ACCEPTED
+7c3f0bb), design gate (3a2ecd0 proposed, 4d3b5c5 CHANGES REQUESTED — one
+blocking re-entry issue, 3417ec9 corrected, 898d471 re-review APPROVED),
+development (a94465e, +186 lines, 0 deletions, confined to device.py), code
+review (b1d8780 APPROVED, zero issues), testing gate (9e884fe recovery-cycle
+case, a9589eb green evidence: 10/10 focused, 50/50 full suite under -W error,
+compile/import clean, independent rerun).
+
+Principle 1: tests preceded design, design preceded implementation; one design
+correction round was requested by the architect and closed by the designer
+before implementation — review authority exercised, not bypassed. Principle 2:
+zero open review or test issues. Principle 3: no skipped environment component;
+mocks only. Principle 4: N/A. Principle 5: warnings-as-errors full suite green;
+pre-existing parameter.py baseline warnings unchanged and still recorded.
+Principle 6: every log/release_1 artifact committed with docs(log): messages
+and pushed.
+
+No hardware, no new dependency, no VISA change (OBS-003 stays deferred to
+TU-006). Integration candidate must pass CI before dev fast-forward.
