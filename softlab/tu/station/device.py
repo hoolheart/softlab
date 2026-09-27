@@ -16,11 +16,78 @@ from typing import (
     Dict,
     Optional,
     Sequence,
+    Set,
     Tuple,
     Union,
 )
 from softlab.jin.misc import Delegated
-from softlab.tu.station.parameter import Parameter
+from softlab.tu.station.parameter import (
+    Parameter,
+    _validate_metadata,
+)
+
+
+def _describe_device_node(
+    device: "Device",
+    metadata: Dict[str, Any],
+    active: Set[int],
+    path: str,
+) -> Dict[str, Any]:
+    """
+    Build a detached version-1 description node of ``device``.
+
+    Stored collections ``_parameters`` and ``_devices`` are read
+    directly (no delegated attribute lookup), preserving dictionary
+    iteration order and serializing the lookup key separately from the
+    contained object's current name. Nested parameter and device nodes
+    always carry empty metadata and are constructed from stored fields;
+    a subclass ``describe`` override is never invoked.
+
+    Args:
+    - device --- device instance to inspect
+    - metadata --- already validated, detached metadata for this node
+    - active --- identities of devices on the active ancestry path
+    - path --- dotted lookup path of ``device``, used in error messages
+
+    Returns:
+    - a detached version-1 description dict with ``parameters`` and
+      ``children`` keyed by lookup key
+
+    Errors:
+    - ValueError --- if ``device`` is already on the active ancestry
+      path (a cycle)
+
+    Side-effects: none; never calls ``get``, ``set``, ``snapshot``,
+    validators, codecs, hooks or VISA handles.
+    """
+    if id(device) in active:
+        raise ValueError(f'Cyclic device reference at {path}')
+    active.add(id(device))
+    parameters = {}
+    for key, para in device._parameters.items():
+        cls = type(para)
+        parameters[key] = {
+            'schema_version': 1,
+            'name': para._name,
+            'type': cls.__module__ + '.' + cls.__qualname__,
+            'metadata': {},
+            'settable': para._settable,
+            'gettable': para._gettable,
+        }
+    children = {}
+    for key, child in device._devices.items():
+        children[key] = _describe_device_node(
+            child, {}, active, f'{path}.{key}')
+    active.discard(id(device))
+    cls = type(device)
+    return {
+        'schema_version': 1,
+        'name': device._name,
+        'type': cls.__module__ + '.' + cls.__qualname__,
+        'metadata': metadata,
+        'parameters': parameters,
+        'children': children,
+    }
 
 
 class Device(Delegated):
@@ -111,6 +178,37 @@ class Device(Delegated):
                 self._devices,
             ))
         }
+
+    def describe(self,
+                 metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Get a portable, JSON-compatible description of this device.
+
+        The description contains only structure: common fields plus
+        ``parameters`` and ``children`` dicts keyed by lookup key, where
+        each contained object's current name is serialized separately.
+        Dictionary iteration order is preserved. No runtime parameter
+        value, validator representation or owner object is included.
+
+        Args:
+        - metadata --- optional user metadata mapping attached to this
+          node, validated and recursively copied; descendants receive
+          empty metadata
+
+        Returns:
+        - a detached version-1 description dict
+
+        Errors:
+        - TypeError --- invalid metadata type or non-string metadata key
+        - ValueError --- non-finite float, cyclic metadata container, or
+          a device cycle on the active ancestry path
+
+        Side-effects: none; never reads parameter values and never calls
+        ``get``, ``set``, ``snapshot``, validators, codecs, hooks or
+        subclass ``describe`` overrides during traversal.
+        """
+        return _describe_device_node(
+            self, _validate_metadata(metadata), set(), self._name)
 
     def parameter(self, key: str) -> Optional[Parameter]:
         """

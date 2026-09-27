@@ -11,7 +11,9 @@ from softlab.tu.station.device import (
     Device,
     DeviceBuilder,
     get_device_builder,
+    _describe_device_node,
 )
+from softlab.tu.station.parameter import _validate_metadata
 from softlab.jin.misc import Delegated
 
 class Station(Delegated):
@@ -71,6 +73,46 @@ class Station(Delegated):
                 lambda key: (key, self._devices[key].snapshot()),
                 self._devices,
             ))
+        }
+
+    def describe(self,
+                 metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Get a portable, JSON-compatible description of this station.
+
+        The description contains only structure: common fields plus a
+        ``devices`` dict keyed by lookup key, where each device's
+        current name is serialized separately. Dictionary iteration
+        order is preserved. No runtime parameter value, creation time
+        or owner object is included.
+
+        Args:
+        - metadata --- optional user metadata mapping attached to this
+          node, validated and recursively copied; descendants receive
+          empty metadata
+
+        Returns:
+        - a detached version-1 description dict
+
+        Errors:
+        - TypeError --- invalid metadata type or non-string metadata key
+        - ValueError --- non-finite float, cyclic metadata container, or
+          a device cycle inside the device hierarchy
+
+        Side-effects: none; never reads parameter values and never calls
+        ``get``, ``set``, ``snapshot``, validators, codecs, hooks or VISA
+        handles during traversal.
+        """
+        cls = type(self)
+        return {
+            'schema_version': 1,
+            'name': self._name,
+            'type': cls.__module__ + '.' + cls.__qualname__,
+            'metadata': _validate_metadata(metadata),
+            'devices': {
+                key: _describe_device_node(device, {}, set(), key)
+                for key, device in self._devices.items()
+            },
         }
 
     def add_device(self, device: Device) -> None:

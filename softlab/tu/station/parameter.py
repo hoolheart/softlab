@@ -3,8 +3,10 @@
 from abc import abstractmethod
 from typing import (
     Any,
+    Dict,
     Optional,
     Callable,
+    Set,
 )
 import warnings
 from softlab.jin.validator import (
@@ -13,6 +15,79 @@ from softlab.jin.validator import (
     ValAnything,
 )
 import math
+
+
+def _validate_metadata(metadata: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Validate and recursively copy user metadata for descriptions.
+
+    Only exact built-in ``dict`` (top level), ``dict``, ``list``, ``str``,
+    ``int``, ``float``, ``bool`` and None values are accepted, and dict
+    keys must be exact ``str``. Boolean is checked before integer since
+    ``bool`` subclasses ``int``. Floats must be finite.
+
+    Args:
+    - metadata --- user metadata mapping, None means an empty mapping
+
+    Returns:
+    - a detached dict, recursively copied so later mutation of the
+      caller's metadata cannot affect the returned description
+
+    Errors:
+    - TypeError --- if ``metadata`` or a nested container has an
+      unsupported type, or a dict key is not an exact ``str``
+    - ValueError --- if a float is NaN or infinite, or a container
+      refers to itself on the active recursion path
+
+    Side-effects: none; no ``str``, ``repr`` or JSON fallback of any
+    user value is invoked.
+    """
+
+    def copy(value: Any, path: str, active: Set[int]) -> Any:
+        # immutable scalars; check bool before int (bool subclasses int)
+        if type(value) is bool or value is None or type(value) is str:
+            return value
+        if type(value) is int:
+            return value
+        if type(value) is float:
+            if not math.isfinite(value):
+                raise ValueError(
+                    f'Non-finite float in metadata at {path}')
+            return value
+        if type(value) is dict:
+            if id(value) in active:
+                raise ValueError(
+                    f'Cyclic metadata container at {path}')
+            active.add(id(value))
+            result = {}
+            for key, item in value.items():
+                if type(key) is not str:
+                    raise TypeError(
+                        f'Non-string metadata key at {path}')
+                result[key] = copy(item, f'{path}.{key}', active)
+            active.discard(id(value))
+            return result
+        if type(value) is list:
+            if id(value) in active:
+                raise ValueError(
+                    f'Cyclic metadata container at {path}')
+            active.add(id(value))
+            result = [
+                copy(item, f'{path}[{index}]', active)
+                for index, item in enumerate(value)
+            ]
+            active.discard(id(value))
+            return result
+        raise TypeError(
+            f'Unsupported metadata type {type(value).__name__} '
+            f'at {path}')
+
+    if metadata is None:
+        return {}
+    if type(metadata) is not dict:
+        raise TypeError(
+            f'Metadata must be a dict, got {type(metadata).__name__}')
+    return copy(metadata, 'metadata', set())
 
 
 class Parameter():
@@ -167,6 +242,40 @@ class Parameter():
             'gettable': self.gettable,
             'validator': repr(self.validator),
             'owner': str(self.owner),
+        }
+
+    def describe(self,
+                 metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Get a portable, JSON-compatible description of this parameter.
+
+        The description contains only structure and access permissions:
+        ``schema_version``, ``name``, ``type`` (qualified type string),
+        ``metadata``, ``settable`` and ``gettable``. No runtime value,
+        validator representation or owner object is included.
+
+        Args:
+        - metadata --- optional user metadata mapping attached to this
+          node, validated and recursively copied
+
+        Returns:
+        - a detached version-1 description dict
+
+        Errors:
+        - TypeError --- invalid metadata type or non-string metadata key
+        - ValueError --- non-finite float or cyclic metadata container
+
+        Side-effects: none; never reads the stored value and never calls
+        ``get``, ``set``, ``snapshot``, validators, codecs or hooks.
+        """
+        cls = type(self)
+        return {
+            'schema_version': 1,
+            'name': self._name,
+            'type': cls.__module__ + '.' + cls.__qualname__,
+            'metadata': _validate_metadata(metadata),
+            'settable': self._settable,
+            'gettable': self._gettable,
         }
 
     def set(self, value: Any) -> None:
