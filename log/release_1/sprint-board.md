@@ -7,7 +7,7 @@ No main promotion, real hardware, or mu/huo implementation is included.
 | Task | State | Owner | Evidence |
 | --- | --- | --- | --- |
 | TU-001 | Done | Product owner, architect, developer, tester, reviewer | tests b5599ff; review 1c2886e APPROVED; dev integrated 6f39f78 after CI 36302785650 |
-| TU-002 | Development | Developer | codex/tu-002-descriptions from d5b7df9; test gate c01d20b, design gate dcb4a29 approved; implementation next |
+| TU-002 | Done | Developer, tester, reviewer, designer, architect | tests 86a6063 33/33 green; review b613f2a APPROVED; dev integrated 8794cb7 after CI 36306104192 |
 | TU-003 | Backlog | Unassigned | Explicit operations |
 | TU-004 | Backlog | Unassigned | Optional lifecycle/capabilities |
 | TU-005 | Backlog | Unassigned | Measurement semantics |
@@ -16,6 +16,13 @@ No main promotion, real hardware, or mu/huo implementation is included.
 | TU-008 | Backlog | Unassigned | Integration/documentation |
 
 Only one task may advance beyond Backlog before its predecessor integrates.
+
+## TU-002 integration evidence
+
+Candidate `8794cb7e958e32dbdba54d806eec72fafe28e0ab` passed both Python 3.9
+and 3.13 jobs in [run 36306104192](https://github.com/hoolheart/softlab/actions/runs/36306104192).
+`dev` was fast-forwarded and pushed to that candidate. No merge commit was
+created; `main` was untouched.
 
 ## TU-001 integration evidence
 
