@@ -1,7 +1,8 @@
 # TU-002 architecture design review
 
-Reviewer: sw-jerry (architect). Candidate: `3f16452` on
-`codex/tu-002-descriptions`. Verdict: **CHANGES_REQUESTED**. Scope is detailed
+Reviewer: sw-jerry (architect). Initial candidate: `3f16452`; corrected
+candidate: `0095fce` on `codex/tu-002-descriptions`. Final verdict:
+**APPROVED**. Scope is detailed
 design compliance with the Release 1 PRD, TU-002 tests, existing `tu` contracts,
 and the five-module architecture; this is not a code review or test execution.
 
@@ -13,22 +14,17 @@ for indirect device cycles while permitting acyclic shared references. The
 design also identifies focused tests for metadata cycles, device cycles, and
 shared devices before implementation.
 
-## Required correction
+## Resolved correction
 
-The design says recursive descriptions inspect stored fields directly and do
-not dispatch through subclass behavior, yet also says a subclass may override
-`describe()` to add behavior. In a nested `Device` or `Station` description,
-that override would be skipped, making the stated extension contract false.
-Revise the design to choose and document one coherent rule. The simplest
-compatible choice is to define version 1 as the inherited minimal description
-for nested objects and remove the promise that arbitrary subclass overrides
-participate in recursion. If subclass customization is retained, specify how
-recursion dispatches it while preserving cycle detection, JSON validation, and
-no-I/O behavior. Keep the first implementation within TU-002 scope.
+The initial design promised subclass override customization but bypassed those
+overrides in nested traversal. The correction defines version 1 nested output
+as inherited minimal fields, with the subclass's qualified type string, and
+explicitly declines to invoke arbitrary overrides. It also confines no-I/O and
+JSON guarantees to the built-in traversal. These statements resolve the
+contradiction without an extension framework. The design's extra focused tests
+for cyclic metadata, indirect device cycles and shared-device reuse remain
+required before implementation. OBS-006 remains open for TU-004's hierarchy
+mutation policy; detection during description does not change that contract.
 
-The design must also state that its built-in no-I/O guarantee applies to the
-base traversal; arbitrary user overrides cannot be certified by the library.
-No other architectural blocker was found. OBS-006 remains open for TU-004's
-hierarchy policy; detecting a cycle during description does not change the
-existing mutation contract. After correction, resubmit this design for review
-before implementation.
+TU-002 may proceed to implementation after its other applicable gates. This
+approval does not claim code review, test pass, CI or integration.
