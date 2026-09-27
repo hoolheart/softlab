@@ -416,3 +416,23 @@ unaffected. Step B remains gated until this lands.
 - Case 16 (OBS-002) vs case 15 (post-cleanup zero-I/O) compose.
 - All 4 non-blocking observations are correctly recorded as designer
   handoffs and deliberately not encoded as new assertions.
+
+## Closure (blocking issue, revision `d150c4a` + `c125e2c`, tip `c125e2c`)
+
+Reviewer: sw-tom. Verdict: **ISSUE CLOSED**.
+
+- Guard case 6's first block now constructs with an explicit
+  `timeout=5.0` (mirroring case 1) and pins explicit-value raw
+  forwarding; it stays green under the `timeout=None` sentinel
+  semantics. Full sweep of every `resource.timeout` assertion against
+  its construction in `tests/test_tu_visa_contracts.py` found no
+  remaining default-construction raw-timeout contradiction: default
+  constructions consistently assert 5000 ms (cases 7, 8, 17), explicit
+  raw `timeout` constructions assert the raw value (cases 1, 6), and
+  case 6's later set/get/`None` blocks pin raw legacy forwarding.
+- Gate record narrative corrected (`log/release_1/tests/TU-006.md`,
+  "Guard fix" section plus the revised case 6 description).
+- Re-run evidence: `.venv/bin/python -m unittest
+  tests.test_tu_visa_contracts.VisaTimeoutTests.test_legacy_timeout_raw_forwarding_unchanged`
+  (Python 3.13.15, `MPLCONFIGDIR`/`XDG_CACHE_HOME` under `/tmp`):
+  **OK**. Step B (group B) gate is lifted.
