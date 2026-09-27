@@ -55,3 +55,13 @@ Both Python matrix jobs passed [run 36253102330](https://github.com/hoolheart/so
 `dev` was fast-forwarded and pushed to that candidate after review, tester,
 product-owner and principle gates. No merge commit or main promotion was made.
 The completion-record commit follows the same CI-before-integration requirement.
+
+## Release 1 continuation
+
+The user authorized TU-001–TU-008 on 2026-09-27; the proposal wording above
+is preparation history. Current requirements are in
+[release_1/prd.md](../release_1/prd.md), and task state is tracked in the
+[Release 1 board](../release_1/sprint-board.md). TU-001 integrated to `dev`
+at `6f39f78066021a048da82364756bff79294da7d9` after both Python jobs passed
+[CI 36302785650](https://github.com/hoolheart/softlab/actions/runs/36302785650).
+TU-002–TU-008 remain pending their serial gates.
