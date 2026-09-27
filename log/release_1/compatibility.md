@@ -11,9 +11,10 @@ and the existing `tests/test_compatibility.py`. Test names below omit `test_`.
 | Arbitrary object values; snapshot contains class and does not read | Notebook snapshots, device/station snapshot recursion | `arbitrary_value_and_snapshot_do_not_read` |
 | Proxy forwards access/validation/hooks | `parameter.py` proxy examples | `proxy_forwards_validation_permissions_and_hooks` |
 | Quantization modes and input bounds after construction | `parameter.py` quantization examples | `quantization_modes_and_bounds` |
-| Nested lookup, delegation, parent/owner links, ordered settings and removal | `device.py` examples | `nested_paths_delegation_ownership_and_removal` |
+| Nested lookup, delegation, parent/owner links, ordered settings and removal | `device.py` examples | `nested_paths_delegation_ownership_and_removal`, `batch_settings_preserve_sequence_order` |
 | Registry, construction kwargs, default station identity, snapshot | `station.py` examples | `station_builder_registry_and_default_are_restored` (registry and default restored) |
 | Eager VISA opening/clear, direct communication error propagation, explicit close | `tests/test_visa.ipynb` | `eager_open_clear_and_transport_errors` |
+| Timeout constructor/default/set/get preserve raw numeric forwarding | `VisaHandle` public properties; VISA notebook | `timeout_values_are_forwarded_without_conversion` (unit discrepancy remains OBS-001) |
 | VISA formatting, codec read, inspection without I/O | VISA notebook channels | `parameter_commands_codecs_and_snapshot`; existing simulator test |
 | Legacy command get executes exactly once; set denied | `VisaCommand` public contract | `legacy_command_reads_execute_once_and_writes_denied` |
 | Rejected non-message resource closes | `VisaHandle.__init__` | `non_message_resource_is_closed_on_rejection` |
@@ -26,8 +27,8 @@ and the existing `tests/test_compatibility.py`. Test names below omit `test_`.
 
 - **OBS-001 (TU-006):** `VisaHandle.timeout` forwards numeric values directly to
   PyVISA while its docstrings say seconds. PyVISA resource timeout convention is
-  milliseconds. Do not freeze this discrepancy with an assertion or silently
-  rescale existing callers; TU-006 must document compatible units/defaults.
+  milliseconds. The raw numeric forwarding is characterized without certifying seconds
+  as correct. Do not silently rescale existing callers; TU-006 must document compatible units/defaults.
 - **OBS-002 (TU-006):** `VisaHandle.write_raw` calls resource `write`, not
   `write_raw`. Source observation; no hardware reproduction. Resolve explicitly
   in TU-006 with a focused regression and compatible error handling.
