@@ -9,13 +9,20 @@ No main promotion, real hardware, or mu/huo implementation is included.
 | TU-001 | Done | Product owner, architect, developer, tester, reviewer | tests b5599ff; review 1c2886e APPROVED; dev integrated 6f39f78 after CI 36302785650 |
 | TU-002 | Done | Developer, tester, reviewer, designer, architect | tests 86a6063 33/33 green; review b613f2a APPROVED; dev integrated 8794cb7 after CI 36306104192 |
 | TU-003 | Done | Developer, tester, reviewer, designer, architect | tests ffc5f25 40/40 green; review 9002b68 APPROVED; dev integrated d24da5c after CI 36320621031 |
-| TU-004 | Development | Developer | codex/tu-004-lifecycle from 112a49c; test/design/arch gates approved (692b422/7c3f0bb/898d471, one design correction round) |
+| TU-004 | Done | Developer, tester, reviewer, designer, architect | tests a9589eb 50/50 green; review b1d8780 APPROVED; dev integrated c989d4c after CI 36323399137 |
 | TU-005 | Backlog | Unassigned | Measurement semantics |
 | TU-006 | Backlog | Unassigned | VISA operation contracts |
 | TU-007 | Backlog | Unassigned | Theory contracts |
 | TU-008 | Backlog | Unassigned | Integration/documentation |
 
 Only one task may advance beyond Backlog before its predecessor integrates.
+
+## TU-004 integration evidence
+
+Candidate `c989d4c672f76ce56b8801a120de08ed4c772c90` passed both Python 3.9
+and 3.13 jobs in [run 36323399137](https://github.com/hoolheart/softlab/actions/runs/36323399137).
+`dev` was fast-forwarded and pushed to that candidate. No merge commit was
+created; `main` was untouched.
 
 ## TU-003 integration evidence
 
