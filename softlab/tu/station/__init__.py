@@ -4,6 +4,7 @@ from softlab.tu.station.parameter import (
     Parameter,
     QuantizedParameter,
     ProxyParameter,
+    Reading,
 )
 
 from softlab.tu.station.device import (

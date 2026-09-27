@@ -1,13 +1,16 @@
 """Parameter interface"""
 
 from abc import abstractmethod
+from dataclasses import dataclass
 from typing import (
     Any,
     Dict,
+    List,
     Optional,
     Callable,
     Set,
 )
+import time
 import warnings
 from softlab.jin.validator import (
     Validator,
@@ -90,6 +93,55 @@ def _validate_metadata(metadata: Optional[Dict[str, Any]]) -> Dict[str, Any]:
     return copy(metadata, 'metadata', set())
 
 
+@dataclass(frozen=True)
+class Reading():
+    """
+    Immutable record of the outcome of one ``Parameter.read()`` call.
+
+    A reading is a frozen value object: attribute rebinding raises
+    ``dataclasses.FrozenInstanceError``. Field values are not copied or
+    deeply frozen --- ``value`` is the identical object the acquisition
+    chain returned, echoed by reference.
+
+    ``quality`` is a closed vocabulary: exactly ``'ok'`` (acquisition
+    chain completed) or ``'failed'`` (acquisition chain raised). No
+    other value is defined.
+
+    On a failed read, ``value`` is ``None`` (no acquisition completed),
+    ``acquired_at`` is ``None`` (no completion time exists), ``error``
+    holds the original exception object (identity preserved, never
+    wrapped), and the declared ``uncertainty``/``calibration`` are still
+    populated from the parameter's constructor declarations.
+
+    Serialization limit: this class defines no ``__iter__``, no
+    ``to_json`` and no JSON fallback of any kind. ``json.dumps`` of a
+    reading raises ``TypeError`` under the standard encoder --- an
+    explicit, loud outcome, never a restriction on what may be stored.
+    Note that the generated dataclass ``__repr__`` and ``__hash__``
+    touch field values, so ``repr(reading)`` may raise for opaque values
+    and hashability is value-dependent.
+
+    Fields:
+    - value --- the exact object ``get()`` returned (identity, never
+      copied); ``None`` on a failed read
+    - acquired_at --- epoch seconds of acquisition-chain completion,
+      stamped after the chain returns; ``None`` on a failed read
+    - quality --- ``'ok'`` or ``'failed'`` (closed vocabulary)
+    - error --- the original exception object on failure, else ``None``
+    - uncertainty --- declared uncertainty of the parameter, else
+      ``None``
+    - calibration --- declared calibration reference of the parameter,
+      else ``None``
+    """
+
+    value: Any
+    acquired_at: Optional[float]
+    quality: str
+    error: Optional[Exception]
+    uncertainty: Optional[Any]
+    calibration: Optional[Any]
+
+
 class Parameter():
     """
     Parameter base class
@@ -109,6 +161,13 @@ class Parameter():
     - snapshot --- get the snapshot dict of parameter
     - set --- set parameter value
     - get --- get parameter value
+    - read --- opt-in measurement read returning a ``Reading`` with
+               acquisition time, quality and the original failure
+               object, distinct from the legacy value-only ``get()``/
+               ``__call__`` path
+    - describe_reading --- opt-in versioned description of the declared
+                           measurement metadata, in its own schema
+                           namespace, never touching the stored value
 
     Parameter is callable object, calling without parameter means getting,
     and calling with parameters means setting (only first parameter is used).
@@ -151,7 +210,13 @@ class Parameter():
                  encoder: Optional[Callable[[Any], Any]] = None,
                  before_set: Optional[Callable[[Any, Any], None]] = None,
                  after_set: Optional[Callable[[Any], None]] = None,
-                 before_get: Optional[Callable[[Any], Any]] = None) -> None:
+                 before_get: Optional[Callable[[Any], Any]] = None,
+                 unit: Optional[str] = None,
+                 value_type: Optional[str] = None,
+                 shape: Optional[List[int]] = None,
+                 channel: Optional[str] = None,
+                 uncertainty: Optional[Any] = None,
+                 calibration: Optional[Any] = None) -> None:
         """
         Initialize parameter
 
@@ -167,6 +232,20 @@ class Parameter():
         - before_set --- hook function before setting, [prev, next] -> None
         - after_set --- hook function after setting
         - before_get --- hook function to alter stored value before getting
+        - unit --- physical unit declaration, optional, default None
+        - value_type --- value type declaration, optional, default None
+        - shape --- value shape declaration, optional, default None
+        - channel --- channel declaration, optional, default None
+        - uncertainty --- uncertainty declaration, optional, default None
+        - calibration --- calibration reference declaration, optional,
+          default None
+
+        The six measurement keywords (``unit``, ``value_type``,
+        ``shape``, ``channel``, ``uncertainty``, ``calibration``) are
+        descriptive declarations only: they are stored verbatim, with no
+        validation and no copying, and are echoed by reference in
+        ``describe_reading()`` and on ``Reading.uncertainty`` /
+        ``Reading.calibration``. Callers must treat them as read-only.
 
         Note: warning if settable and gettable are both False
         """
@@ -200,6 +279,14 @@ class Parameter():
             else:
                 self._validator.validate(init_value)
                 self._value = init_value
+        # declared measurement metadata, stored verbatim, no validation,
+        # no copying; echoed by reference and documented as read-only
+        self._unit: Optional[str] = unit
+        self._value_type: Optional[str] = value_type
+        self._shape: Optional[List[int]] = shape
+        self._channel: Optional[str] = channel
+        self._uncertainty: Optional[Any] = uncertainty
+        self._calibration: Optional[Any] = calibration
 
     @property
     def name(self) -> str:
@@ -278,6 +365,34 @@ class Parameter():
             'gettable': self._gettable,
         }
 
+    def describe_reading(self) -> Dict[str, Any]:
+        """
+        Get a versioned description of the declared measurement metadata.
+
+        The result lives in its own schema namespace (``schema_version``
+        1, independent of the ``describe()`` v1 and
+        ``describe_operation()`` v1 schemas) and is a fresh dict literal
+        on every call. The four optional fields ``unit``,
+        ``value_type``, ``shape`` and ``channel`` are ``None`` when
+        undeclared. Declared values are echoed verbatim by reference
+        (``shape`` in particular) and must be treated as read-only.
+
+        Returns:
+        - a fresh version-1 reading-description dict
+
+        Side-effects: zero device I/O; never reads the stored value;
+        never invokes validators, codecs, hooks, or ``str``/``repr`` on
+        any runtime value.
+        """
+        return {
+            'schema_version': 1,
+            'name': self._name,
+            'unit': self._unit,
+            'value_type': self._value_type,
+            'shape': self._shape,
+            'channel': self._channel,
+        }
+
     def set(self, value: Any) -> None:
         """Set parameter value"""
         if not self.settable:
@@ -300,6 +415,48 @@ class Parameter():
         if isinstance(self._encoder, Callable):
             return self._encoder(self._value)
         return self._value
+
+    def read(self) -> Reading:
+        """
+        Opt-in richer read, returning a ``Reading`` of one acquisition.
+
+        Performs exactly one acquisition through the legacy ``get()``
+        chain (permission check, ``before_get`` hook, encoder), so
+        acquisition counts, hook ordering and encoder behavior are
+        identical by construction; ``acquired_at`` is stamped with
+        ``time.time()`` after the acquisition chain completes. No
+        caching is performed: each call acquires afresh.
+
+        Raises ``RuntimeError`` when the parameter is not gettable,
+        exactly like ``get()``, before any acquisition is attempted;
+        permission denial is a programming error, not an acquisition
+        outcome, and never produces a ``Reading``.
+
+        If the acquisition chain raises an ``Exception`` subclass, the
+        original exception object is returned on ``reading.error`` with
+        ``quality == 'failed'`` instead of propagating; ``BaseException``
+        subclasses (e.g. ``KeyboardInterrupt``) propagate unchanged.
+        Legacy ``get()`` always propagates the identical exception
+        object.
+
+        Returns:
+        - a ``Reading`` with the acquired value, completion timestamp,
+          quality and the original failure object (on failure)
+
+        Side-effects: exactly those of one legacy ``get()`` call (hook
+        invocation, device I/O); none on the permission-denied path.
+        """
+        if not self.gettable:
+            raise RuntimeError(f'Parameter {self.name} is not gettable')
+        try:
+            value = self.get()
+        except Exception as error:
+            return Reading(value=None, acquired_at=None, quality='failed',
+                           error=error, uncertainty=self._uncertainty,
+                           calibration=self._calibration)
+        return Reading(value=value, acquired_at=time.time(), quality='ok',
+                       error=None, uncertainty=self._uncertainty,
+                       calibration=self._calibration)
 
     def __call__(self, *args: Any) -> Any:
         """Get or set parameter value, makes parameter callable"""
@@ -393,6 +550,21 @@ class ProxyParameter(Parameter):
 
     def get(self) -> Any:
         return self._obj.get()
+
+    def read(self) -> Reading:
+        """
+        Forward the opt-in rich read to the target parameter.
+
+        Returns:
+        - the target's own ``Reading`` object, giving value/quality/
+          error parity with a direct read of the target
+
+        Errors: permission is enforced on the target side --- the
+        target's ``read()`` performs its own gettable pre-check, so a
+        denied target raises the target's ``RuntimeError`` through this
+        proxy with zero proxy-side acquisition.
+        """
+        return self._obj.read()
 
 
 if __name__ == '__main__':
