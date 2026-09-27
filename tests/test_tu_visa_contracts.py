@@ -29,12 +29,23 @@ Group A --- lifecycle adoption and ownership (closes OBS-003):
   its resource and closes it.
 
 Group B --- timeout units and defaults (resolves OBS-001 additively):
+- Construction contract (developer-recommended resolution of the
+  default-construction contradiction, review issue 1): the legacy
+  ``timeout`` parameter becomes ``Optional[float] = None`` where ``None``
+  is the sentinel meaning "not specified"; the seconds default is
+  ``timeout_seconds: float = 5.0``, a new constructor keyword. When
+  ``timeout`` is ``None`` the seconds default applies (resource value
+  5000 ms); when ``timeout`` is given, the legacy raw path forwards it
+  untouched (an explicitly supplied raw ``timeout`` is never rescaled,
+  per OBS-001 "do not silently rescale existing callers"). Guard case 1
+  pins raw forwarding of an explicitly supplied ``timeout=5.0``; guard
+  case 6 pins raw forwarding of set/get on the legacy ``timeout``
+  property.
 - Additive, explicit ``timeout_seconds`` property expresses the timeout in
   seconds and converts to the PyVISA millisecond convention (x1000) on the
   resource, in both directions; ``None`` disables the timeout. The
   documented default is 5.0 seconds (resource value 5000 ms), applied on
-  construction (also via a ``timeout_seconds`` constructor keyword). The
-  legacy ``timeout`` property keeps raw numeric forwarding untouched.
+  default construction via the ``timeout_seconds`` keyword default.
 - An operation whose completion exceeds the configured timeout surfaces
   the original ``VisaIOError`` (e.g. ``VI_ERROR_TMO``) object unchanged.
 
@@ -61,6 +72,11 @@ Group D --- error causes and real resource outcomes:
 - Operations on a cleaned-up handle raise ``RuntimeError`` matching
   ``'Invalid visa resource'`` with zero resource I/O; ``prepare()``
   recovers the handle.
+- OBS-002 disposition (focused regression, group D): ``write_raw`` must
+  target the resource's raw ``write_raw`` with the identical bytes object
+  --- current production forwards the bytes to the string ``write``
+  (``resource.write(message=bytes)``), which is the recorded defect this
+  case pins and turns red on until fixed.
 - End-to-end ``@sim`` verification of resource outcomes: real simulator
   round trips, real timeout-unit conversion on a real resource, non-owner
   close behaviour on a real resource, and device-confirmed stop against
@@ -105,7 +121,11 @@ class VisaLifecycleTests(unittest.TestCase):
 
     def test_legacy_eager_open_and_close_unchanged(self):
         # Compatibility guard: passes against unchanged production code.
-        handle, resource, manager, factory = make_resource(self, "TEST@sim")
+        # Pins raw forwarding of an EXPLICIT legacy timeout=5.0 (review
+        # issue 1): an explicitly supplied raw timeout must forward
+        # unchanged (OBS-001: no silent rescaling of existing callers).
+        handle, resource, manager, factory = make_resource(
+            self, "TEST@sim", timeout=5.0)
         factory.assert_called_once_with("@sim")
         manager.open_resource.assert_called_once_with("TEST")
         resource.clear.assert_called_once_with()
@@ -220,6 +240,10 @@ class VisaTimeoutTests(unittest.TestCase):
     def test_timeout_seconds_converts_to_visa_milliseconds(self):
         handle, resource, _, _ = make_resource(self, "TEST@sim")
         timeout_seconds = handle.timeout_seconds
+        # Default construction takes the seconds path (review issue 1):
+        # no explicit raw timeout was supplied, so the 5.0 s default is
+        # applied as 5000 ms on the resource and reads back as 5.0 s.
+        self.assertEqual(resource.timeout, 5000)
         self.assertEqual(timeout_seconds, 5.0)
         handle.timeout_seconds = 2.5
         self.assertEqual(resource.timeout, 2500)
@@ -406,6 +430,37 @@ class VisaErrorCauseTests(unittest.TestCase):
         resource.query.return_value = "3.5"
         self.assertEqual(handle.query("V?", None), "3.5")
 
+    def test_write_raw_targets_raw_resource_write(self):
+        # OBS-002 disposition (compatibility.md: "Resolve explicitly in
+        # TU-006 with a focused regression and compatible error handling").
+        # Recorded defect (visa.py at gate time): handle.write_raw forwards
+        # the bytes to the resource's string write --- resource.write(
+        # message=bytes) --- instead of the resource's write_raw. The
+        # explicit behavior decision is the FIX direction: write_raw must
+        # target resource.write_raw with the identical bytes object, the
+        # return value is forwarded unchanged, and transport errors
+        # propagate as the identical object. This case is RED against the
+        # current defect (mirroring how TU-001 recorded defects separately
+        # from intended contracts) and turns green with the fix; the
+        # post-cleanup zero-I/O policy of case 15 composes with it
+        # (write_raw on a cleaned-up handle already raises RuntimeError
+        # before any resource call).
+        handle, resource, _, _ = make_resource(self, "TEST@sim")
+        message = b"V 1"
+        resource.write_raw.return_value = 3
+        self.assertEqual(handle.write_raw(message), 3)
+        resource.write_raw.assert_called_once_with(message)
+        self.assertIs(resource.write_raw.call_args.args[0], message)
+        resource.write.assert_not_called()
+        resource.reset_mock()
+        error = pyvisa.errors.VisaIOError(
+            pyvisa.constants.StatusCode.error_io)
+        resource.write_raw.side_effect = error
+        with self.assertRaises(pyvisa.errors.VisaIOError) as raised:
+            handle.write_raw(b"FAIL")
+        self.assertIs(raised.exception, error)
+        resource.write.assert_not_called()
+
     def test_sim_end_to_end_resource_outcomes(self):
         # Borrowed resource: adopted as-is, never closed by the non-owner.
         manager = pyvisa.ResourceManager(SIMULATOR)
@@ -430,6 +485,9 @@ class VisaErrorCauseTests(unittest.TestCase):
                            read_termination="\r", write_termination="\r",
                            device_clear=False)
         self.assertTrue(owned.supports("connection"))
+        # Default construction applies the seconds default as real 5000 ms
+        # on the resource (review issue 1: timeout=None sentinel path).
+        self.assertEqual(owned.timeout, 5000)
         self.assertEqual(owned.timeout_seconds, 5.0)  # 5000 ms on resource
         self.assertIn("Keithley", owned.query("*IDN?"))
         owned.cleanup()
