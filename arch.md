@@ -117,6 +117,30 @@ Public import paths are aggregated in [station](softlab/tu/station/__init__.py)
 and [theory](softlab/tu/theory/__init__.py). New exports require circular-import
 checks as well as direct-module tests.
 
+### TU-001 characterization status (existing behavior and planned decisions)
+
+The [compatibility matrix](log/release_1/compatibility.md) and
+`tests/test_tu_contracts.py` characterize value calls, hook order, snapshots,
+composition, builders, VISA side effects, theory fallbacks and mapping shapes
+without production changes. The tests establish observed behavior; they do not
+turn every observation into a desired long-term contract. Six observations need
+explicit later decisions before Release 1 acceptance:
+
+| Observation | Existing finding | Planned disposition |
+| --- | --- | --- |
+| OBS-001 | VISA timeout docstrings say seconds; values forward unchanged to PyVISA. | TU-006 documents compatible units and defaults before any conversion decision. |
+| OBS-002 | `write_raw` delegates to resource `write`. | TU-006 reproduces and resolves with a focused regression. |
+| OBS-003 | VISA resource acquisition has no cleanup guard for later initialization failures; manager ownership is unspecified. | TU-004 defines optional ownership/lifecycle; TU-006 applies it to VISA. |
+| OBS-004 | Quantized/VISA subclass fields are initialized after base initialization may invoke set hooks. | TU-005/TU-006 reproduce non-None initialization and decide compatible correction. |
+| OBS-005 | `TheoryModel.features` returns `{}` on evaluation exceptions. | TU-007 adds an opt-in strict path while preserving the legacy fallback. |
+| OBS-006 | Delegated names can collide with methods; longer parent cycles lack coverage. | TU-004 evaluates explicit lookup and cycle policy without assuming new guarantees. |
+
+These are tracked design decisions and possible defects, not closed issues.
+`tu` owns device and model contracts; `huo` remains responsible for scheduling,
+`shui` for persistence, and `mu` for application services. The TU-001 tests do
+not establish hardware, concurrency, exhaustive failure or new lifecycle
+behavior.
+
 ## Existing execution interaction
 
 The simplified sequence below describes `AtomJob.body()` in a normal non-dry run.
