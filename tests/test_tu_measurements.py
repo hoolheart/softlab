@@ -151,11 +151,27 @@ class MeasurementTests(unittest.TestCase):
         result = read()
         self.assertEqual(result.quality, "failed")
         self.assertIs(result.error, error)
+        # Failed-read field states: no value, no completion time, and the
+        # identical exception object (design Decision 1, test-phase pin).
+        self.assertIsNone(result.value)
+        self.assertIsNone(result.acquired_at)
         handle.query.assert_called_once_with("MEAS?", None)
         # Legacy path still propagates the identical exception object.
         with self.assertRaises(pyvisa.errors.VisaIOError) as raised:
             measured.get()
         self.assertIs(raised.exception, error)
+        # Declared uncertainty/calibration stay populated on a failed read.
+        calibrated = VisaParameter(
+            "signal", handle, get_cmd="MEAS?",
+            encoder=float, settable=False,
+            uncertainty=0.02, calibration="cal-2026-09")
+        failed = calibrated.read()
+        self.assertEqual(failed.quality, "failed")
+        self.assertIsNone(failed.value)
+        self.assertIsNone(failed.acquired_at)
+        self.assertIs(failed.error, error)
+        self.assertEqual(failed.uncertainty, 0.02)
+        self.assertEqual(failed.calibration, "cal-2026-09")
 
     def test_rich_read_performs_single_acquisition_on_visa_parameter(self):
         handle = Mock(spec=VisaHandle)
