@@ -45,3 +45,27 @@ with docs(log): messages and pushed; no uncommitted artifacts.
 No hardware accessed, no new runtime dependency, no Python support change,
 no huo/mu production change. Integration candidate: branch tip must pass CI
 before dev fast-forward; OBS-001–006 remain open for later tasks.
+
+## TU-003 completion inspection
+
+PASS for explicit-operations scope. Serial gates observed on
+codex/tu-003-operations: test gate (RED evidence 1c6d97c, implementability
+ACCEPTED ef10bed), design gate (0047a50 proposed, 14a7d9d architect APPROVED),
+development (770bad6, +71 lines confined to softlab/tu/station/visa.py),
+code review (9002b68 APPROVED, zero issues, arch observation discharged in
+docstring), testing gate (beeb6b5 detachment case, ffc5f25 green evidence:
+7/7 focused, 40/40 full suite under -W error, compile/import clean, tester
+independent rerun).
+
+Principle 1: tests preceded design, design preceded implementation, all
+reports exist and are committed/pushed. Principle 2: zero open review or test
+issues. Principle 3: no skipped environment component; mocked PyVISA only,
+notebooks out of scope as recorded. Principle 4: N/A. Principle 5: warnings-as-
+errors full suite green; two pre-existing parameter.py baseline warnings
+(SyntaxWarning pair in __main__ example block, plus a warning at
+Parameter.__init__ parameter.py:183 noted by the code reviewer) recorded as
+baseline defects, not silently exempted. Principle 6: every log/release_1
+artifact committed with docs(log): messages and pushed.
+
+No hardware, no new dependency, no huo/mu change. Integration candidate must
+pass CI before dev fast-forward.
