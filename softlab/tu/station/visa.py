@@ -271,6 +271,10 @@ class VisaParameter(Parameter):
 class VisaCommand(Parameter):
     """
     Simple visa command as a read-only command
+
+    Public Methods:
+    - execute --- perform the command's write explicitly (TU-003)
+    - describe_operation --- report side-effect semantics without I/O (TU-003)
     """
 
     def __init__(self, name: str,
@@ -304,6 +308,73 @@ class VisaCommand(Parameter):
     def before_get(self, value: Any) -> Any:
         self._handle.write(self._cmd)
         return value
+
+    def execute(self) -> Any:
+        """
+        Perform the command's write explicitly and report the stored value
+
+        The explicit operation path is not gated by the legacy gettable /
+        settable permissions of ``Parameter``: executing a ``VisaCommand``
+        is always permitted, because the command's whole purpose is to be
+        executed. The write is performed directly and does not invoke
+        ``before_get``, ``get()`` or ``__call__``.
+
+        Args:
+        - None
+
+        Returns:
+        The stored value (``self._value``) verbatim. No encoder or decoder
+        is applied; for the standard configuration the stored value is the
+        construction-time ``init_value`` (``True``) and never changes.
+
+        Errors:
+        Any exception raised by the handle's write propagates unchanged,
+        with the original exception object preserved (no wrapping). This
+        includes transport failures (e.g. ``pyvisa.errors.VisaIOError``)
+        and the ``RuntimeError('Invalid visa resource')`` raised when the
+        handle's resource is unavailable; in both cases exactly one write
+        was attempted before the exception.
+
+        Side-effects:
+        Exactly one command write per call (``self._handle.write(
+        self._cmd)``, positional), no reads, no other device I/O. Two
+        calls write exactly twice.
+        """
+        self._handle.write(self._cmd)
+        return self._value
+
+    def describe_operation(self) -> Dict[str, Any]:
+        """
+        Describe the operation's side-effect semantics without executing it
+
+        Returns a fresh, detached, JSON-compatible dict on every call, in
+        a schema namespace separate from TU-002 ``describe()`` (version 1
+        of the operation-description schema, not the structure-description
+        schema). Only four fields exist: ``schema_version`` (int, 1),
+        ``name`` (the command's parameter name), ``effect`` (``'write'``,
+        the side-effect kind of one invocation), and ``executions_per_call``
+        (int, 1, the number of command writes performed by one ``execute()``
+        call).
+
+        Args:
+        - None
+
+        Returns:
+        Fresh version-1 operation description dict.
+
+        Errors:
+        None.
+
+        Side-effects:
+        None --- performs no device I/O, never touches the handle, and never
+        includes the command string or the resource address in the result.
+        """
+        return {
+            'schema_version': 1,
+            'name': self._name,
+            'effect': 'write',
+            'executions_per_call': 1,
+        }
 
     def snapshot(self) -> dict:
         return {
