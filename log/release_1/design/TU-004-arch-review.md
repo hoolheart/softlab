@@ -123,3 +123,62 @@ design document; no re-review of the full document is required if the fix
 is limited to pinning that transition (design text, state diagram,
 docstring requirements). This review does not claim code review, test
 pass, CI or integration.
+
+## Re-review of the correction (commit `3417ec9`)
+
+Reviewer: sw-jerry (architect). Candidate: `3417ec9` on
+`codex/tu-004-lifecycle` (`log/release_1/design/TU-004.md`, +85/−6).
+Scope: confirmation that Issue 1 is resolved and that the correction
+introduced no new inconsistencies, per the closing note above. Verdict:
+**APPROVED** — TU-004 may proceed to implementation.
+
+**Issue 1 — resolved.**
+
+- **Cleanup-first pinned, out-of-contract otherwise.** New decision 5
+  selects option (a) exactly as recommended: after a failed `prepare()`,
+  the author must call `cleanup()` before re-preparing; calling
+  `prepare()` in `FailedPendingRelease` is outside the lifecycle
+  contract. The pinning is documentation-only — no guard in `prepare()`,
+  consistent with the failing-release-hook pinning style.
+- **`prepare()` algorithm unchanged.** The pseudocode still has exactly
+  one early return (`_initialized` is `True`); the contract-boundary
+  paragraph under `prepare()` and the decision 5 implementation note
+  both state explicitly that no guard is added. Case 6's
+  exception-identity guarantee remains structurally trivial (no
+  `try`/`except`).
+- **State diagram updated.** A self-loop
+  `FailedPendingRelease → FailedPendingRelease : prepare() — OUT OF
+  CONTRACT (decision 5)` was added, and the state's note records
+  "cleanup() first (decision 5)". Read as a contract statement (not a
+  behavior claim, since out-of-contract behavior is undefined), this is
+  consistent with the algorithms section.
+- **Docstring contract text mandated verbatim.** The docstring
+  requirements now quote the exact `prepare()` contract text the
+  developer must write, stating the cleanup-first requirement and the
+  undefined behavior of re-preparation without it.
+- **Hook contract consistent everywhere.** Decision 5, the Hooks
+  section, and the `cleanup()` docstring requirements all state
+  "`_cleanup_impl()` invoked at most once per acquisition attempt
+  (successful or failed)". Under the cleanup-first pinning this
+  guarantee holds: in-contract, every acquisition attempt
+  (`_needs_cleanup` armed) is discharged by exactly one `cleanup()`
+  before any further attempt.
+
+**No new inconsistencies introduced.** Decision 5 coheres with decision
+1 (lazy release: single release site, unchanged), decision 2
+(double-prepare no-op scoped to the initialized state, unchanged), and
+decision 3 (out-of-contract usage has no guaranteed behavior — the
+single-threaded pinning provides the precedent for documentation-only
+contract boundaries). The `prepare()` edge-case list now distinguishes
+the supported repeatable cycle (re-prepare after `cleanup()`) from the
+out-of-contract transition (re-prepare without it), matching the state
+diagram. The test-phase handoff case is correctly scoped: it asserts
+only the supported recovery path
+(`FailedPendingRelease → cleanup() → Fresh → prepare() → Ready`,
+release hook exactly once in total) and explicitly does not assert the
+out-of-contract transition — the right call, since no behavior is
+guaranteed there. Adding it in the test phase rather than during
+implementation keeps the implementation task minimal.
+
+No remaining issues. This re-review does not claim code review, test
+pass, CI or integration.
