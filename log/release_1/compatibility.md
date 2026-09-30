@@ -38,6 +38,23 @@ and the existing `tests/test_compatibility.py`. Test names below omit `test_`.
     supersession"). Explicit raw set/get forwarding remains
     characterized unchanged. Disposition of OBS-001 as resolved is
     recorded with step D per the TU-006 design.
+- **OBS-001 (TU-006) — RESOLVED (TU-006 step D):** the sentinel contract
+  landed: default construction forwards `timeout_seconds * 1000`
+  milliseconds (5000 ms), an explicit raw `timeout` is forwarded
+  unchanged (never rescaled), and the explicit `timeout_seconds`
+  property converts in both directions (`None` disables). Pinned by
+  cases 7, 8, 9 and 17; supersession of the TU-001 implicit-default
+  assertion recorded above.
+- **OBS-002 (TU-006) — FIXED (TU-006 step D):** `VisaHandle.write_raw`
+  now routes to `resource.write_raw(message)` with the identical bytes
+  object, the return value forwarded and error identity preserved.
+  Pinned by case 16 (`write` never called).
+- **OBS-003 (TU-004/TU-006) — CLOSED (TU-006 steps A–C):** `_acquire()`
+  is the single acquisition site; any post-acquisition failure (device
+  clear or a timeout/termination assignment) closes the acquired
+  resource exactly once and propagates the original exception object
+  unchanged. The resource manager is retained for the handle's
+  lifetime; there is no manager-close API. Pinned by cases 4 and 17.
 - **OBS-002 (TU-006):** `VisaHandle.write_raw` calls resource `write`, not
   `write_raw`. Source observation; no hardware reproduction. Resolve explicitly
   in TU-006 with a focused regression and compatible error handling.
