@@ -35,6 +35,7 @@ class TheoryModel(Delegated):
         super().__init__()
         self._name = name if isinstance(name, str) else ''
         self._attributes = {}
+        self._attr_descriptions = {}
         self.add_delegate_attr_dict('_attributes')
 
     @property
@@ -51,7 +52,8 @@ class TheoryModel(Delegated):
             return {}
 
     def add_attribute(self, key: str,
-                      vals: Validator, initial_value: Any) -> None:
+                      vals: Validator, initial_value: Any,
+                      description: str = '') -> None:
         """
         Add an attribute to the model, usually called at initialization of
         derived classes
@@ -60,10 +62,47 @@ class TheoryModel(Delegated):
             - key, the key of attribute, should be unique in one model
             - vals, the validator of attribute,
             - initial_value, the initial value of attribute
+            - description, optional semantic description of the attribute,
+              default ``''``
+
+        ``description`` (keyword-only in intent, positional-compatible by
+        default): optional semantic description of the attribute, default
+        ``''``. It is recorded only after the duplicate-key check and the
+        initial-value validation both succeed, so a rejected attribute
+        never leaves an orphan description. Existing three-argument calls
+        are unchanged.
         """
         if key in self._attributes:
             raise ValueError(f'Already has the attribute with key "{key}"')
         self._attributes[key] = LimitedAttribute(vals, initial_value)
+        self._attr_descriptions[key] = description
+
+    def describe(self) -> Dict[str, Any]:
+        """
+        Returns the versioned semantic description of this model
+        (``schema_version`` 1): the model ``name``, the model kind as the
+        class's ``__qualname__`` (JSON-safe), and one entry per attribute
+        carrying its semantic ``description`` (``''`` when none was
+        given). Performs no evaluation: ``calculate_features`` is never
+        called, so a model whose evaluation raises is still fully
+        describable. The returned dict is freshly built on each call;
+        mutating it does not affect the model.
+
+        Returns:
+            description dict with keys ``schema_version`` (``int``, 1),
+            ``name`` (``str``, possibly empty), ``model`` (``str``,
+            class ``__qualname__``) and ``attributes`` (``dict`` mapping
+            each attribute key to a ``dict`` carrying its ``description``)
+        """
+        return {
+            'schema_version': 1,
+            'name': self.name,
+            'model': type(self).__qualname__,
+            'attributes': {
+                key: {'description': self._attr_descriptions[key]}
+                for key in self._attributes
+            },
+        }
 
     def __repr__(self) -> str:
         prefix = f'"{self.name}"' if len(self.name) > 0 else ''
