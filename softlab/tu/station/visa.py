@@ -17,21 +17,39 @@ class VisaHandle():
     """
     Simple handle of VISA connection
 
+    ``VisaHandle`` mirrors the TU-004 lifecycle outcomes (``supports``,
+    ``initialized``, ``prepare``, ``cleanup`` and resource ownership)
+    without inheriting ``Device``: a ``VisaHandle`` is a connection
+    handle, not a device container.
+
     Properties:
     - address --- address of visa device, read-only
-    - timeout --- time-out time, unit: seconds
+    - timeout --- time-out time, forwarded raw to the PyVISA resource;
+      the legacy docstring described the unit as seconds while the
+      value was forwarded unchanged (OBS-001), resolved by the explicit
+      ``timeout_seconds`` property
+    - timeout_seconds --- time-out time in seconds, converting to/from
+      the PyVISA millisecond convention (x1000) in both directions
     - read_termination --- termination in reading
     - write_termination --- termination in writing
+    - initialized --- whether the handle currently holds a valid resource
+    - stopped --- device-confirmed stop latch (see ``confirm_stop``)
 
     Public Methods:
+    - supports --- detect lifecycle capabilities, no I/O
     - open --- open device
-    - close --- close device
+    - prepare --- re-open the resource after cleanup (repeatable cycle)
+    - close --- close device (legacy alias of ``cleanup``)
+    - cleanup --- release the owned resource, idempotent
+    - borrow --- adopt an externally owned resource (classmethod)
     - clear --- clear visa buffer
     - read --- read as string
     - read_raw --- read as raw bytes
     - write --- write as string
     - write_raw --- write as raw bytes
     - query --- query as string
+    - abort --- request interruption of the in-flight operation
+    - confirm_stop --- ask the device for a completion confirmation
     """
 
     def __init__(self,
@@ -50,50 +68,282 @@ class VisaHandle():
         - read_termination --- termination in reading
         - write_termination --- termination in writing
         - device_clear --- whether to clear device buffer
+
+        If anything after resource acquisition fails during construction
+        (device clear or a timeout/termination assignment), the acquired
+        resource is closed exactly once and the original exception
+        object propagates unchanged; no open resource is leaked.
         """
         self._backend: str = ''
         self._lib = visalib if isinstance(visalib, str) else None
         self._resource: Optional[visa.resources.MessageBasedResource] = None
+        self._manager: Optional[visa.ResourceManager] = None
+        self._initialized: bool = False
+        self._owns_resource: bool = True
+        self._stopped: bool = False
+        self._device_clear: bool = bool(device_clear)
+        self._read_termination: Optional[str] = read_termination
+        self._write_termination: Optional[str] = write_termination
+        self._timeout_raw: Optional[float] = timeout
 
         address = str(address)
         if len(address) > 0 and '@' in address:
             address, lib_in_addr = address.split('@')
             if self._lib is None:
                 self._lib = '@' + lib_in_addr
+        self._address = address
 
         try:
             if self._lib:
                 _logger.info(f'Opening PyVISA resource with {self._lib}')
-                resource_manager = visa.ResourceManager(self._lib)
+                self._manager = visa.ResourceManager(self._lib)
                 self._backend = self._lib.split('@')[1]
             else:
                 _logger.info('Opening PyVISA resource with default backend')
-                resource_manager = visa.ResourceManager()
+                self._manager = visa.ResourceManager()
                 self._backend = 'ni'
-            _logger.info(f'Opening PyVISA resource at {address}')
-            resource = resource_manager.open_resource(address)
-            if not isinstance(resource, visa.resources.MessageBasedResource):
-                resource.close()
-                raise TypeError(
-                    f'{__class__} only support MessageBasedResource '
-                    f'instead of {type(resource)}')
-            self._resource = resource
-            self._address = address
+            self._acquire()
         except Exception as e:
             _logger.info(f'Failed to connect {address}')
             raise e
 
-        if device_clear:
-            self.clear()
+    def _acquire(self) -> None:
+        """
+        Acquire the resource: open, type-check, configure
 
-        self.timeout = timeout
-        self.read_termination = read_termination
-        self.write_termination = write_termination
+        Single acquisition site shared by ``__init__`` and
+        ``prepare()``: opens the resource through the retained resource
+        manager, rejects non-message-based resources (closing them once,
+        the legacy path, outside the failed-init guard), then replays
+        the stored construction configuration (device clear flag,
+        timeout, both terminations).
+
+        If anything after resource acquisition fails, the acquired
+        resource is closed exactly once (a failing close is logged and
+        suppressed, never masking the original error) and the original
+        exception object propagates unchanged (OBS-003).
+
+        Args:
+        - None
+
+        Returns:
+        None.
+
+        Errors:
+        - ``TypeError`` --- the opened resource is not a
+          ``MessageBasedResource`` (legacy rejection path)
+        - any configuration failure propagates unchanged after the
+          acquired resource is closed exactly once
+
+        Side-effects:
+        Sets ``self._resource`` and ``self._initialized`` on success;
+        performs device I/O (open, optional clear, assignments).
+        """
+        _logger.info(f'Opening PyVISA resource at {self._address}')
+        resource = self._manager.open_resource(self._address)
+        if not isinstance(resource, visa.resources.MessageBasedResource):
+            resource.close()
+            raise TypeError(
+                f'{__class__} only support MessageBasedResource '
+                f'instead of {type(resource)}')
+        try:
+            if self._device_clear:
+                resource.clear()
+            resource.timeout = self._timeout_raw
+            resource.read_termination = self._read_termination
+            resource.write_termination = self._write_termination
+        except Exception:
+            try:
+                resource.close()
+            except Exception:
+                _logger.warning(
+                    'Failed to close resource after initialization failure',
+                    exc_info=True)
+            raise
+        self._resource = resource
+        self._initialized = True
 
     @property
     def address(self) -> str:
         """Get device address"""
         return self._address
+
+    @property
+    def initialized(self) -> bool:
+        """
+        Whether the handle currently holds a valid, ready resource
+
+        ``True`` after a successful eager open (or ``borrow``), ``False``
+        after ``cleanup()`` until a successful ``prepare()``.
+
+        Args:
+        - None
+
+        Returns:
+        The readiness flag.
+
+        Errors:
+        None.
+
+        Side-effects:
+        None --- performs no I/O.
+        """
+        return self._initialized
+
+    def supports(self, capability: str) -> bool:
+        """
+        Detect whether a lifecycle capability is supported, without I/O
+
+        The capability vocabulary is ``('connection', 'prepare',
+        'cleanup')`` and all three report ``True``; ``'connection'`` is
+        ``True`` because a ``VisaHandle`` *is* a connection (a deliberate
+        mirror-divergence from the ``Device`` base vocabulary, which
+        answers ``False`` for ``'connection'``). Unknown names ---
+        including the empty string --- report ``False``. Detection is
+        case-sensitive, performs no I/O and never raises.
+
+        Args:
+        - capability --- capability name, case-sensitive
+
+        Returns:
+        ``True`` for ``'connection'``/``'prepare'``/``'cleanup'``,
+        ``False`` otherwise.
+
+        Errors:
+        None.
+
+        Side-effects:
+        None --- never touches the resource.
+        """
+        return capability in ('connection', 'prepare', 'cleanup')
+
+    def prepare(self) -> None:
+        """
+        Prepare the handle: re-open the resource after ``cleanup()``
+
+        A no-op while the handle is already initialized. Otherwise the
+        handle re-runs acquisition through the retained resource manager
+        with the construction-time configuration re-applied (address,
+        device clear flag, timeout rule and both terminations), making
+        the lifecycle a plain repeatable cycle. If the re-open fails,
+        the original exception object propagates unchanged, any resource
+        acquired before the failure is closed exactly once by the
+        acquisition guard, ``initialized`` stays ``False`` and a later
+        ``prepare()`` retries --- there is no failed-pending state.
+
+        On a borrowed handle there is nothing to re-open (no address or
+        manager was retained), so ``prepare()`` raises
+        ``RuntimeError('Cannot re-open a borrowed visa resource')``.
+
+        Lifecycle methods (``prepare``, ``cleanup``, ``supports``,
+        ``initialized``, ``stopped``) are single-threaded in the TU-004
+        sense: calling ``cleanup()`` while an operation is in flight is
+        outside the contract. Operation serialization applies to the
+        five I/O operations and ``confirm_stop()`` only.
+
+        Args:
+        - None
+
+        Returns:
+        None.
+
+        Errors:
+        - ``RuntimeError`` --- borrowed handle, nothing to re-open
+        - any acquisition failure propagates unchanged (see
+          ``_acquire()``)
+
+        Side-effects:
+        Re-opens and re-configures the resource on success.
+        """
+        if self._initialized:
+            return
+        if not self._owns_resource:
+            raise RuntimeError('Cannot re-open a borrowed visa resource')
+        self._acquire()
+
+    def cleanup(self) -> None:
+        """
+        Release the resource and discharge the lifecycle state
+
+        Idempotent: the release runs at most once per acquisition cycle.
+        An owned resource is closed exactly once; a borrowed resource is
+        never closed by the non-owner. State is discharged before the
+        release, so a failing ``resource.close()`` propagates unchanged
+        and is never implicitly retried. ``stopped`` is reset for the
+        next acquisition cycle.
+
+        Lifecycle methods (``prepare``, ``cleanup``, ``supports``,
+        ``initialized``, ``stopped``) are single-threaded in the TU-004
+        sense: calling ``cleanup()`` while an operation is in flight is
+        outside the contract.
+
+        Args:
+        - None
+
+        Returns:
+        None.
+
+        Errors:
+        A failing resource ``close()`` propagates unchanged; the
+        already-discharged state is not re-armed.
+
+        Side-effects:
+        Sets ``_resource`` to ``None`` and ``initialized``/``stopped``
+        to ``False``; closes the owned resource exactly once.
+        """
+        resource = self._resource
+        self._resource = None
+        self._initialized = False
+        self._stopped = False
+        if resource is not None and self._owns_resource:
+            resource.close()
+
+    @classmethod
+    def borrow(cls, resource: visa.resources.MessageBasedResource
+               ) -> 'VisaHandle':
+        """
+        Adopt an externally owned, already-open message-based resource
+
+        Adoption is non-intrusive: no I/O, no ``clear()``, no
+        configuration changes --- the borrower uses the resource exactly
+        as the owner configured it. The new handle is a non-owner:
+        ``cleanup()``/``close()`` never close the borrowed resource, and
+        ``prepare()`` is unavailable (it raises ``RuntimeError``, as
+        there is nothing to re-open). ``initialized`` is ``True`` from
+        adoption. ``address`` is informational only (the resource's
+        ``resource_name`` when present, else ``''``).
+
+        Args:
+        - resource --- an open ``MessageBasedResource`` owned elsewhere
+
+        Returns:
+        A non-owning ``VisaHandle`` wrapping ``resource``.
+
+        Errors:
+        - ``TypeError`` --- ``resource`` is not a
+          ``MessageBasedResource`` (mirrors the constructor policy)
+
+        Side-effects:
+        None --- performs no device I/O and no configuration writes.
+        """
+        if not isinstance(resource, visa.resources.MessageBasedResource):
+            raise TypeError(
+                f'{cls} only support MessageBasedResource '
+                f'instead of {type(resource)}')
+        handle = cls.__new__(cls)
+        handle._lib = None
+        handle._backend = ''
+        handle._manager = None
+        handle._resource = resource
+        handle._address = getattr(resource, 'resource_name', '') or ''
+        handle._initialized = True
+        handle._owns_resource = False
+        handle._stopped = False
+        handle._device_clear = False
+        handle._read_termination = None
+        handle._write_termination = None
+        handle._timeout_raw = None
+        return handle
 
     @property
     def timeout(self) -> Optional[float]:
@@ -143,9 +393,29 @@ class VisaHandle():
             self._resource.clear()
 
     def close(self) -> None:
-        """Close device"""
-        if self._resource:
-            self._resource.close()
+        """
+        Close device
+
+        ``close()`` is the legacy alias of ``cleanup()``: it is
+        idempotent and ownership-aware. This differs from the pre-TU-006
+        behavior, where a second ``close()`` invoked the resource's
+        ``close()`` again; a second ``close()`` is now a no-op. No
+        production caller depended on the old double-close behavior.
+
+        Args:
+        - None
+
+        Returns:
+        None.
+
+        Errors:
+        Same as ``cleanup()``.
+
+        Side-effects:
+        Same as ``cleanup()``: the owned resource is closed exactly
+        once; a borrowed resource is never closed.
+        """
+        self.cleanup()
 
     def read(self, encoding: Optional[str] = None) -> str:
         """Read as string"""
