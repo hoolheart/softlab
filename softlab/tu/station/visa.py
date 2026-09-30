@@ -5,12 +5,32 @@ from typing import (
     Dict,
     Optional,
     Callable,
+    NamedTuple,
 )
 from softlab.tu.station.parameter import Parameter
 import pyvisa as visa
 import logging
+import threading
 
 _logger = logging.getLogger(__name__)
+
+
+class AbortReport(NamedTuple):
+    """
+    Advisory outcome of an ``abort()`` request
+
+    Fields:
+    - aborted --- whether an operation was in flight when the request
+      was recorded (``True``) or the request was a quiet no-op (``False``)
+    - stopped --- always ``False``: an abort request never claims the
+      equipment stopped; device-confirmed stop is ``confirm_stop()``'s
+      role alone
+
+    The report derives from the in-flight counter only; ``abort()``
+    performs no I/O, never waits and never acquires the operation lock.
+    """
+    aborted: bool
+    stopped: bool
 
 
 class VisaHandle():
@@ -50,6 +70,13 @@ class VisaHandle():
     - query --- query as string
     - abort --- request interruption of the in-flight operation
     - confirm_stop --- ask the device for a completion confirmation
+
+    The five I/O operations and ``confirm_stop()`` are serialized by a
+    single operation lock; ``abort()`` is the deliberate lock-free
+    cross-thread entry point. Lifecycle methods (``prepare``,
+    ``cleanup``, ``supports``, ``initialized``, ``stopped``) are
+    single-threaded in the TU-004 sense: calling ``cleanup()`` while an
+    operation is in flight is outside the contract.
     """
 
     def __init__(self,
@@ -102,6 +129,8 @@ class VisaHandle():
         self._write_termination: Optional[str] = write_termination
         self._timeout_raw: Optional[float] = timeout
         self._timeout_seconds: Optional[float] = timeout_seconds
+        self._op_lock: threading.Lock = threading.Lock()
+        self._in_flight: int = 0
 
         address = str(address)
         if len(address) > 0 and '@' in address:
@@ -366,6 +395,8 @@ class VisaHandle():
         handle._write_termination = None
         handle._timeout_raw = None
         handle._timeout_seconds = 5.0
+        handle._op_lock = threading.Lock()
+        handle._in_flight = 0
         return handle
 
     @property
@@ -497,33 +528,159 @@ class VisaHandle():
 
     def read(self, encoding: Optional[str] = None) -> str:
         """Read as string"""
-        if self._resource:
-            return self._resource.read(encoding=encoding)
-        raise RuntimeError('Invalid visa resource')
+        return self._serialized(
+            lambda r: r.read(encoding=encoding))
 
     def read_raw(self, size: Optional[int] = None) -> bytes:
         """Read as raw bytes"""
-        if self._resource:
-            return self._resource.read_raw(size=size)
-        raise RuntimeError('Invalid visa resource')
+        return self._serialized(
+            lambda r: r.read_raw(size=size))
 
     def write(self, message: str, encoding: Optional[str] = None) -> int:
         """Write as string"""
-        if self._resource:
-            return self._resource.write(message=message, encoding=encoding)
-        raise RuntimeError('Invalid visa resource')
+        return self._serialized(
+            lambda r: r.write(message=message, encoding=encoding))
 
     def write_raw(self, message: bytes) -> int:
         """Write as raw bytes"""
-        if self._resource:
-            return self._resource.write(message=message)
-        raise RuntimeError('Invalid visa resource')
+        return self._serialized(
+            lambda r: r.write(message=message))
 
     def query(self, command: str, delay: Optional[float] = None) -> str:
         """Query as string"""
-        if self._resource:
-            return self._resource.query(command, delay)
-        raise RuntimeError('Invalid visa resource')
+        return self._serialized(
+            lambda r: r.query(command, delay))
+
+    def _serialized(self, operation: Callable) -> Any:
+        """
+        Serialize one device operation through the operation lock
+
+        Single guard site for the five I/O operations and
+        ``confirm_stop()``'s query: acquires ``_op_lock``, rejects a
+        missing resource with ``RuntimeError('Invalid visa resource')``
+        (zero device I/O, atomically with respect to operation
+        boundaries), tracks the in-flight counter for ``abort()``, then
+        runs ``operation(resource)``. No ``try/except`` wraps the call:
+        any exception raised by the operation propagates as the
+        identical object.
+
+        Args:
+        - operation --- callable taking the resource, returning the
+          operation result
+
+        Returns:
+        The operation result.
+
+        Errors:
+        - ``RuntimeError`` --- no resource (post-cleanup), zero I/O
+        - any operation failure propagates unchanged
+
+        Side-effects:
+        Mutates ``_in_flight`` around the call; performs the operation's
+        device I/O under the lock.
+        """
+        with self._op_lock:
+            resource = self._resource
+            if resource is None:
+                raise RuntimeError('Invalid visa resource')
+            self._in_flight += 1
+            try:
+                return operation(resource)
+            finally:
+                self._in_flight -= 1
+
+    def abort(self) -> AbortReport:
+        """
+        Request interruption of the in-flight operation
+
+        An abort request is advisory bookkeeping only: it never waits
+        for the in-flight operation, never acquires the operation lock,
+        and never writes to the device. ``report.stopped`` and
+        ``handle.stopped`` are always ``False`` after ``abort()`` — an
+        abort request never claims the equipment stopped. Only
+        ``confirm_stop()`` may report a device-confirmed stop. Whether
+        the in-flight call terminates early is backend-honored; the
+        aborted call's underlying exception object propagates unchanged.
+
+        The in-flight counter is read without the lock: an int read
+        cannot tear under the GIL, and a stale read at the exact
+        boundary of completion only affects the advisory ``aborted``
+        flag — never device state, never error identity.
+
+        Args:
+        - None
+
+        Returns:
+        ``AbortReport(aborted=True, stopped=False)`` while an operation
+        is in flight; ``AbortReport(aborted=False, stopped=False)`` when
+        idle.
+
+        Errors:
+        None.
+
+        Side-effects:
+        None — performs no I/O and records no state.
+        """
+        if self._in_flight > 0:
+            return AbortReport(aborted=True, stopped=False)
+        return AbortReport(aborted=False, stopped=False)
+
+    @property
+    def stopped(self) -> bool:
+        """
+        Device-confirmed stop latch
+
+        ``False`` initially, set ``True`` only by a device-confirmed
+        ``confirm_stop()`` (response strips to exactly ``'1'``), never
+        set by ``abort()``, and reset by ``cleanup()`` so a new
+        acquisition cycle begins fresh.
+
+        Args:
+        - None
+
+        Returns:
+        The latch value.
+
+        Errors:
+        None.
+
+        Side-effects:
+        None — performs no I/O.
+        """
+        return self._stopped
+
+    def confirm_stop(self) -> bool:
+        """
+        Ask the device for a completion confirmation
+
+        The only path that may report a physical stop. Performs exactly
+        one serialized ``'*OPC?'`` query per call (positional
+        ``delay=None``); the response strips to exactly ``'1'`` to
+        confirm. Any other response (``'0'``, ``''``, ``'2'``, ...) or a
+        transport error returns/propagates without setting ``stopped``.
+        On confirmation the ``stopped`` latch is set and stays set — a
+        later ``False`` return or raised error does not clear it; only
+        ``cleanup()`` resets the latch.
+
+        Args:
+        - None
+
+        Returns:
+        ``True`` when the device confirmed completion, ``False``
+        otherwise.
+
+        Errors:
+        Any transport error from the query propagates unchanged as the
+        identical object.
+
+        Side-effects:
+        One ``'*OPC?'`` device query; may set the ``stopped`` latch.
+        """
+        response = self.query('*OPC?', None)
+        confirmed = str(response).strip() == '1'
+        if confirmed:
+            self._stopped = True
+        return confirmed
 
 
 class VisaParameter(Parameter):
