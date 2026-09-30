@@ -54,7 +54,8 @@ class VisaHandle():
 
     def __init__(self,
                  address: str, visalib: Optional[str] = None,
-                 timeout: Optional[float] = 5.0,
+                 timeout: Optional[float] = None,
+                 timeout_seconds: Optional[float] = 5.0,
                  read_termination: Optional[str] = '\n',
                  write_termination: Optional[str] = '\n',
                  device_clear: bool = True) -> None:
@@ -64,7 +65,22 @@ class VisaHandle():
         Args:
         - address --- address of visa device
         - visalib --- specified visa lib, use default (ni) if None
-        - timeout --- time-out time, unit: seconds
+        - timeout --- time-out time forwarded raw to the PyVISA
+          resource; ``timeout=None`` (the default) means "not
+          specified": the documented seconds default applies and the
+          resource receives ``timeout_seconds * 1000`` milliseconds
+          (5000 ms by default). An explicitly supplied ``timeout`` is
+          forwarded to the PyVISA resource unchanged and is never
+          rescaled; when both ``timeout`` and ``timeout_seconds`` are
+          supplied, the explicit raw ``timeout`` wins and
+          ``timeout_seconds`` is ignored. Note the legacy docstring
+          described ``timeout``'s unit as seconds while the value was
+          forwarded raw; that unit discrepancy is OBS-001, resolved by
+          this sentinel contract and the explicit ``timeout_seconds``
+          property
+        - timeout_seconds --- time-out time in seconds, applied as
+          milliseconds on the resource when ``timeout`` is not given;
+          ``None`` disables the timeout (the resource receives ``None``)
         - read_termination --- termination in reading
         - write_termination --- termination in writing
         - device_clear --- whether to clear device buffer
@@ -85,6 +101,7 @@ class VisaHandle():
         self._read_termination: Optional[str] = read_termination
         self._write_termination: Optional[str] = write_termination
         self._timeout_raw: Optional[float] = timeout
+        self._timeout_seconds: Optional[float] = timeout_seconds
 
         address = str(address)
         if len(address) > 0 and '@' in address:
@@ -149,7 +166,12 @@ class VisaHandle():
         try:
             if self._device_clear:
                 resource.clear()
-            resource.timeout = self._timeout_raw
+            if self._timeout_raw is not None:
+                resource.timeout = self._timeout_raw
+            else:
+                seconds = self._timeout_seconds
+                resource.timeout = None if seconds is None \
+                    else seconds * 1000
             resource.read_termination = self._read_termination
             resource.write_termination = self._write_termination
         except Exception:
@@ -343,6 +365,7 @@ class VisaHandle():
         handle._read_termination = None
         handle._write_termination = None
         handle._timeout_raw = None
+        handle._timeout_seconds = 5.0
         return handle
 
     @property
@@ -357,6 +380,61 @@ class VisaHandle():
         """Set timeout in seconds"""
         if self._resource:
             self._resource.timeout = timeout
+
+    @property
+    def timeout_seconds(self) -> Optional[float]:
+        """
+        Get timeout in seconds, converted from the PyVISA millisecond
+        convention (resource value / 1000)
+
+        ``None`` maps to ``None`` (disabled timeout) and a handle
+        without a resource reads ``None``, mirroring the legacy
+        ``timeout`` getter posture. No rounding, no clamping, no
+        locking --- the timeout properties are direct pass-throughs,
+        not serialized operations.
+
+        Args:
+        - None
+
+        Returns:
+        The resource timeout in seconds, or ``None``.
+
+        Errors:
+        None.
+
+        Side-effects:
+        None --- performs no I/O beyond the attribute read.
+        """
+        if self._resource:
+            value = self._resource.timeout
+            return None if value is None else value / 1000
+        return None
+
+    @timeout_seconds.setter
+    def timeout_seconds(self, timeout: Optional[float]) -> None:
+        """
+        Set timeout in seconds, converted to the PyVISA millisecond
+        convention (value x 1000)
+
+        ``None`` disables the timeout (the resource receives ``None``).
+        No rounding, no clamping, no locking --- the timeout properties
+        are direct pass-throughs, not serialized operations.
+
+        Args:
+        - timeout --- timeout in seconds, or ``None`` to disable
+
+        Returns:
+        None.
+
+        Errors:
+        None.
+
+        Side-effects:
+        Writes the resource timeout in milliseconds.
+        """
+        if self._resource:
+            self._resource.timeout = None if timeout is None \
+                else timeout * 1000
 
     @property
     def read_termination(self) -> Optional[str]:
