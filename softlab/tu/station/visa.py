@@ -418,6 +418,10 @@ class VisaHandle():
         Get timeout in seconds, converted from the PyVISA millisecond
         convention (resource value / 1000)
 
+        The construction default is 5.0 s (applied as 5000 ms when the
+        raw ``timeout`` is not given), and the legacy raw ``timeout``
+        property is undisturbed by this property.
+
         ``None`` maps to ``None`` (disabled timeout) and a handle
         without a resource reads ``None``, mirroring the legacy
         ``timeout`` getter posture. No rounding, no clamping, no
