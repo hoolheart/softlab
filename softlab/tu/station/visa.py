@@ -544,7 +544,7 @@ class VisaHandle():
     def write_raw(self, message: bytes) -> int:
         """Write as raw bytes"""
         return self._serialized(
-            lambda r: r.write(message=message))
+            lambda r: r.write_raw(message))
 
     def query(self, command: str, delay: Optional[float] = None) -> str:
         """Query as string"""
