@@ -220,8 +220,13 @@ class VisaContracts(unittest.TestCase):
         self.resource.close.assert_called_once_with()
 
     def test_timeout_values_are_forwarded_without_conversion(self):
-        # Legacy numeric forwarding only; OBS-001 still tracks unit semantics.
-        self.assertEqual(self.resource.timeout, 5.0)
+        # TU-006 sentinel supersession (design handoff 2, step-B
+        # co-requisite): default construction (``timeout=None`` sentinel)
+        # now applies the ``timeout_seconds`` default — 5.0 s, forwarded
+        # to the resource as 5000 ms. This replaces the TU-001-era pin of
+        # the implicit legacy raw 5.0. The assertions below pin explicit
+        # raw set/get forwarding, which OBS-001 still tracks.
+        self.assertEqual(self.resource.timeout, 5000)
         handle = VisaHandle("CUSTOM@sim", timeout=12.5)
         self.addCleanup(handle.close)
         self.assertEqual(self.resource.timeout, 12.5)
