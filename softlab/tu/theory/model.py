@@ -1,10 +1,12 @@
 """Abstract interface for any theoretical model"""
 
+import collections.abc
 from typing import (
     Any,
     Dict,
     Optional,
     Callable,
+    Tuple,
 )
 from softlab.jin.validator import Validator
 from softlab.jin.misc import (
@@ -103,6 +105,75 @@ class TheoryModel(Delegated):
                 for key in self._attributes
             },
         }
+
+    def supported_configuration(self) -> Tuple[str, ...]:
+        """
+        Returns the supported configuration keys — exactly the
+        registered attribute keys, in registration order. The declaration
+        is explicit and independent of current attribute values: it does
+        not change when values change. The keys are strings and JSON-safe.
+
+        Returns:
+            tuple of the registered attribute keys, in registration order
+        """
+        return tuple(self._attributes.keys())
+
+    def configuration(self) -> Dict[str, Any]:
+        """
+        Returns the current configuration as a fresh dict mapping each
+        supported key to its attribute's current value, read through the
+        existing ``LimitedAttribute.get()``. Values are JSON-serializable
+        exactly when the model's attribute values are: JSON safety of
+        values is the model author's responsibility and is not enforced —
+        an attribute holding a non-serializable value (e.g. an ndarray)
+        is still configurable, but the returned dict will not dump to
+        JSON. Performs no evaluation and no I/O.
+
+        Returns:
+            fresh dict mapping each supported configuration key to its
+            attribute's current value
+        """
+        return {key: attr.get() for key, attr in self._attributes.items()}
+
+    def configure(self,
+                  cfg: collections.abc.Mapping[str, Any]) -> None:
+        """
+        Applies a configuration mapping. Three phases, each completing
+        fully before the next: (1) a non-``collections.abc.Mapping``
+        argument raises ``TypeError`` naming the received type; (2) any
+        key not in ``supported_configuration()`` raises ``KeyError``
+        naming the key; (3) every value is pre-validated against its
+        attribute's existing ``Validator`` before any value is applied.
+        Rejection at any phase leaves the previous configuration fully
+        intact — no partial application for any rejection cause,
+        including multi-key validation failure. Application writes each
+        value through the existing ``LimitedAttribute.set()``
+        (validate-then-assign), reusing the existing validation chain
+        rather than duplicating it. An empty mapping is a no-op.
+        Re-applying a dict read from ``configuration()`` is an identity.
+
+        Args:
+            - cfg, the configuration mapping to apply
+
+        Errors:
+            - ``TypeError``, if ``cfg`` is not a
+              ``collections.abc.Mapping``
+            - ``KeyError``, if any key of ``cfg`` is not a registered
+              attribute key
+            - the attribute ``Validator``'s own exception, if any value
+              fails pre-validation
+        """
+        if not isinstance(cfg, collections.abc.Mapping):
+            raise TypeError(
+                f'Configuration should be a mapping, '
+                f'not {type(cfg).__name__}')
+        for key in cfg:
+            if key not in self._attributes:
+                raise KeyError(key)
+        for key, value in cfg.items():
+            self._attributes[key]._vals.validate(value)
+        for key, value in cfg.items():
+            self._attributes[key].set(value)
 
     def __repr__(self) -> str:
         prefix = f'"{self.name}"' if len(self.name) > 0 else ''
