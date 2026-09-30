@@ -285,6 +285,15 @@ class VisaTimeoutTests(unittest.TestCase):
         self.assertIs(raised.exception, error)
         resource.read.assert_called_once()
         # @sim: an explicit timeout does not disturb real outcomes.
+        # Developer-escalated fix (verified root cause): make_resource's
+        # patcher above replaces pyvisa.ResourceManager (a module-global
+        # attribute) and is still active here, so a "real" sim handle
+        # would wrap the mock resource and ``"*IDN?" in <Mock>`` would
+        # raise ``TypeError: argument of type 'Mock' is not iterable``.
+        # Stop all active patches before constructing the real handle;
+        # the patcher's own stop at cleanup is a safe double-stop on
+        # Python 3.13.
+        patch.stopall()
         sim = VisaHandle("GPIB::1::INSTR", visalib=SIMULATOR,
                          read_termination="\r", write_termination="\r",
                          device_clear=False)
