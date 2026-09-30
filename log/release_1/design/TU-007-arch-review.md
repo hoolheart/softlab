@@ -207,3 +207,56 @@ without a further full re-review — a focused confirmation of the three
 corrections suffices. This review does not claim code review, test
 pass, CI or integration; the implementation, independent review,
 testing, principle and CI gates remain open.
+
+## Focused confirmation of corrections (commit `acac791`)
+
+Reviewer: sw-jerry (architect). Scope: the three corrections only; no
+full re-review. Each verified against `log/release_1/design/TU-007.md`
+at `acac791`.
+
+1. **Issue 1 — `Mapping` collision: CONFIRMED.** The import form is
+   pinned to a plain `import collections.abc` with
+   `collections.abc.Mapping` spelled fully at both use sites (phase-1
+   `isinstance`, `configure` annotation), the rebinding
+   `from collections.abc import Mapping` form is explicitly forbidden
+   with the correct rationale (`get_mapping`'s class-body-evaluated
+   annotation and the `Motion1D` example instantiation), and the alias
+   alternative is considered and rejected with reason. The annotation is
+   consistent across every surface: public-surface signature, "New
+   import" paragraph, phase-1 pseudocode, `configure` sequence diagram
+   (`alt cfg is not a collections.abc.Mapping`), `configure` docstring
+   mandate, step-B import delta row, and scope/dependency statements.
+   The module-level `Mapping` binding (`get_mapping`, class-diagram
+   `Mapping` node, `Motion1D` example) stays the theory mapping class
+   and is stated as such.
+2. **Issue 2 — lenient-path overclaim: CONFIRMED.** The "behaviorally
+   identical" claim is gone from the normative text (it survives only in
+   the design-review summary describing the fix). The algorithm section
+   now states the exact contract: matches the legacy property for every
+   `Exception` subclass (covering every failure the acceptance suite
+   exercises) and **deliberately diverges** for `BaseException`-only
+   process-control exceptions (`KeyboardInterrupt`, `SystemExit`,
+   `GeneratorExit`), which propagate on the new path while the legacy
+   bare `except:` stays byte-unchanged. The `evaluate_features` docstring
+   mandate no longer quotes the overclaim and carries the same
+   divergence statement, so the verbatim docstring the developer writes
+   cannot reintroduce it.
+3. **Issue 3 — `_vals` reach: CONFIRMED.** Decision 4 now names the
+   tradeoff explicitly: reading `LimitedAttribute._vals` is a
+   cross-module private access coupling `tu` to `jin`'s private state
+   layout, chosen as the smallest mechanism that pre-validates without
+   mutating. The public-only snapshot-restore alternative (`get()`
+   snapshot → `set()` apply → restore on failure) is explicitly rejected
+   with rationale (duplicates validation state and rollback logic `set()`
+   already owns; adds a restore path with its own failure modes).
+   Promoting a public `validate()` accessor on `LimitedAttribute` is
+   recorded as out of the authorized `model.py` scope and revisitable if
+   a second consumer of attribute pre-validation appears.
+
+### Verdict: APPROVED
+
+All three corrections are implemented as requested, internally
+consistent across surface text, pseudocode, diagrams and docstring
+mandates, and introduce no new issues. The TU-007 design is approved;
+it may proceed to implementation. This confirmation claims no code
+review, test pass, CI or integration; those gates remain open.
