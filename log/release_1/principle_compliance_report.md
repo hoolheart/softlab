@@ -93,6 +93,34 @@ and pushed.
 No hardware, no new dependency, no VISA change (OBS-003 stays deferred to
 TU-006). Integration candidate must pass CI before dev fast-forward.
 
+## TU-006 completion inspection
+
+PASS for visa-contracts scope. Serial gates observed on
+codex/tu-006-visa-contracts: test gate (RED 850ce75; two developer blocking
+rounds — timeout-sentinel contradiction and OBS-002 coverage — both revised by
+tester and closed; 3 latent test defects (cases 4/8/9) found and fixed by the
+tester during development with a full proactive sweep; TU-001 characterization
+supersession applied as sanctioned co-requisite d452d50), design gate
+(92b57a5 proposed, 642aca6 CHANGES REQUESTED — 3 text issues, 04dab95
+corrected, e8528f3 confirmed APPROVED), development in 4 sanctioned steps
+(a57b63b A, 98702a2 B, 002855e C, 099004e D + 6849358 OBS dispositions +
+3314718 review docstring fix), code review (a34f357 CHANGES REQUESTED — 1
+Medium docstring issue, 3314718 fixed, 888d7ba re-review APPROVED, zero open
+issues), testing gate (2ba02fd green evidence: 17/17 focused, 77/77 full suite
+under -W error, @sim handles verified genuine, OBS-001/002/003 dispositions
+reproduced live against production, independent rerun).
+
+Principle 1: tests preceded design, design preceded implementation; every
+review round (developer, architect, code reviewer) was honored and closed by
+its owner before progression. Principle 2: zero open review or test issues.
+Principle 3: no skipped environment component; @sim + mocks only, no real
+hardware. Principle 4: N/A. Principle 5: warnings-as-errors full suite green;
+pre-existing parameter.py baseline warnings unchanged and recorded. Principle
+6: every log/release_1 artifact committed with docs(log): messages and pushed.
+
+No new runtime dependency (stdlib threading/typing only), no huo/mu change,
+no main promotion. Integration candidate must pass CI before dev fast-forward.
+
 ## TU-005 completion inspection
 
 PASS for measurement-semantics scope. Serial gates observed on
