@@ -199,3 +199,40 @@ review, testing, principle and CI gates remain open. The blocking
 test-contract finding (case-8 binding) is already resolved at `25cc5e1`
 and is correctly pinned as a step-B prerequisite, not an implementation
 task.
+
+## Correction confirmation (commit 04dab95)
+
+Focused confirmation of the three corrections only — no full re-review.
+
+1. **Issue 1 (`_abort_requested`) — corrected.** The field is fully
+   removed: state table row deleted, class diagram attribute deleted,
+   sequence diagram notes now read "no state recorded" and "finally:
+   `_in_flight` = 0", the `borrow()`, `_serialized` and `abort()`
+   pseudocode sites deleted, decision 1 reworded to "reads the in-flight
+   counter ... records no state" (the "Flag consumption" paragraph
+   deleted; the second-lock rejection now correctly covers the counter
+   alone), and the step-C row no longer lists the field. The single
+   remaining mention in the simplicity audit is a proper rejection record
+   ("considered and rejected as write-only dead state ... deletion breaks
+   none of the 17 cases") — rationale, not a dangling reference. No other
+   occurrences in the design.
+2. **Issue 2 (`Optional[float]`) — corrected and consistent.** Intent
+   summary, pseudocode constructor signature, `_timeout_seconds` state
+   table row, class diagram attribute and the step-B row all now declare
+   `timeout_seconds: Optional[float] = 5.0` / `_timeout_seconds:
+   Optional[float]`, matching the property type and the
+   `None`-disables contract. Repo-wide sweep of the design finds no
+   remaining `float = 5.0` annotation.
+3. **Issue 3 (case-17 gating) — corrected.** Step-C row newly green is
+   "11, 12, 13 (17 also turns green — see note)" with green condition
+   "case 16 RED"; step-D newly green is "16" only; the early-green note
+   now correctly explains that case 17 exercises only A+B+C semantics
+   (never `write_raw`), is expected green at step C and must stay green,
+   and that only case 16 (OBS-002) plus the `compatibility.md`
+   dispositions are genuinely D-gated.
+
+**Verdict: APPROVED.** All three requested changes are correctly and
+completely applied at the design-text level; no new issues found in the
+changed hunks. TU-006 may proceed to implementation. Per the original
+disposition, code review, test pass, CI and integration gates remain
+open and are not claimed here.
