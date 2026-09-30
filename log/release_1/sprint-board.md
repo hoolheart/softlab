@@ -12,7 +12,7 @@ No main promotion, real hardware, or mu/huo implementation is included.
 | TU-004 | Done | Developer, tester, reviewer, designer, architect | tests a9589eb 50/50 green; review b1d8780 APPROVED; dev integrated c989d4c after CI 36323399137 |
 | TU-005 | Done | Developer, tester, reviewer, designer, architect | tests 7b7d87d 60/60 green; review 1faf8dd APPROVED; dev integrated 18bfe64 after CI 36325439753 |
 | TU-006 | Done | Developer, tester, reviewer, designer, architect | tests 2ba02fd 77/77 green; review 888d7ba APPROVED; dev integrated 45a995b after CI 36725443721 |
-| TU-007 | Design | Tester, developer, designer, architect | codex/tu-007-theory from a3d1011; test cases first |
+| TU-007 | Development | Developer | codex/tu-007-theory from a3d1011; test/design/arch gates approved (13ec8b7/82d8ccb/9e69110, one correction round); step split A-C |
 | TU-008 | Backlog | Unassigned | Integration/documentation |
 
 Only one task may advance beyond Backlog before its predecessor integrates.
