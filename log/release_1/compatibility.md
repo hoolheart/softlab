@@ -29,6 +29,15 @@ and the existing `tests/test_compatibility.py`. Test names below omit `test_`.
   PyVISA while its docstrings say seconds. PyVISA resource timeout convention is
   milliseconds. The raw numeric forwarding is characterized without certifying seconds
   as correct. Do not silently rescale existing callers; TU-006 must document compatible units/defaults.
+  - *TU-006 step-B test co-requisite (recorded):* the matrix row
+    `timeout_values_are_forwarded_without_conversion` above pinned the
+    implicit legacy default (`resource.timeout == 5.0` on default
+    construction); that single assertion is superseded by the accepted
+    sentinel contract and now pins `5000` ms (see
+    `log/release_1/tests/TU-006.md`, "TU-001 characterization
+    supersession"). Explicit raw set/get forwarding remains
+    characterized unchanged. Disposition of OBS-001 as resolved is
+    recorded with step D per the TU-006 design.
 - **OBS-002 (TU-006):** `VisaHandle.write_raw` calls resource `write`, not
   `write_raw`. Source observation; no hardware reproduction. Resolve explicitly
   in TU-006 with a focused regression and compatible error handling.
