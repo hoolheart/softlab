@@ -31,6 +31,16 @@ class TheoryModel(Delegated):
 
     Theoretical model can produce any mapping in method
     ``get_mapping`` which should be implemented in derived classes.
+
+    The method names ``describe``, ``supported_configuration``,
+    ``configuration``, ``configure`` and ``evaluate_features`` are
+    reserved: they shadow any delegated attribute key of the same name,
+    because delegated lookup (``Delegated.__getattr__``) only fires when
+    normal attribute lookup fails. If a model registers an attribute
+    under one of these names, dotted-call access reaches the method, not
+    the attribute; explicit lookup through ``model._attributes[name]()``
+    remains available as the escape hatch (the OBS-006 convention). No
+    in-repo model uses any of these names as attribute keys.
     """
 
     def __init__(self, name: Optional[str] = None) -> None:
@@ -174,6 +184,38 @@ class TheoryModel(Delegated):
             self._attributes[key]._vals.validate(value)
         for key, value in cfg.items():
             self._attributes[key].set(value)
+
+    def evaluate_features(self, strict: bool = False) -> Dict[str, Any]:
+        """
+        Evaluates model features by calling ``calculate_features()``
+        directly — never through the ``features`` property (the property
+        swallows all exceptions, so a strict path routed through it could
+        never propagate anything). With ``strict=True`` the original
+        exception object from ``calculate_features`` propagates unchanged
+        (no wrapping, no ``raise ... from``). With ``strict=False`` (the
+        default) the legacy lenient semantics are preserved: any
+        ``Exception`` raised by evaluation returns ``{}`` (the OBS-005
+        fallback), while ``BaseException``-only process-control
+        exceptions (``KeyboardInterrupt``, ``SystemExit``,
+        ``GeneratorExit``) deliberately propagate — the swallow is not
+        extended into new code. The legacy ``features`` property is a
+        separate, unchanged code path.
+
+        Args:
+            - strict, whether to propagate the original evaluation error
+              (``True``) or fall back to an empty dict (``False``,
+              default)
+
+        Returns:
+            calculated feature dict, or ``{}`` on evaluation failure in
+            lenient mode
+        """
+        if strict:
+            return self.calculate_features()
+        try:
+            return self.calculate_features()
+        except Exception:
+            return {}
 
     def __repr__(self) -> str:
         prefix = f'"{self.name}"' if len(self.name) > 0 else ''
