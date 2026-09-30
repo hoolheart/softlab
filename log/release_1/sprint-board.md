@@ -11,7 +11,7 @@ No main promotion, real hardware, or mu/huo implementation is included.
 | TU-003 | Done | Developer, tester, reviewer, designer, architect | tests ffc5f25 40/40 green; review 9002b68 APPROVED; dev integrated d24da5c after CI 36320621031 |
 | TU-004 | Done | Developer, tester, reviewer, designer, architect | tests a9589eb 50/50 green; review b1d8780 APPROVED; dev integrated c989d4c after CI 36323399137 |
 | TU-005 | Done | Developer, tester, reviewer, designer, architect | tests 7b7d87d 60/60 green; review 1faf8dd APPROVED; dev integrated 18bfe64 after CI 36325439753 |
-| TU-006 | Design | Tester, developer, designer, architect | codex/tu-006-visa-contracts from f7032e5; test cases first |
+| TU-006 | Development | Developer | codex/tu-006-visa-contracts from f7032e5; test/design/arch gates approved (c125e2c/0874f87/e8528f3, two correction rounds); step split A-D |
 | TU-007 | Backlog | Unassigned | Theory contracts |
 | TU-008 | Backlog | Unassigned | Integration/documentation |
 
