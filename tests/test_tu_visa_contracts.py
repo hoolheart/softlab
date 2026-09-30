@@ -194,7 +194,7 @@ class VisaLifecycleTests(unittest.TestCase):
         setter_error = pyvisa.errors.VisaIOError(
             pyvisa.constants.StatusCode.error_system_error)
 
-        def _raise_on_set(value):
+        def _raise_on_set(self, value):
             raise setter_error
 
         _FailingResource.timeout = property(
