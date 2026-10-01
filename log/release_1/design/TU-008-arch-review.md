@@ -172,3 +172,38 @@ TU-008 may proceed to implementation without a further full re-review —
 a focused confirmation of the two corrections suffices. This review does
 not claim code review, test pass, CI or integration; the implementation,
 independent review, testing, principle and CI gates remain open.
+
+## Focused confirmation of corrections (candidate `e1e7a40`)
+
+Verifier: sw-jerry (architect). Scope: the two requested corrections
+only; no re-review.
+
+1. **Issue 1 — resolved.** The release-end `arch.md` content list in
+   `TU-008.md` now carries one bullet requiring the open observation
+   dispositions — OBS-004 (init-value hazard), OBS-006 (delegated-name
+   collisions with the `_attributes`/`device()` escape hatch) and
+   DEFECT-2 (deliberate neither-settable-nor-gettable warning) — to be
+   recorded as known limitations / technical debt with their documented
+   workarounds, explicitly permitting a cross-reference to
+   `docs/tu_extensions.md` section 8 and
+   `log/release_1/compatibility.md`, and stating the record must not be
+   silent where the user documentation is explicit. Matches the
+   requested change (one bullet, no other content-list changes).
+2. **Issue 2 — resolved.** `TU-008.md` now states explicitly,
+   immediately after the pinned DC-4 evidence path (within "Step split
+   and role boundaries" → "What TU-008 delivers vs. what the
+   release-end arch update adds"), that the release-end architecture
+   update/review record is **appended** to `log/release_1/arch-review.md`
+   as a new section and that the existing TU-001 review content is
+   preserved (no replacement). Matches the requested change.
+
+The header candidate-chain correction (`b65bd81` → the correction
+commit) also disposes of non-blocking Observation 2. Non-blocking
+Observation 1 (`AbortReport` import path in outline section 5) stands as
+previously recorded; it remains non-blocking and is caught by the DC-2
+walk if mishandled.
+
+**Confirmation verdict: APPROVED.** Both required corrections land as
+requested; no new issues. TU-008 may proceed to implementation. All
+downstream gates (implementation, independent review, testing,
+principle check, CI, release-end architecture update) remain open.
