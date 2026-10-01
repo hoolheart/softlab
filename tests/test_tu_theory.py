@@ -34,6 +34,11 @@ no production implementation is asserted to exist):
   no second shape-check layer is introduced anywhere; fixed-shape
   ndarray mappings and ``batch_mapping`` stay byte-compatible. Public
   imports of ``softlab.tu.theory`` are unchanged.
+- Test-phase handoff pins (design handoffs 2-3): the legacy ``name``
+  property and the base ``calculate_features`` ``NotImplementedError``
+  (plus the lenient swallow on that base path) are pinned directly;
+  multi-key ``configure`` rejection is atomic (no partial application)
+  and an empty mapping is a no-op returning ``None``.
 """
 
 import json
@@ -119,6 +124,27 @@ class LegacyGuardTests(unittest.TestCase):
         self.assertIs(tu.theory.TheoryModel, TheoryModel)
         self.assertIs(tu.theory.batch_mapping, batch_mapping)
 
+    def test_legacy_name_property_pinned(self):
+        # Test-phase handoff 2: the legacy ``name`` property is pinned
+        # directly (case 4 reaches it only indirectly through
+        # ``describe()``). Guard: passes against unchanged code.
+        model = _make_model()
+        self.assertEqual(model.name, "model")
+        unnamed = _make_model()
+        unnamed._name = ""
+        self.assertEqual(unnamed.name, "")
+        self.assertEqual(model.describe()["name"], model.name)
+
+    def test_base_calculate_features_not_implemented(self):
+        # Test-phase handoff 2: the abstract base ``calculate_features``
+        # raises ``NotImplementedError`` and the legacy property keeps
+        # the characterized OBS-005 lenient swallow on that path. Guard:
+        # passes against unchanged code.
+        base = TheoryModel("base")
+        with self.assertRaises(NotImplementedError):
+            base.calculate_features()
+        self.assertEqual(base.features, {})
+
 
 class ModelIdentityTests(unittest.TestCase):
     def test_model_identity_and_semantic_description(self):
@@ -195,6 +221,25 @@ class ConfigurationTests(unittest.TestCase):
         # Failed validation changes nothing (existing validator chain).
         self.assertEqual(model.configuration(), {"value": 2, "gain": 1.5})
         self.assertEqual(model.value(), 2)
+
+    def test_configure_multi_key_failure_is_atomic(self):
+        # Test-phase handoff 3: multi-key ``configure`` pre-validates
+        # every value before applying any, so a single failing value
+        # leaves even the other, valid keys of the same call unapplied.
+        model = _make_model()
+        with self.assertRaises(ValueError):
+            model.configure({"gain": 0.5, "value": 11})  # value rejected
+        # No partial application: the valid "gain" stays untouched too.
+        self.assertEqual(model.configuration(), {"value": 2, "gain": 1.5})
+        self.assertEqual(model.value(), 2)
+        self.assertEqual(model.gain(), 1.5)
+
+    def test_configure_empty_mapping_is_noop(self):
+        # Test-phase handoff 3: an empty mapping applies nothing and
+        # returns ``None``.
+        model = _make_model()
+        self.assertIsNone(model.configure({}))
+        self.assertEqual(model.configuration(), {"value": 2, "gain": 1.5})
 
 
 class StrictEvaluationTests(unittest.TestCase):
