@@ -177,6 +177,20 @@ actual evidence. Release-level gates remain: DC-4 arch.md append (sw-jerry),
 release completion inspection, final acceptance (sw-camille). Integration
 candidate must pass CI before dev fast-forward.
 
+## Release 1 completion inspection
+
+PASS for the release as a whole. Every task TU-001–TU-008 passed its own
+completion inspection above with actual evidence. Release-level artifacts are
+complete: sprint board (all Done, integration evidence with CI run IDs),
+compatibility matrix with OBS-001/002/003 resolved and OBS-004/005/006 +
+DEFECT-2 recorded as known limitations, user guide docs/tu_extensions.md
+(DC-2 walk 8/8), final architecture record appended to
+log/release_1/arch-review.md (TU-001 record preserved) and project-root
+arch.md updated to implemented behavior (525ffc9, e04e341, CI 36867316907
+green, integrated to dev e04e341). Sprint-end zero-warning gate achieved
+and recorded at TU-008 (P1). Final acceptance by the product owner is the
+only remaining gate; this document grants no unrun gate a passing status.
+
 ## TU-005 completion inspection
 
 PASS for measurement-semantics scope. Serial gates observed on
