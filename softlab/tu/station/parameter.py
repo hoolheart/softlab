@@ -577,8 +577,8 @@ if __name__ == '__main__':
     )
     for para, val in [
         (Parameter('demo', ValAnything(), init_value=42), 'lab'),
-        (Parameter('email1', ValPattern('\w+(\.\w+)*@\w+(\.\w+)+')), 'a@b.com'),
-        (Parameter('email2', ValPattern('\w+(\.\w+)*@\w+(\.\w+)+')), 'a_b.com'),
+        (Parameter('email1', ValPattern(r'\w+(\.\w+)*@\w+(\.\w+)+')), 'a@b.com'),
+        (Parameter('email2', ValPattern(r'\w+(\.\w+)*@\w+(\.\w+)+')), 'a_b.com'),
         (Parameter('int', ValInt(0, 100), settable=False, init_value=61), 73),
         (Parameter('percentage', ValInt(0, 100), gettable=False), 73),
         (Parameter('noaccess', ValNothing('test'), False, False), 0),
