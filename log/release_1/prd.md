@@ -78,9 +78,12 @@ calibration orchestration and UI are excluded. UI gates are not applicable.
 
 ## Acceptance status and evidence requirements
 
-Status: requirements recorded; implementation and release acceptance **pending**.
-Each task requires the documented serial test/design/review/testing/principle
-gates before integration into `dev`, including CI for the candidate commit.
+Status: **ACCEPTED (PASS)** by product-owner release acceptance on 2026-10-01;
+the criterion-by-criterion evidence review is recorded in
+`log/release_1/acceptance.md`. All serial test/design/review/testing/principle
+gates for TU-001–TU-008 were executed with recorded results before integration
+into `dev`, including CI for each candidate commit (run IDs in
+`sprint-board.md` and `acceptance.md`).
 TU-001 specifically passes only when its matrix and characterization coverage
 are independently reviewed, required checks have actual results, production
 files remain unchanged and baseline defects/limitations are explicit.
