@@ -145,6 +145,38 @@ No new runtime dependency (stdlib collections.abc/typing only), no huo/mu or
 jin change (cross-module _vals read acknowledged as sanctioned tradeoff).
 Integration candidate must pass CI before dev fast-forward.
 
+## TU-008 completion inspection
+
+PASS for integration/documentation scope. Serial gates observed on
+codex/tu-008-integration: test gate (gate c4989a5, implementability review
+CHANGES REQUESTED 1 issue — two-file DEFECT-1 record fixed 32dd5a7), design
+gate (b65bd81 proposed, 0b86d0e CHANGES REQUESTED — 2 issues, e1e7a40
+corrected, 94f17ef confirmed APPROVED), development (6c7af65 + b57b136
+DEFECT-1 raw-string fixes with byte-identical __main__ outputs, 1ce6400 user
+guide 353 lines with executed worked examples, 95119c6 README pointer), code
+review (6a218d6 CHANGES REQUESTED — 1 critical doc inaccuracy, 829cffd fixed,
+4292952 re-review APPROVED), testing gate (cd392de final green evidence:
+P1 zero-warning forced compile PASS — DEFECT-1 closed, 99/99 suite under
+-W error, P2 package-artifact inspection PASS with isolated build + wheel/sdist
+content verification, DC-2 8-item documentation walk 30/30 live checks PASS,
+independent reruns).
+
+Principle 1: tests preceded design, design preceded implementation; all
+reports exist, committed and pushed. Principle 2: zero open review or test
+issues anywhere in the release. Principle 3: no skipped environment component;
+build tooling installed and recorded; synthetic + @sim only. Principle 4: N/A.
+Principle 5: sprint-end zero-warning achieved — forced compile of softlab AND
+tests under -W error exits 0 zero output; full suite 99/99 under -W error;
+the two pre-existing __main__ SyntaxWarning sites (DEFECT-1) are FIXED in this
+task; DEFECT-2 recorded as deliberate non-firing limitation in user docs and
+compatibility matrix. Principle 6: every log/release_1 artifact committed with
+docs(log): messages and pushed; no uncommitted artifacts.
+
+TU-008 is the release-final task: all TU-001–TU-008 PRD criteria now have
+actual evidence. Release-level gates remain: DC-4 arch.md append (sw-jerry),
+release completion inspection, final acceptance (sw-camille). Integration
+candidate must pass CI before dev fast-forward.
+
 ## TU-005 completion inspection
 
 PASS for measurement-semantics scope. Serial gates observed on
