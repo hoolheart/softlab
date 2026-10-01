@@ -16,3 +16,7 @@ hypothesis:
   defining, management, sheduling, etc.
 * ``tu`` means "earth", it represents basis of system, including parameters,
   devices, stations, models, etc.
+
+The TU-002–TU-007 extension APIs of ``tu`` (descriptions, lifecycle,
+measurement readings, VISA and theory contracts) are documented in
+``docs/tu_extensions.md``.
