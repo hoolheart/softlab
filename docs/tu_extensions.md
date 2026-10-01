@@ -32,9 +32,10 @@ value-only `()` / `get()` paths:
   acquisition — identical type and message to legacy `get()`.
 - `describe_reading() -> Dict[str, Any]`: versioned description
   (`schema_version` 1) of the reading surface — the constructor-declared
-  optional `unit`, `value_type`, `shape`, `channel`, `uncertainty` and
-  `calibration` declarations, echoed verbatim. Description lookup
-  performs no acquisition.
+  optional `unit`, `value_type`, `shape` and `channel` declarations,
+  echoed verbatim. The `uncertainty` and `calibration` declarations are
+  not part of the description; they are exposed on the `Reading` returned
+  by `read()`. Description lookup performs no acquisition.
 - Six optional constructor keywords (`unit`, `value_type`, `shape`,
   `channel`, `uncertainty`, `calibration`, all defaulting to `None`)
   declare the metadata; they are stored verbatim, with no validation and
