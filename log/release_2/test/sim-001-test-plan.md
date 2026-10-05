@@ -14,6 +14,10 @@ This is a **test plan only**. Every case below is marked:
 - **[BASELINE-READY]** — can be executed against the current baseline without
   any new production code (SIM-AC-07 compatibility re-run and the
   pre-implementation import sanity parts of SIM-AC-07).
+- **[TRACKED-PENDING]** — a tracked deferred case: the obligation to fully
+  specify and execute it is recorded here (with its blocking condition),
+  but it has no executable steps yet and is not counted in the pass/fail
+  tally until specified.
 
 The exact public API names are intentionally not hard-coded: the detailed
 design is not yet written. Test steps refer to *roles* (declared inputs,
@@ -85,7 +89,7 @@ is stable; input assignment alone does not evolve.
 | SIM-TC-04a **[PLAN]** | Reset restores initial condition | Accumulator evolved several times from documented initial inputs/state | Call reset | Inputs, state and outputs return to documented initial values (including any time values represented there); subsequent observation matches the pristine initial object |
 | SIM-TC-04b **[PLAN]** | Replay reproduces observations | Reset model; deterministic input/evolve sequence recorded | Replay the identical input assignment + explicit evolution sequence | Every observation in the replay equals the corresponding observation in the original run (exact equality for deterministic callbacks) |
 | SIM-TC-04c **[PLAN]** | Independent objects do not share mutable state | Two objects constructed independently from the same declaration/model (each with its own initial mutable containers, e.g., ndarray state) | Evolve object A only; read state/outputs of B | B's committed state/outputs unchanged; mutating an inspection value returned from A (SIM-TC-05c) does not affect B; no shared mutable container between A and B (verified by identity checks where inspection allows, plus behavioral checks) |
-| SIM-TC-04d **[PLAN]** | Reset after failed evolution | Object where `evolve` raises for a specific input (see SIM-TC-05b) | Trigger failed evolution; then reset | Reset succeeds and restores the documented initial condition; the failure leaves no residue (SIM-TC-05b) |
+| SIM-TC-04d **[PLAN]** | Reset after failed evolution | Object where `evolve` raises for a specific input (see SIM-TC-05b) | Trigger failed evolution; then reset | Reset succeeds and restores the documented initial condition; the failure leaves no residue (SIM-TC-05b). Note: the complementary case — a reset that itself fails — is tracked as SIM-TC-05i-PENDING pending the reset error contract |
 
 ## SIM-AC-05 — predictable failures, atomicity, and ownership (mutable-alias protection)
 
@@ -104,6 +108,8 @@ clearly rejected.
 | SIM-TC-05e **[PLAN]** | Mutable-alias protection — callback arguments | Model whose `evolve` mutates its arguments in place (adversarial callback) or retains a reference and mutates later | Evolve once with ndarray input/state; after evolution completes, mutate the retained argument via the callback's reference | Committed state is unaffected: the object must not retain aliases to arguments it handed to callbacks (copies out before publish; exact mechanism per design) |
 | SIM-TC-05f **[PLAN]** | Unsupported value category documented | — | Attempt an explicitly unsupported category (e.g., object arrays, ragged sequences, or non-numeric scalars, per the design's documented supported-value rules) | Clear documented rejection (error type documented in API docs); behavior for that category is stated in the user guide |
 | SIM-TC-05g **[PLAN]** | External side effects out of rollback scope — documentation check | — | Review user guide/API docs | Guide states that external side effects of user callbacks are outside rollback guarantees (honest-bounds documentation per SIM-AC-08) |
+| SIM-TC-05h **[PLAN]** | Failure visibility/atomicity — observation callback `G` | Model whose observation function `G` raises `ValueError("bad observation")` for a specific committed state; snapshot committed state and record a valid prior observation | Evolve into the offending state via a valid input; attempt observation; catch; compare state/outputs to snapshot; then attempt observation of a different, valid output (or reset and observe the initial state) | The original exception object propagates (identity preserved, or documented wrapper chaining via `__cause__`, matching the contract pinned by SIM-TC-05a); committed state is bit-identical to the snapshot; the prior recorded observation is unchanged; the subsequent valid observation succeeds and returns the correct value |
+| SIM-TC-05i-PENDING **[TRACKED-PENDING]** | Failure atomicity — reset | Reset error contract not yet designed (see open question 4) | *To be fully specified once the reset atomicity contract is approved by design.* Obligation: a case exercising a reset that itself fails (e.g., initial-condition reconstruction raising), asserting the original exception propagates visibly and that the object is left in a documented, well-defined state (no partially committed reset) | Tracked placeholder — **must be specified and bound to the approved reset contract before the SIM-AC-05 gate is claimed complete**; not counted in the executable pass/fail tally until specified |
 
 ## SIM-AC-06 — existing experiment interfaces (Device/Parameter bridge + huo integration)
 
@@ -124,6 +130,19 @@ If the existing count/scan offers no hook, the design must specify the
 minimal adapter; the test below then pins that contract. This is a planned
 assertion, not yet bound to API names.
 
+**Stepping-hook ordering constraint (design-time input, per
+implementability review):** simulation stepping must be bound to
+`hook_before_get` or `hook_after_set` — **never `hook_before_set`**.
+Rationale: the point value must be committed to the input before evolution
+(`hook_before_set` fires before the set, so evolving there would use the
+*previous* input — a subtle off-by-one that would corrupt the analytic
+sequence in SIM-TC-06e), and observation must follow evolution. For `count`,
+`hook_before_get`/`hook_after_get` are both safe; for `scan`, only
+`hook_after_set` or `hook_before_get` are valid stepping points. Hooks are
+no-arg synchronous callables (closure over the simulation object) invoked
+exactly once per non-dry-run point; the terminal dry-run sweep execution
+invokes no hooks, so the evolve count equals the point count exactly.
+
 | ID | Case | Preconditions | Steps | Expected result |
 | --- | --- | --- | --- | --- |
 | SIM-TC-06a **[PLAN]** | Parameter bridge for inputs | Mock `Device` built from existing `Device`/`Parameter` interfaces; input parameter setter wired to the simulation object's input assignment | Set input parameter via the parameter's normal set path (validation/codecs/hooks intact) | Object's committed input updates exactly once; no evolution occurs (SIM-TC-03c cross-check); parameter read-back reflects the documented contract (pending vs committed per design) |
@@ -131,7 +150,22 @@ assertion, not yet bound to API names.
 | SIM-TC-06c **[PLAN]** | One object shared between controls/observations | Two mock devices (a "control" device writing inputs, an "observation" device reading outputs) bound to the SAME simulation object | Set input via device A; advance via the defined hook; read via device B | Device B observes the state produced by A's input: shared object, no per-device state copies; consistent observations |
 | SIM-TC-06d **[PLAN]** | huo count integration with explicit stepping | Existing `huo` count flow (e.g., `count` process) run with the measurement parameter(s) of SIM-TC-06b; advancement placed in the design-defined hook | Run count for N points; count `evolve` invocations; record the observed values | Exactly one `evolve` per count point (the planned assertion above); recorded values equal the deterministic sequence produced by manual replay of the same steps; **no wall-clock sleep is used as a simulation step** (test runs without sleeping; stepping is synchronous in the hook) |
 | SIM-TC-06e **[PLAN]** | huo scan integration with explicit stepping | Existing `huo` scan flow over a settable parameter driving a model input | Run scan over k points; count evolutions | One evolution per scan point; recorded outputs match the analytic sequence; run is deterministic across two identical executions |
-| SIM-TC-06f **[PLAN]** | No huo edits | — | `git diff` check in test documentation / review of integration path | Integration uses only existing `huo` public API; zero production changes under `softlab/huo/` |
+
+**Review-gate checklist item (reclassified from SIM-TC-06f; NOT an automated
+test case — per implementability review issue 2):** "No `huo` production
+edits" cannot be asserted mechanically by `unittest`, so it is owned by the
+code reviewer/coordinator and recorded in the test-results document at
+execution time:
+
+- [ ] **CHK-06-1 (reviewer/coordinator):** integration path uses only
+  existing `softlab.huo.process` public API; zero production changes under
+  `softlab/huo/` (verified by `git diff` inspection at review/integration
+  gate, recorded in the test-results record).
+- [ ] **CHK-06-2 (tester):** supporting evidence — the automated integration
+  file imports `huo` only via `softlab.huo.process` public names.
+
+This item is excluded from the automated pass/fail tally; the SIM-AC-06
+automated cases are SIM-TC-06a–06e.
 
 ## SIM-AC-07 — compatibility and imports
 
@@ -160,8 +194,8 @@ assertion, not yet bound to API names.
 | SIM-AC-02 | SIM-TC-02a–02e |
 | SIM-AC-03 | SIM-TC-03a–03d |
 | SIM-AC-04 | SIM-TC-04a–04d |
-| SIM-AC-05 | SIM-TC-05a–05g |
-| SIM-AC-06 | SIM-TC-06a–06f |
+| SIM-AC-05 | SIM-TC-05a–05h; SIM-TC-05i-PENDING (tracked-pending reset-failure atomicity, must be specified before the SIM-AC-05 gate is claimed complete) |
+| SIM-AC-06 | SIM-TC-06a–06e (automated); CHK-06-1/CHK-06-2 (review-gate checklist, not in automated tally) |
 | SIM-AC-07 | SIM-TC-07a–07e |
 | SIM-AC-08 | SIM-TC-08a–08d |
 
@@ -175,6 +209,64 @@ assertion, not yet bound to API names.
 3. The SIM-AC-06 stepping hook (SIM-TC-06d planned assertion): the design
    must name the concrete hook/extension point; the test then pins
    evolve-once-per-point.
-4. Failure atomicity for reset (SIM-AC-05 covers input update/evolve; reset
-   atomicity rides on SIM-TC-04d/05b and will be asserted explicitly once the
-   reset error contract is designed).
+4. Failure atomicity for reset (SIM-AC-05 covers input update/evolve and,
+   via SIM-TC-05h, observation; reset atomicity rides on SIM-TC-04d/05b).
+   **Tracked pending:** SIM-TC-05i-PENDING records the obligation to fully
+   specify the reset-failure atomicity case once the reset atomicity
+   contract is designed; the SIM-AC-05 gate cannot be claimed complete
+   before it is specified and executed.
+
+## Design-input recommendations from implementability review (for sw-celeste)
+
+The following are **sw-tom's recommendations, recorded here as tester input
+for the detailed design (sw-celeste). They are NOT test assumptions** — the
+tests pin only the behaviors stated in the case tables; these notes inform
+which design alternatives are cheaper/safer to implement. All options remain
+implementable either way.
+
+1. **Pending-input publication (SIM-TC-03c).** Recommend *pending until
+   explicit evolution*: assignment stores the pending input, `evolve`
+   consumes (a copy of) it. Matches the PRD contract most directly, gives
+   one clean commit boundary per operation (cheapest route to SIM-TC-05a
+   atomicity), and makes SIM-TC-02a/03c mechanically testable via call
+   counters.
+2. **Copies in/out uniformly (SIM-TC-05c/05d/05e).** Recommend copies on the
+   way in and on the way out (`np.array(..., copy=True)` semantics): one
+   mechanism then uniformly satisfies caller-supplied values, returned
+   inspection values, and callback arguments (copies out before publish),
+   with no read-only-view bookkeeping that could leak mutability via NumPy
+   views. The tests require functional protection either way.
+3. **Hook binding (SIM-AC-06).** Recommend a test/example-side no-arg closure
+   calling `evolve` once, bound to `hook_before_get` (count and scan) or
+   `hook_after_set` (scan only) — zero `huo` edits; run via existing
+   `run_process` with the `get_scheduler()` start/stop pattern used in
+   `tests/test_tu_integration.py`. See the stepping-hook ordering constraint
+   under SIM-AC-06 above; no custom `Process` subclass or adapter is needed
+   for the MVP worked example.
+4. **Build-then-swap reset.** Recommend designing reset as
+   *build-new-initial-state-then-swap* (fresh copies of all declared initial
+   values): atomic by construction, no rollback path to test, which makes
+   SIM-TC-04d and the deferred SIM-TC-05i-PENDING case straightforward. If
+   the design instead mutates in place, it must specify the failure contract
+   explicitly.
+
+## Revision history
+
+- **2026-10-05 — Revision 1** (tester: sw-mike; review record:
+  `log/release_2/reviews/sim-001-test-plan-review.md`, review commit
+  `313ae9f`, verdict CHANGES-REQUESTED):
+  1. [BLOCKER] Added SIM-TC-05h (observation-callback `G` failure
+     visibility/atomicity); traceability now maps SIM-AC-05 →
+     SIM-TC-05a–05h (+05i-PENDING).
+  2. Reclassified SIM-TC-06f from automated test case to review-gate
+     checklist items CHK-06-1/CHK-06-2 (owned by reviewer/coordinator and
+     tester respectively; excluded from automated pass/fail tally).
+  3. Added SIM-TC-05i-PENDING tracked-pending placeholder for reset-failure
+     atomicity, referenced from SIM-TC-04d, the SIM-AC-05 series, and open
+     question 4.
+  4. Stated the stepping-hook ordering constraint for the SIM-TC-06 series
+     (`hook_before_get`/`hook_after_set` only; never `hook_before_set`),
+     with rationale and hook invocation semantics.
+  5. Recorded sw-tom's four design recommendations (pending-input
+     publication, copies in/out, hook binding, build-then-swap reset) as
+     design input for sw-celeste, explicitly marked as non-assumptions.
