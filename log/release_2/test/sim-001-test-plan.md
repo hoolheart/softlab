@@ -14,10 +14,6 @@ This is a **test plan only**. Every case below is marked:
 - **[BASELINE-READY]** — can be executed against the current baseline without
   any new production code (SIM-AC-07 compatibility re-run and the
   pre-implementation import sanity parts of SIM-AC-07).
-- **[TRACKED-PENDING]** — a tracked deferred case: the obligation to fully
-  specify and execute it is recorded here (with its blocking condition),
-  but it has no executable steps yet and is not counted in the pass/fail
-  tally until specified.
 
 The exact public API names are intentionally not hard-coded: the detailed
 design is not yet written. Test steps refer to *roles* (declared inputs,
@@ -89,7 +85,7 @@ is stable; input assignment alone does not evolve.
 | SIM-TC-04a **[PLAN]** | Reset restores initial condition | Accumulator evolved several times from documented initial inputs/state | Call reset | Inputs, state and outputs return to documented initial values (including any time values represented there); subsequent observation matches the pristine initial object |
 | SIM-TC-04b **[PLAN]** | Replay reproduces observations | Reset model; deterministic input/evolve sequence recorded | Replay the identical input assignment + explicit evolution sequence | Every observation in the replay equals the corresponding observation in the original run (exact equality for deterministic callbacks) |
 | SIM-TC-04c **[PLAN]** | Independent objects do not share mutable state | Two objects constructed independently from the same declaration/model (each with its own initial mutable containers, e.g., ndarray state) | Evolve object A only; read state/outputs of B | B's committed state/outputs unchanged; mutating an inspection value returned from A (SIM-TC-05c) does not affect B; no shared mutable container between A and B (verified by identity checks where inspection allows, plus behavioral checks) |
-| SIM-TC-04d **[PLAN]** | Reset after failed evolution | Object where `evolve` raises for a specific input (see SIM-TC-05b) | Trigger failed evolution; then reset | Reset succeeds and restores the documented initial condition; the failure leaves no residue (SIM-TC-05b). Note: the complementary case — a reset that itself fails — is tracked as SIM-TC-05i-PENDING pending the reset error contract |
+| SIM-TC-04d **[PLAN]** | Reset after failed evolution | Object where `evolve` raises for a specific input (see SIM-TC-05b) | Trigger failed evolution; then reset | Reset succeeds and restores the documented initial condition; the failure leaves no residue (SIM-TC-05b). Note: the complementary case — a reset that itself fails — is specified as SIM-TC-05i per the approved design §2.5/§6 reset atomicity contract |
 
 ## SIM-AC-05 — predictable failures, atomicity, and ownership (mutable-alias protection)
 
@@ -109,7 +105,7 @@ clearly rejected.
 | SIM-TC-05f **[PLAN]** | Unsupported value category documented | — | Attempt an explicitly unsupported category (e.g., object arrays, ragged sequences, or non-numeric scalars, per the design's documented supported-value rules) | Clear documented rejection (error type documented in API docs); behavior for that category is stated in the user guide |
 | SIM-TC-05g **[PLAN]** | External side effects out of rollback scope — documentation check | — | Review user guide/API docs | Guide states that external side effects of user callbacks are outside rollback guarantees (honest-bounds documentation per SIM-AC-08) |
 | SIM-TC-05h **[PLAN]** | Failure visibility/atomicity — observation callback `G` | Model whose observation function `G` raises `ValueError("bad observation")` for a specific committed state; snapshot committed state and record a valid prior observation | Evolve into the offending state via a valid input; attempt observation; catch; compare state/outputs to snapshot; then attempt observation of a different, valid output (or reset and observe the initial state) | The original exception object propagates (identity preserved, or documented wrapper chaining via `__cause__`, matching the contract pinned by SIM-TC-05a); committed state is bit-identical to the snapshot; the prior recorded observation is unchanged; the subsequent valid observation succeeds and returns the correct value |
-| SIM-TC-05i-PENDING **[TRACKED-PENDING]** | Failure atomicity — reset | Reset error contract not yet designed (see open question 4) | *To be fully specified once the reset atomicity contract is approved by design.* Obligation: a case exercising a reset that itself fails (e.g., initial-condition reconstruction raising), asserting the original exception propagates visibly and that the object is left in a documented, well-defined state (no partially committed reset) | Tracked placeholder — **must be specified and bound to the approved reset contract before the SIM-AC-05 gate is claimed complete**; not counted in the executable pass/fail tally until specified |
+| SIM-TC-05i **[PLAN]** | Failure atomicity — reset | Object constructed with at least one factory-declared initial value (per design §2.1/§2.5, e.g. `states={'x': factory}`) where the user-supplied factory returns the valid initial value normally but is instrumented to raise `RuntimeError("reset boom")` on a chosen invocation count. The object has been evolved away from its initial condition. Failure injection is via the public construction API only — no monkeypatching of internals | (1) Snapshot committed inputs, states and observations. (2) Arm the factory to raise on its next invocation. (3) Call `reset()`; catch the exception. (4) Read inputs, states and outputs; exercise `set_input` / `evolve_once` / `observe_outputs`. (5) Disarm the factory; call `reset()` again; observe | (3) The propagated exception is the **identical** `RuntimeError` object raised by the factory (identity preserved, never wrapped). (4) Inputs, states and observations equal the pre-reset committed snapshot exactly — no partially committed reset; the object remains fully usable. (5) The second `reset()` succeeds and restores the documented initial condition; subsequent observation matches a pristine object |
 
 ## SIM-AC-06 — existing experiment interfaces (Device/Parameter bridge + huo integration)
 
@@ -194,7 +190,7 @@ automated cases are SIM-TC-06a–06e.
 | SIM-AC-02 | SIM-TC-02a–02e |
 | SIM-AC-03 | SIM-TC-03a–03d |
 | SIM-AC-04 | SIM-TC-04a–04d |
-| SIM-AC-05 | SIM-TC-05a–05h; SIM-TC-05i-PENDING (tracked-pending reset-failure atomicity, must be specified before the SIM-AC-05 gate is claimed complete) |
+| SIM-AC-05 | SIM-TC-05a–05i |
 | SIM-AC-06 | SIM-TC-06a–06e (automated); CHK-06-1/CHK-06-2 (review-gate checklist, not in automated tally) |
 | SIM-AC-07 | SIM-TC-07a–07e |
 | SIM-AC-08 | SIM-TC-08a–08d |
@@ -211,10 +207,10 @@ automated cases are SIM-TC-06a–06e.
    evolve-once-per-point.
 4. Failure atomicity for reset (SIM-AC-05 covers input update/evolve and,
    via SIM-TC-05h, observation; reset atomicity rides on SIM-TC-04d/05b).
-   **Tracked pending:** SIM-TC-05i-PENDING records the obligation to fully
-   specify the reset-failure atomicity case once the reset atomicity
-   contract is designed; the SIM-AC-05 gate cannot be claimed complete
-   before it is specified and executed.
+   **Resolved by design** (§2.5 build-then-swap reset atomicity contract, §6
+   concrete case): SIM-TC-05i is fully specified and executable via a
+   factory-declared initial value as the public-API failure-injection point;
+   the SIM-AC-05 gate has no remaining pending case.
 
 ## Design-input recommendations from implementability review (for sw-celeste)
 
@@ -246,7 +242,7 @@ implementable either way.
 4. **Build-then-swap reset.** Recommend designing reset as
    *build-new-initial-state-then-swap* (fresh copies of all declared initial
    values): atomic by construction, no rollback path to test, which makes
-   SIM-TC-04d and the deferred SIM-TC-05i-PENDING case straightforward. If
+   SIM-TC-04d and SIM-TC-05i straightforward. If
    the design instead mutates in place, it must specify the failure contract
    explicitly.
 
@@ -267,6 +263,23 @@ implementable either way.
   4. Stated the stepping-hook ordering constraint for the SIM-TC-06 series
      (`hook_before_get`/`hook_after_set` only; never `hook_before_set`),
      with rationale and hook invocation semantics.
-  5. Recorded sw-tom's four design recommendations (pending-input
-     publication, copies in/out, hook binding, build-then-swap reset) as
-     design input for sw-celeste, explicitly marked as non-assumptions.
+   5. Recorded sw-tom's four design recommendations (pending-input
+      publication, copies in/out, hook binding, build-then-swap reset) as
+      design input for sw-celeste, explicitly marked as non-assumptions.
+- **2026-10-05 — Revision 2** (tester: sw-mike; design:
+  `log/release_2/design/sim-001-detailed-design.md` commit `7ccac0d`;
+  design review: `log/release_2/reviews/sim-001-design-review.md` commit
+  `3d6cb13`, minor issue 3 closed):
+  1. Reclassified SIM-TC-05i-PENDING [TRACKED-PENDING] → SIM-TC-05i
+     [PLAN], fully specified per the approved design §6 reset atomicity
+     contract (§2.5): arm a user-supplied factory-declared initial-value
+     factory to raise → call `reset()` → assert identical exception
+     identity, exact pre-reset snapshot equality of committed state, full
+     continued usability → disarm factory → second `reset()` succeeds and
+     restores the documented initial condition. Executable entirely via the
+     public construction API; no monkeypatching of internals.
+  2. Traceability updated: SIM-AC-05 → SIM-TC-05a–05i; no pending case
+     remains and the gate-blocking note was removed.
+  3. Removed the [TRACKED-PENDING] legend entry (no remaining users);
+     updated the SIM-TC-04d cross-reference and open question 4, both now
+     marked resolved by design §2.5/§6.
