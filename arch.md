@@ -412,7 +412,7 @@ suites `tests/test_tu_contracts.py` (characterization baseline),
 (Device/Parameter bridge and `huo` count/scan hook advancement) and
 `tests/test_sim_user_guide.py` (executed-guide regression). The integrated
 suite is 135 tests, green on `dev` at `470e2c7` with zero warnings under
-`-W error` (evidence in `log/release_2/tests/`), and CI run 37298623628 is
+`-W error` (evidence in `log/release_2/test/`), and CI run 37298623628 is
 green on Python 3.9 and 3.13. They do not by themselves
 prove hardware behavior, concurrency or exhaustive driver failures.
 Actual baseline results belong in `log/release_0/`; this architecture inspection
