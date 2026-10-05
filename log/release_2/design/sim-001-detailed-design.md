@@ -1,6 +1,7 @@
 # Design — SIM-001: deterministic simulated-object foundation
 
-Owner: sw-celeste | Status: DRAFT (pending architect review) | Date: 2026-10-05
+Owner: sw-celeste | Status: APPROVED (sw-jerry, commit `3d6cb13`; review
+minors 1–2 closed in this revision — see §11) | Date: 2026-10-05
 Source revision: `4fbe97e` on `codex/sim-001-simulation-foundation`
 Requirements: [prd.md](../prd.md) (SIM-AC-01–08) |
 Approved test plan: [sim-001-test-plan.md](../test/sim-001-test-plan.md) |
@@ -147,10 +148,13 @@ Declaration validation at construction (SIM-TC-01a/01c):
 
 The declaration fixes, per variable, a private **value specification**
 (`int` | `float` | `(ndarray, dtype, shape)`) recorded from the initial
-value. Construction makes **two** independent copies of each mutable initial
-value: a pristine copy retained for `reset()`, and the working committed
-value (SIM-TC-05c: later mutation of the caller's container changes
-neither).
+value. For a **literal-declared** initial value, construction makes **two**
+independent copies: a pristine copy retained for `reset()`, and the working
+committed value (SIM-TC-05c: later mutation of the caller's container
+changes neither). Pristine copies are retained **only** for literal-declared
+initial values: for a **factory-declared** variable nothing is retained to
+copy — the initial value is rebuilt by re-invoking the factory at each
+`reset()` (§2.5, §3.2).
 
 ### 2.2 Callback contracts
 
@@ -483,9 +487,17 @@ and wired via hooks:
   `before_set=lambda old, new: sim.set_input('u', new)`.
   Rationale for `before_set` over `after_set`: `Parameter.set` order is
   permission → validate → decode → `before_set` → store → `after_set`
-  (arch.md §Parameters). Binding in `before_set` means a sim-side
-  validation failure propagates *before* the parameter's store changes, so
-  parameter and object can never disagree. Exactly one `set_input` per
+  (arch.md §Parameters). **Two-gate validation asymmetry** (must be stated
+  in the user guide): the parameter's own validator and the object's
+  per-variable value specification are **two separate, independent gates**,
+  applied in sequence — the parameter validator runs first (the validate
+  step of `Parameter.set`), and the object may still reject a value the
+  parameter accepted (e.g. a `float` passed to an `int`-pinned input). The
+  sim specification is **authoritative**: a sim-spec rejection surfaces as
+  the object's `TypeError`/`ValueError` propagating out of
+  `Parameter.set`, and because the wiring is in `before_set` it propagates
+  *before* the parameter's store changes, so the parameter and the object
+  stay consistent and can never disagree. Exactly one `set_input` per
   parameter set; no evolution occurs (SIM-TC-06a, cross-check SIM-TC-03c).
   Parameter read-back via `get()` returns the parameter's stored value,
   which equals the object's current (pending) input — the documented
@@ -641,7 +653,12 @@ construction, `evolve` contract, observation, reset, error table (§2.5),
 ownership/aliasing rules (§2.4), optional time context (§2.6), mock-device
 vs simulated-object distinction (§1), supported value contract (§2.4),
 deterministic-callback contract incl. the external-side-effects caveat
-(SIM-TC-05g), and the §4 bridge pattern with the hook-binding constraint;
+(SIM-TC-05g), and the §4 bridge pattern with the hook-binding constraint —
+including the **two-gate validation asymmetry** (the parameter validator
+and the object's specification are two separate gates; the sim
+specification is authoritative, and a sim-spec rejection propagates out of
+`Parameter.set` *before* the parameter store changes, so parameter and
+object stay consistent — §4.1);
 executed example = accumulating scalar model + ndarray vector integrator
 (SIM-TC-08b). Docstrings: constructor, every public method/property, with
 Args/Returns/Errors/Side-effects per repo convention.
@@ -716,6 +733,35 @@ observation call fail (reset restores observability — SIM-TC-05h binding).
 
 ## 10. Architect review
 
-sw-jerry: PENDING — review of architectural fit, compatibility and the
-explicit contracts above (especially §2.5 reset atomicity and the §6
-SIM-TC-05i binding) before any production work begins.
+sw-jerry: **APPROVED** — review at
+`log/release_2/reviews/sim-001-design-review.md` (commit `3d6cb13`), with
+three minor items. Items 1 and 2 are closed in this revision (§11); item 3
+is a coordinator/sw-mike follow-up (test plan revision 2 reclassifying
+SIM-TC-05i-PENDING → SIM-TC-05i [PLAN]) and requires no design change.
+
+## 11. Review closure
+
+sw-jerry's design review
+(`log/release_2/reviews/sim-001-design-review.md`, commit `3d6cb13`)
+approved this design with three minor items. Closure status:
+
+- **Item 1 [minor] §4.1 — two-gate validation asymmetry — CLOSED.** §4.1
+  now states explicitly that the parameter-level validator and the
+  simulation-object value specification are two separate, independent
+  gates; that the parameter validator runs first (the validate step of
+  `Parameter.set`); that the sim specification is authoritative; and that
+  a sim-spec rejection propagates as the object's `TypeError`/`ValueError`
+  out of `Parameter.set` *before* the parameter store changes (because the
+  wiring is in `before_set`), keeping parameter and object consistent. The
+  same statement is added to the §6 user-guide topic checklist handed to
+  sw-tom. No API change, per the review.
+- **Item 2 [minor] §2.1/§2.5 — pristine copies for factory-declared
+  variables — CLOSED.** §2.1 now states explicitly that pristine copies are
+  retained **only** for literal-declared initial values; factory-declared
+  variables retain nothing to copy and are rebuilt by re-invoking the
+  factory at each `reset()` (consistent with §2.5 and §3.2, unchanged).
+  Editorial only, per the review.
+- **Item 3 [minor] §6 SIM-TC-05i handoff — tracked, no design change.**
+  Per the review, this is a coordinator/sw-mike scheduling item (test plan
+  revision 2 reclassifying SIM-TC-05i-PENDING → SIM-TC-05i [PLAN]); no
+  design-document change was requested or made.
