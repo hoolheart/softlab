@@ -75,3 +75,34 @@ testing gate). No corrective tasks. Explicitly NOT claimed: candidate-CI
 pass (integration gate, pending), `arch.md` release-end update (pending),
 integration to `dev` and release acceptance (pending coordinator/user
 gates).
+
+## Release-completion principle inspection
+
+Inspector: sw-jerry (delegated by coordinator) | Date: 2026-10-05
+Branch: `dev` (verified via `git branch --show-current`) | HEAD `a297324`
+| Inspected range: `f04e783..HEAD` (entire release) | Scope: whole-release
+principle compliance after SIM-001 integration. Release-close gates
+remaining after this inspection — `arch.md` actual-implementation update,
+sw-camille acceptance, `main` promotion — are NOT claimed complete.
+
+All findings re-verified with git/CI commands against the actual
+artifacts on `dev`; reports not taken at face value.
+
+| Principle | Evidence checked | PASS / FAIL | Reason |
+| --- | --- | --- | --- |
+| 1. Five-element architecture | `git diff --name-only f04e783..HEAD` sorted by top-level: only `softlab/tu/`, `tests/`, `docs/user-guide/`, `log/release_2/`; production confined to new `softlab/tu/simulation/` package + 1 export line in `softlab/tu/__init__.py` | PASS | Additive-only; zero `huo`/`jin`/`shui`/`mu` edits; post-merge diff identical in scope to the task-completion inspection. `arch.md` actual-implementation update is an explicitly pending release-end architect activity (principle 11), not a scope violation. |
+| 2. Characterize behavior | `sim-001-baseline.md` (`86cddb4`) predates first production commit `4eab94d`; additive diff means no existing public behavior changed post-merge either | PASS | Characterization-before-change held across the release; baseline 99-test contract preserved (regression suite remains in diff and ran green). |
+| 3. Documented TDD | Commit order `86cddb4`→`313ae9f`→`5caabc7`/`f1bbcd2`→`7ccac0d`→`3d6cb13`→`917cfd7`/`0aa3908`→`4eab94d`→`dfa535c`→`e25a416`/`88c140d`→`cd90ff6`→CI→`9408c79` | PASS | Requirements → test plan + developer review → design + architect review → implementation → independent code review → testing → principle inspection → CI → integration; every gate artifact exists on `dev`. |
+| 4. One active task | Sprint board: SIM-001 "Done", merge `9408c79`, task branch deleted; `a297324` records merge reference; single task in range | PASS | Task-completion PASS (`cd90ff6`) still holds post-merge; board updated honestly with merge commit and remaining release-close gates; no shared-history rewrite. |
+| 5. Role ownership | Review files on `dev`: test-plan review issues 1–4 all marked **CLOSED** by sw-tom at `f1bbcd2`; design review APPROVED with three non-blocking minors closed via `917cfd7`/`0aa3908`; code review (`dfa535c`) APPROVED with zero issues and one explicitly informational observation | PASS | All review issues across the release closed by their respective reviewers; no issue left open or closed by a non-reviewer. UI gates N/A. |
+| 6. Committed evidence | `git log --oneline f04e783..HEAD`: 22 commits, all Conventional (`docs(log):` for logs, `feat(tu):`/`test(tu):`/`docs(user-guide):` otherwise); `git status --short` clean; `git log @{u}..HEAD` empty (all pushed); all `log/release_2/` files in the diff are committed | PASS | Every completed update committed and pushed with conforming messages; merge commit carries full release evidence; no circular self-hashes. |
+| 7. Environment evidence | Local: `sim-001-test-results.md` §Environment — Python 3.13.15 / softlab 0.3.0 / macOS; 135 tests OK exit 0; compileall exit 0; import smoke OK; `-W error::Warning` gate green (tester-recorded, verbatim commands). CI: `gh run view 37298623628` → `status=completed`, `conclusion=success`, jobs `compatibility (3.9)` and `compatibility (3.13)` both success | PASS | Sprint-end zero-warning claim supported by executed evidence: local `-W error::Warning` run recorded by tester AND CI regression steps passed on both matrix versions. Local (3.13) and CI-covered (3.9) evidence both recorded; nothing unrun claimed. |
+| 8. Baseline debt | `sim-001-test-results.md` §4: no OBS-004/005/006/DEFECT-2 warning fired under warnings-as-errors, "no silent waiver"; `sim-001-baseline.md` records each debt item with disposition; PRD §lines 90–91 and sprint board keep them tracked as Release 1 debt; diff contains no unrelated repairs; `pyproject.toml`/`setup.py` untouched | PASS | Known debt explicitly recorded, tracked, not repaired and not silently waived; no scope expansion. |
+| 9. Hardware/data safety | Diff contains zero VISA/real-instrument code; test results show synthetic data and `/var/folders/.../T/tmp*` storage; scheduler start/stop released in `tearDown` | PASS | Synthetic data, temporary storage, no real hardware throughout the release. |
+| 10. Minimal extensions | `git diff f04e783..HEAD -- pyproject.toml setup.py` empty; implementation uses stdlib + already-required NumPy only | PASS | No new dependency, framework, domain hierarchy or Python-version change; setuptools project preserved. |
+| 11. Reproducible completion | CI run 37298623628 success BEFORE merge `9408c79` into `dev`; `git diff --check f04e783..HEAD` exit 0; clean status. Remaining gates explicitly pending in board and this report: (a) `arch.md` actual-implementation update (architect, release-end), (b) sw-camille release acceptance, (c) `main` promotion (requires acceptance) | PASS | CI-before-`dev` satisfied with evidence; acceptance-before-`main` correctly NOT claimed; no release treated as accepted because its task completed. |
+
+**Overall verdict: PASS** for release-completion principle compliance
+through the integration gate. No corrective tasks. Explicitly pending and
+not claimed: `arch.md` actual-implementation update, sw-camille release
+acceptance, and `main` promotion (blocked on acceptance).
