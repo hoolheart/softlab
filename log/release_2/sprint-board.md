@@ -4,7 +4,7 @@ Updated: 2026-10-05 | Integration branch: dev | Execution: resumed by user
 
 | ID | Scope | Owner | Phase | Started | Expected completion | Blocker | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| SIM-001 | Deterministic simulation foundation, bridge example and verification | sw-mike (test plan) → sw-celeste (design) → sw-tom (impl) → sw-celeste (review) → sw-mike (test) | Code review | 2026-10-05 | After serial gates per tasks.md | — | — |
+| SIM-001 | Deterministic simulation foundation, bridge example and verification | sw-mike (test plan) → sw-celeste (design) → sw-tom (impl) → sw-celeste (review) → sw-mike (test) | Testing | 2026-10-05 | After serial gates per tasks.md | — | — |
 
 User resumed task execution on 2026-10-05; the preparation pause is lifted.
 Exactly one task is active on branch `codex/sim-001-simulation-foundation`
