@@ -180,3 +180,66 @@ dependencies". The integration file must follow the established scheduler
 lifecycle discipline (`get_scheduler()` started in `setUp`, stopped in
 `tearDown`, `verbose=False`) per AGENTS.md's global-state warning — the
 plan does not contradict this; noting it as an implementation constraint.
+
+## Re-review closure
+
+Re-review date: 2026-10-05 | Re-review commit: `5caabc7` (tester revision,
+"docs(log): revise SIM-001 test plan per implementability review") |
+Reviewer: sw-tom.
+
+### Issue 1 [blocker] — observation-callback failure coverage — **CLOSED**
+
+- Revised plan adds **SIM-TC-05h [PLAN]** (SIM-AC-05 case table): model
+  whose observation function `G` raises `ValueError("bad observation")`
+  for a specific committed state; asserts (a) the original exception object
+  propagates — identity preserved, or documented wrapper chaining via
+  `__cause__`, explicitly pinned to the SIM-TC-05a contract as requested;
+  (b) committed state bit-identical to snapshot; (c) prior recorded
+  observation unchanged; (d) a subsequent valid observation succeeds with
+  the correct value. All four requested assertions are present.
+- Traceability table updated: SIM-AC-05 → SIM-TC-05a–05h (+SIM-TC-05i-PENDING).
+
+### Issue 2 [minor] — SIM-TC-06f not mechanically executable — **CLOSED**
+
+- SIM-TC-06f removed from the automated case table; replaced by an explicit
+  **review-gate checklist** paragraph under SIM-AC-06 with
+  **CHK-06-1** (reviewer/coordinator: zero production changes under
+  `softlab/huo/`, verified by `git diff` at the review/integration gate,
+  recorded in the test-results record) and **CHK-06-2** (tester: the
+  integration file imports `huo` only via `softlab.huo.process` public
+  names as supporting evidence) — exactly the requested split of
+  ownership. Explicitly excluded from the automated pass/fail tally;
+  traceability maps SIM-AC-06 → SIM-TC-06a–06e (automated) + CHK-06-1/2
+  (review-gate).
+
+### Issue 3 [minor] — reset-failure atomicity not tracked — **CLOSED**
+
+- Plan adds **SIM-TC-05i-PENDING [TRACKED-PENDING]** with the new
+  [TRACKED-PENDING] status definition, stating the blocking condition
+  (reset error contract not yet designed, open question 4), the obligation
+  (reset that itself fails; original exception propagates visibly; object
+  left in documented well-defined state, no partially committed reset),
+  and the gate condition ("must be specified and bound to the approved
+  reset contract before the SIM-AC-05 gate is claimed complete").
+  Referenced from SIM-TC-04d (note), the SIM-AC-05 traceability row, and
+  open question 4 — the cross-references requested are all in place.
+
+### Issue 4 [minor] — scan stepping-hook ordering constraint — **CLOSED**
+
+- Plan adds the **"Stepping-hook ordering constraint (design-time input,
+  per implementability review)"** paragraph under SIM-AC-06 with all
+  requested content: stepping bound to `hook_before_get` or
+  `hook_after_set`, never `hook_before_set`; rationale (fires before the
+  set → evolves with the previous input → corrupts the SIM-TC-06e analytic
+  sequence); `count` safe with either `hook_before_get`/`hook_after_get`,
+  `scan` valid only via `hook_after_set`/`hook_before_get`; hooks are
+  no-arg synchronous callables (closure over the simulation object)
+  invoked exactly once per non-dry-run point; terminal dry-run sweep
+  invokes no hooks, so evolve count equals point count exactly.
+
+### Final verdict
+
+**APPROVED** — all four issues closed with the requested evidence. The
+revised plan remains implementable as reviewed: all [PLAN] cases are
+writable as `unittest`-compatible tests with stdlib + NumPy, production
+changes confined to `softlab/tu/`, zero `huo`/`jin`/`shui`/`mu` edits.
