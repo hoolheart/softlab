@@ -1,6 +1,6 @@
 # Technical requirements review — SIM-001
 
-Owner: sw-jerry (Architect) | Candidate revision: `8ba0106`
+Owner: sw-jerry (Architect) | Candidate revision: `547e97c`
 Verdict: APPROVED | Date: 2026-10-05
 Requirements: [PRD](../prd.md) | Scope: feasibility and architectural placement
 
@@ -8,8 +8,10 @@ Requirements: [PRD](../prd.md) | Scope: feasibility and architectural placement
 
 The proposed object/instrument distinction is sound and feasible. Preserve a
 separate simulated object so independent mock devices can share one physical
-model. Dynamic evolution requires previous state and explicit time:
-`x_next = F(x, u, t, dt)` and `y = G(x_next)`. Inputs alone would not describe
+model. The clarified contract is
+`evolve(inputs, previous_states) -> next_states`, then `y = G(next_states)`.
+Exact API signatures remain undecided. Time or dt may be model inputs or
+optional context; a dedicated clock is not required. Inputs alone would not describe
 memory, accumulation or relaxation. A memoryless function remains a special
 case. The release intentionally omits direct feedthrough, solvers and clocks
 that advance on real-time sleeps.
@@ -39,15 +41,19 @@ prove and explain this existing integration seam.
 
 ## Verdict and design constraints
 
-APPROVED for the bounded single task, not implementation or release acceptance.
+APPROVED for release preparation. SIM-001 is Backlog, paused before test
+planning, detailed design and implementation at the user’s request.
 Detailed design must specify supported scalar/ndarray values, declarations and
 validators, defensive ownership, callback reentrancy, commit-on-success
-semantics, time overflow/nonpositive-step rejection and reset behavior. Copies
+semantics and reset behavior; any optional time context needs its own documented
+validation contract. Copies
 must protect committed state even if callbacks mutate their arguments before
-raising. Output errors must not leave a committed new state/time. Do not claim
+raising. Output errors must not leave a committed new state. Do not claim
 rollback of user callbacks' external effects. Prefer a documented hook bridge
 over a general mock-driver hierarchy; any adapter must justify its need.
 
 OBS-004, OBS-005, OBS-006 and DEFECT-2 remain existing recorded limitations.
-This review neither fixes nor closes them. Fresh baseline execution, test-plan
-review, detailed design, code review, testing and CI are all pending.
+This review neither fixes nor closes them. Baseline checks started before the pause are recorded in the preparation
+principle report. Test-plan review, detailed design, code review, task testing
+and CI remain pending. This revision supersedes the earlier mandatory-clock
+proposal; it approves no detailed API and authorizes no task execution.
