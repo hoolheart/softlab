@@ -1,31 +1,34 @@
 # Tasks — Release 2 simulation foundation
 
-Owner: sw-jerry | Date: 2026-10-05 | Status: planned
+Owner: sw-jerry | Date: 2026-10-05 | Status: preparation complete; paused before SIM-001
 Requirements: [PRD](prd.md) | Technical review: [approved](reviews/prd.md)
-Baseline: `80b0b05` from `dev`; active branch `codex/tu-simulation-foundation`.
+Baseline: `80b0b05` from `dev`; preparation branch `codex/tu-simulation-foundation`.
 
 ## Single bounded task
 
 | ID | Deliverable | Acceptance | Dependencies | Status |
 | --- | --- | --- | --- | --- |
-| SIM-001 | Deterministic simulated-object foundation and existing experiment-interface example | SIM-AC-01–08 | Release 1 accepted baseline; all serial gates below | Design |
+| SIM-001 | Deterministic simulated-object foundation and existing experiment-interface example | SIM-AC-01–08 | Release 1 accepted baseline; all serial gates below | Backlog |
 
-This is one task across roles, not several concurrent implementation tasks.
+This is one planned task across roles. Execution is paused before test planning,
+detailed design and implementation until the user resumes it.
 No next task or unrelated baseline repair is authorized by this decomposition.
 
 ## [PLANNED — not implemented] Architecture
 
-Add a focused `softlab/tu/simulation/` package and expose it through `tu`'s
+Propose a focused `softlab/tu/simulation/` package and expose it through `tu`'s
 package initializer. Its simulated-object abstraction owns declared inputs,
-internal state, outputs and simulation time. Keep it independent of `Device`,
+internal state and outputs. Keep it independent of `Device`,
 `TheoryModel`, scheduling and storage. Model authors supply deterministic
 transition and observation functions; the foundation validates declarations,
-copies supported numerical values, advances synchronously on explicit steps,
+copies supported numerical values, evolves synchronously on explicit requests,
 observes without advancing and restores initial conditions on reset.
 
-Transitions receive previous state, current inputs, current simulated time and
-step duration; observations derive from the candidate state. Publish a completed
-state/output/time snapshot only after callback execution and validation succeed.
+The required behavior is `evolve(inputs, previous_states) -> next_states`;
+observations derive from the resulting state. Exact API signatures remain
+undecided. Time or dt may be model inputs or optional context, without requiring
+a dedicated clock. Publish completed state/outputs only after callback execution
+and validation succeed.
 This defines transaction boundaries for the simulation object only. Concrete
 signatures, supported-value rules, validator isolation, reentrancy policy and
 exception cases belong in the reviewed detailed design.
@@ -34,14 +37,14 @@ Use existing `Parameter` callbacks to bridge inputs and observations to one or
 more mock `Device` instances sharing one object. A user guide example should
 show an accumulating model and an ndarray model; a count/scan integration should
 put explicit stepping in an existing process hook. Parameter acquisition time
-remains wall-clock time; model time remains explicit simulated time.
+remains wall-clock time; any model-specific time is a separate concept.
 
 Production edits are restricted to `softlab/tu/`. Tests in `tests/`, a guide in
 `docs/`, process evidence here, and final `arch.md` updates are necessary outside
 that directory. No `huo`, `shui`, `jin` or `mu` production changes, new dependencies,
 Python-support changes, solver framework or device hierarchy are planned.
 
-## Serial delivery and owners
+## Serial delivery and owners — pending user resumption
 
 1. sw-mike records fresh Release 1 baseline and writes SIM-AC-01–08 tests/test
    plan, including mutable-alias and failure atomicity cases. sw-tom reviews
@@ -61,7 +64,9 @@ Python-support changes, solver framework or device hierarchy are planned.
 
 Every completed process update is committed/pushed immediately with `docs(log):`.
 Board phases track this sequence. UI and hardware gates are N/A. Tests, design,
-implementation, code review, runtime verification, CI and acceptance are pending.
+implementation, code review, task verification, CI and acceptance are pending.
+Baseline checks started before the pause are recorded in the principle report;
+they are not a completed task test gate.
 
 ## Risks and tracked limitations
 
