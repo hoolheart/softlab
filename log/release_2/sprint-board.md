@@ -1,21 +1,18 @@
 # Sprint board — Release 2
 
-Updated: 2026-10-05 | Integration branch: dev | Execution: resumed by user
+Updated: 2026-10-05 | Integration branch: dev | Execution: SIM-001 integrated into dev; release close pending
 
 | ID | Scope | Owner | Phase | Started | Expected completion | Blocker | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| SIM-001 | Deterministic simulation foundation, bridge example and verification | sw-mike (test plan) → sw-celeste (design) → sw-tom (impl) → sw-celeste (review) → sw-mike (test) | Testing | 2026-10-05 | After serial gates per tasks.md | — | — |
+| SIM-001 | Deterministic simulation foundation, bridge example and verification | sw-mike (test plan) → sw-celeste (design) → sw-tom (impl) → sw-celeste (review) → sw-mike (test) | Done | 2026-10-05 | 2026-10-05 | — | 9408c79 |
 
-User resumed task execution on 2026-10-05; the preparation pause is lifted.
-Exactly one task is active on branch `codex/sim-001-simulation-foundation`
-(cut from dev @ f04e783). Completed so far: fresh baseline recorded
-(99 tests OK, exit 0, zero warnings; `log/release_2/test/sim-001-baseline.md`),
-test plan approved after one revision round (commits 86cddb4, 5caabc7;
-implementability review 313ae9f with all issues closed at f1bbcd2, verdict
-APPROVED); detailed design approved by sw-jerry (3d6cb13, 0 blockers, all 3
-minors closed at 0aa3908/917cfd7; SIM-TC-05i fully specified). Required behavior
-is `evolve(inputs, previous_states) -> next_states`; time/dt is optional model
-input/context.
+SIM-001 completed all serial gates and was integrated into `dev` as merge
+commit `9408c79` (CI run 37298623628 success on Python 3.9 + 3.13; task branch
+deleted after merge). Evidence chain: baseline `86cddb4` → test plan `5caabc7`
+(review `313ae9f`, closed `f1bbcd2`) → design `7ccac0d` (review `3d6cb13`,
+minors closed `0aa3908`/`917cfd7`) → implementation `4eab94d` (code review
+`dfa535c`, zero issues) → tests `e25a416`/results `88c140d` (135 tests OK,
+zero-warning gate green) → task principle inspection PASS `cd90ff6`.
 
 See [tasks](tasks.md), [PRD](prd.md), [technical review](reviews/prd.md),
 [test plan](test/sim-001-test-plan.md), [plan review](reviews/sim-001-test-plan-review.md),
