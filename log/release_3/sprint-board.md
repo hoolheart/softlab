@@ -4,7 +4,7 @@ Updated: 2026-10-06 | Integration branch: dev | Execution: **Mode D confirmed by
 
 | ID | Scope | Owner | Phase | Started | Expected completion | Blocker | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| R3-001 | Scoped Release 2 corrections and closure reconciliation | sw-mike (test plan) | Test plan / characterization | 2026-10-06 | 2026-10-09 | — | — |
+| R3-001 | Scoped Release 2 corrections and closure reconciliation | sw-celeste (design) | Detailed design | 2026-10-06 | 2026-10-09 | — | — |
 | R3-002 | Object builders and station membership | Unassigned | Backlog | — | — | R3-001 dev integration | — |
 | R3-003 | Shared clock, delayed graph, mock signals and atomic coordination | Unassigned | Backlog | — | — | R3-002 dev integration | — |
 | R3-004 | Connected guide/example and final delivery evidence | Unassigned | Backlog | — | — | R3-003 dev integration | — |
@@ -38,6 +38,13 @@ testing (sw-mike) → principle inspection → candidate CI → dev integration.
 Review issues are closed by sw-celeste; test failures by sw-mike. Every process
 record is committed/pushed immediately with `docs(log):` on
 `codex/r3-001-corrections`.
+
+Progress:
+- ✅ Test plan + characterization baseline committed `b1bed62`; review
+  `5ffda3a` issued one minor issue; closed by sw-mike `b5f2202`; reviewer
+  re-confirmed, verdict APPROVED at `d657e13`. 23 test cases (15 automated
+  + R3-TC-07t wording pin + 5 manual record checks + CHK-08-1 scope checklist).
+- ▶ Detailed design (sw-celeste) in progress next.
 
 R3-001 scope (from tasks.md): correct Release 2 standalone bridge readback,
 malformed callback-key errors and reset claims; reconcile closure records
