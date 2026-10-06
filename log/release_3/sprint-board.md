@@ -4,7 +4,7 @@ Updated: 2026-10-06 | Integration branch: dev | Execution: **Mode D confirmed by
 
 | ID | Scope | Owner | Phase | Started | Expected completion | Blocker | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| R3-001 | Scoped Release 2 corrections and closure reconciliation | sw-tom (implementation) | Implementation | 2026-10-06 | 2026-10-09 | — | — |
+| R3-001 | Scoped Release 2 corrections and closure reconciliation | sw-celeste (review) | Code review | 2026-10-06 | 2026-10-09 | — | — |
 | R3-002 | Object builders and station membership | Unassigned | Backlog | — | — | R3-001 dev integration | — |
 | R3-003 | Shared clock, delayed graph, mock signals and atomic coordination | Unassigned | Backlog | — | — | R3-002 dev integration | — |
 | R3-004 | Connected guide/example and final delivery evidence | Unassigned | Backlog | — | — | R3-003 dev integration | — |
@@ -46,7 +46,14 @@ Progress:
   + R3-TC-07t wording pin + 5 manual record checks + CHK-08-1 scope checklist).
 - ✅ Detailed design `46a17fe`; architect review APPROVED `24f129f` (C-6
   ACCEPT: arch.md:291 in scope); 2 minor issues closed by sw-celeste `88ca37d`.
-- ▶ Implementation (sw-tom) in progress next.
+- ✅ Implementation complete: `148959b` callback-key fix, `7c63685` reset
+  docstrings, `7657eda` bridge before_get rebind + R3-TC-07a–07m tests,
+  `bf7ee44` guide/arch wording, `a26608b` release 2 closure reconciliation.
+  Self-test: 147 tests OK (12 new), compileall clean, import smoke 0.3.0,
+  `-W error::Warning` gate green. One documented deviation: SIM-TC-06a test
+  docstring wording neutralized to "authoritative input store" (assertion
+  unchanged) — recorded in `7657eda`.
+- ▶ Independent code review (sw-celeste) in progress next.
 
 R3-001 scope (from tasks.md): correct Release 2 standalone bridge readback,
 malformed callback-key errors and reset claims; reconcile closure records
