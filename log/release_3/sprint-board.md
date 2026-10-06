@@ -1,10 +1,10 @@
 # Sprint board — Release 3 execution
 
-Updated: 2026-10-06 | Integration branch: dev | Execution: **Mode D confirmed by user — all four tasks, strict serial**
+Updated: 2026-10-06 | Integration branch: dev | Execution: **PAUSED by user during R3-001 testing phase**
 
 | ID | Scope | Owner | Phase | Started | Expected completion | Blocker | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| R3-001 | Scoped Release 2 corrections and closure reconciliation | sw-mike (testing) | Testing | 2026-10-06 | 2026-10-09 | — | — |
+| R3-001 | Scoped Release 2 corrections and closure reconciliation | sw-mike (testing) | Testing | 2026-10-06 | 2026-10-09 | USER PAUSE 2026-10-06 | — |
 | R3-002 | Object builders and station membership | Unassigned | Backlog | — | — | R3-001 dev integration | — |
 | R3-003 | Shared clock, delayed graph, mock signals and atomic coordination | Unassigned | Backlog | — | — | R3-002 dev integration | — |
 | R3-004 | Connected guide/example and final delivery evidence | Unassigned | Backlog | — | — | R3-003 dev integration | — |
