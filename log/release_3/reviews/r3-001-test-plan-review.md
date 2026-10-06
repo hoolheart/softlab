@@ -1,16 +1,17 @@
 # R3-001 test plan review — implementability
 
 Reviewer: sw-tom (implementer) | Date: 2026-10-06
-Branch: `codex/r3-001-corrections` (HEAD `b1bed62`)
+Branch: `codex/r3-001-corrections` (initial review at `b1bed62`;
+re-confirmation at `b5f2202`)
 Input reviewed: `log/release_3/test/r3-001-test-plan.md` (with
 `r3-001-baseline.md`, `log/release_3/prd.md` R3-AC-07/08, tasks.md R3-001
 row, `docs/user-guide/simulation.md`, `arch.md`, and the cited code in
 `softlab/tu/simulation/object.py`, `softlab/tu/simulation/__init__.py`,
 `tests/test_tu_simulation.py`, `tests/test_tu_simulation_integration.py`)
 
-**Verdict: CHANGES-REQUESTED** — one minor issue (a correction that is
-explicitly in scope is not pinned by any check case; the behavior itself
-is fully covered). The plan is otherwise implementable: every automated
+**Verdict: APPROVED** — the single issue raised under
+CHANGES-REQUESTED is resolved by R3-TC-07t (plan Revision 2); see the
+closure log below. The plan is otherwise implementable: every automated
 case is writable as a `unittest`-compatible test with stdlib + NumPy,
 fails on the current baseline exactly where the plan claims it fails,
 and confines production changes to `softlab/tu/` plus guide/arch/log
@@ -90,6 +91,9 @@ wording.
   traceability row for R3-AC-07 (bridge readback) to reference the
   extended wording check.
 - **Owner:** sw-mike (tester).
+- **Status: CLOSED** — resolved by R3-TC-07t (plan Revision 2), added
+  per the reviewer's "or add a sibling manual record check" option.
+  Re-confirmed by sw-tom on 2026-10-06 (see closure log below).
 
 No other issues found. See the point-by-point answers below for the
 checks that came back clean.
@@ -253,3 +257,33 @@ Once issue 1 is closed, this plan is ready for implementation.
   test plan review issue 1` on `codex/r3-001-corrections` (single
   commit containing both this entry and the test-plan change; full
   hash reported in the tester handoff note).
+- **2026-10-06 — Issue 1 [minor] — CLOSED (re-confirmed by sw-tom,
+  reviewer).** Verified against the closure commit
+  (`b5f2202`) on `origin/codex/r3-001-corrections`:
+  - **(a) Wording pin** — R3-TC-07t checklist item (a) requires §9 to
+    state that a control read via `get()` reflects the object's
+    **authoritative input store** and that the line-243 overpromise
+    ("equals the object's current (pending) input") is gone. Matches
+    the required change verbatim in substance.
+  - **(b) Standalone-vs-pending-source distinction** — item (b) pins
+    the distinction and defers the connected half's semantics to
+    R3-003, exactly as required; no connected semantics are pulled
+    into R3-001 scope.
+  - **(c) Conditional two-gate/error-table check** — item (c) is
+    correctly conditional on the design changing the wiring, pins the
+    two-gate validation asymmetry paragraph and the guide §6 error
+    table against the implemented `Parameter.set` order (permission →
+    validate → decode → `before_set` → store → `after_set`) and the
+    implemented error contract. Precise and verifiable.
+  - **Verifiability** — each checklist item requires file/line
+    citations recorded in the test-results document ("nothing silently
+    waived"), so the check cannot self-grade.
+  - **No collateral change** — `git diff b1bed62..b5f2202` on the plan
+    shows only the 07t addition, cross-references, and a genuine
+    traceability-table correction (`07m–07q` → `07n–07t`; 07l/07m are
+    automated, 07q never existed). Every assertion in R3-TC-07a–07s
+    and R3-TC-08a–08e is byte-identical; traceability rows are
+    internally consistent (automated = 07a–07m + 08a–08d; manual =
+    07n/07t/07o–07s + CHK-08-1).
+  - **Verdict: APPROVED.** The plan is ready for implementation; all
+    other aspects approved in the sections above stand.
