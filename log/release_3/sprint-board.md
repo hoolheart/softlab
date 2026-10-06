@@ -1,25 +1,50 @@
-# Sprint board — Release 3 preparation
+# Sprint board — Release 3 execution
 
-Updated: 2026-10-05 | Integration branch: dev | Execution: paused before first task
+Updated: 2026-10-06 | Integration branch: dev | Execution: **Mode D confirmed by user — all four tasks, strict serial**
 
 | ID | Scope | Owner | Phase | Started | Expected completion | Blocker | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| R3-001 | Scoped Release 2 corrections and closure reconciliation | Unassigned until resumed | Backlog | — | — | USER PAUSE; preparation PASS | — |
-| R3-002 | Object builders and station membership | Unassigned | Backlog | — | — | R3-001 integration | — |
-| R3-003 | Shared clock, delayed graph, mock signals and atomic coordination | Unassigned | Backlog | — | — | R3-002 integration | — |
-| R3-004 | Connected guide/example and final delivery evidence | Unassigned | Backlog | — | — | R3-003 integration | — |
+| R3-001 | Scoped Release 2 corrections and closure reconciliation | sw-mike (test plan) | Test plan / characterization | 2026-10-06 | 2026-10-09 | — | — |
+| R3-002 | Object builders and station membership | Unassigned | Backlog | — | — | R3-001 dev integration | — |
+| R3-003 | Shared clock, delayed graph, mock signals and atomic coordination | Unassigned | Backlog | — | — | R3-002 dev integration | — |
+| R3-004 | Connected guide/example and final delivery evidence | Unassigned | Backlog | — | — | R3-003 dev integration | — |
 
-No task active. Preparation branch: `codex/release-3-preparation`, baseline
-`603ba85`. PRD `9586b2b`; technical review APPROVED `ed2276a`; planned architecture
-`2052b60`; serial backlog `5175fed`, all committed/pushed before this board.
-See [PRD](prd.md), [review](reviews/prd.md), [architecture plan](architecture-plan.md)
-and [tasks](tasks.md). [Preparation principle inspection](principle_compliance_report.md)
-PASS at `8ef37df` (committed/pushed), for readiness only. USER PAUSE remains;
-this does not authorize the first task.
+## Execution authorization
 
-No test plan, detailed design, implementation or runtime checks have been started
-in Release 3 preparation. All task review/test/principle/CI/integration gates and
-release acceptance are pending. UI/hardware gates are N/A. Each resumed task
-starts from updated dev after the predecessor's gated integration. Done requires
-dev integration; main promotion requires acceptance and separate authorization.
-The future concrete huo process is excluded. Existing Release 1 debt remains open.
+User confirmed Mode D (selective development — all four planned tasks) on
+2026-10-06, lifting the recorded USER PAUSE. Preparation artifacts remain as
+planned: PRD `9586b2b`; technical review APPROVED `ed2276a`; architecture plan
+`2052b60`; serial backlog `5175fed`; preparation principle inspection PASS
+`8ef37df`. See [PRD](prd.md), [review](reviews/prd.md),
+[architecture plan](architecture-plan.md), [tasks](tasks.md) and
+[principle report](principle_compliance_report.md).
+
+## Step 0 — preparation integration (DONE, formally reviewed)
+
+- `codex/release-3-preparation` merged into `dev` as `2dee90e`
+  (`docs(log): integrate release 3 preparation records`, `--no-ff` per repo
+  convention) and pushed.
+- CI run 37434708422 on `dev`: **SUCCESS** (Python 3.9/3.13 matrix green).
+- Preparation branch deleted (local + remote).
+- Task branch `codex/r3-001-corrections` created from updated `dev` (`2dee90e`)
+  and pushed; all R3-001 artifacts belong on this branch.
+
+## Active task: R3-001
+
+Pipeline per [tasks.md](tasks.md): test plan/characterization (sw-mike) →
+developer review (sw-tom) → detailed design (sw-celeste) → architect review
+(sw-jerry) → implementation (sw-tom) → independent review (sw-celeste) →
+testing (sw-mike) → principle inspection → candidate CI → dev integration.
+Review issues are closed by sw-celeste; test failures by sw-mike. Every process
+record is committed/pushed immediately with `docs(log):` on
+`codex/r3-001-corrections`.
+
+R3-001 scope (from tasks.md): correct Release 2 standalone bridge readback,
+malformed callback-key errors and reset claims; reconcile closure records
+against commits; includes existing docstring/guide/architecture wording
+corrections. Acceptance coverage: R3-AC-07, standalone portion of R3-AC-08.
+It must not invent past evidence or promotion.
+
+Done requires dev integration; main promotion requires release acceptance and
+separate authorization. UI/hardware gates are N/A. Existing Release 1 debt
+(OBS-004/005/006, DEFECT-2) remains tracked separately and is out of scope.
