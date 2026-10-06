@@ -128,8 +128,12 @@ object.reset()
 `reset()` rebuilds the complete initial condition: fresh copies of
 pristine construction-time values for literal-declared variables,
 fresh factory invocations for factory-declared variables (declaration
-order). It never invokes `evolve` or `observe`. On success the object
-is behaviorally identical to a newly constructed one.
+order). It never invokes `evolve` or `observe`. On success the owned
+input and state stores are restored from their declared sources. This
+is not an equivalence to fresh construction: a factory with external
+state may return a different value on each reset, and reproducible
+observations require deterministic callbacks and reproducible
+factories.
 
 `reset()` executes in two phases — **build** (produce and validate
 every candidate value into fresh local dicts, committed stores
@@ -138,7 +142,10 @@ exception during the build phase — a raising factory or an invalid
 factory result — propagates as the **identical original exception
 object** and leaves the object in its complete, unmodified pre-reset
 committed state; the object remains fully usable, and no rollback path
-is needed because no mutation precedes the swap.
+is needed because no mutation precedes the swap. Subsequent
+observations are unchanged under a deterministic `observe`; a stateful
+`observe` follows its own external state, which is outside this
+guarantee.
 
 Every mutating operation is build-then-swap: a failed `set_input`
 leaves the input store, state and outputs exactly as before; a raising
@@ -234,13 +241,26 @@ collide with `Device` attributes/methods.
 
 ```python
 ctrl = Parameter('drive', ... , validator=ValNumber(),
-                 before_set=lambda old, new: sim.set_input('u', new))
+                 before_set=lambda old, new: sim.set_input('u', new),
+                 before_get=lambda stored: sim.get_input('u'))
 ```
 
 `Parameter.set` order is permission → validate → decode → `before_set`
-→ store → `after_set`. Exactly one `set_input` per parameter set; no
-evolution occurs. Parameter read-back via `get()` returns the stored
-value, which equals the object's current (pending) input.
+→ store → `after_set`; `Parameter.get` order is permission →
+`before_get` → encode → return. Exactly one `set_input` per parameter
+set; no evolution occurs on set or read. Parameter read-back via
+`get()` returns the object's **authoritative input store**
+(`before_get`'s return replaces the stored value), so the read reflects
+the object's current input after direct `set_input` changes, `reset()`
+and writes through another controller sharing the same object.
+
+**Standalone vs connected readback.** This section documents the
+standalone pattern: every control read follows the object's
+authoritative input store. A coordinated multi-participant simulation
+(planned Release 3 work) defines different, pending-source and
+delayed-edge readback semantics for connected participants; those
+semantics are specified by that work and are intentionally not stated
+here.
 
 **Two-gate validation asymmetry.** The parameter's own validator and
 the object's per-variable value specification are **two separate,

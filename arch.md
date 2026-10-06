@@ -276,7 +276,11 @@ result and returns a fresh dict; it is all-outputs-at-once by design with
 no per-output observation method, and performs no mutation. `reset()`
 rebuilds the complete initial condition — fresh copies of pristine literal
 initial values, fresh factory invocations for factory-declared variables —
-making the object behaviorally identical to a newly constructed one.
+restoring the owned input and state stores from their declared sources; no
+equivalence to fresh construction is claimed, since factories with
+external state may return different values per invocation and
+reproducible observations require deterministic callbacks and
+reproducible factories.
 
 **Error model and atomicity.** Unknown variable names raise `KeyError`
 naming the variable; callback results that are non-mappings or whose keys
@@ -287,9 +291,10 @@ caught, wrapped or replaced, including `BaseException` subclasses
 (continuing the Release 1 error-identity policy). Every mutating operation
 is build-then-swap: validation, copying and user-callback execution
 complete before any committed storage is replaced, so a failed
-`set_input`, `evolve_once` or `reset()` leaves inputs, states and
-observations exactly as before, and the object remains fully usable after
-a failed `reset()` (a later `reset()` may succeed). External side effects
+`set_input`, `evolve_once` or `reset()` leaves the owned inputs and
+states exactly as before (observations are therefore unchanged under a
+deterministic `observe`), and the object remains fully usable after a
+failed `reset()` (a later `reset()` may succeed). External side effects
 of user callbacks and factories are outside every rollback guarantee. The
 contract is **single-threaded**, matching the `Device` lifecycle contract;
 callbacks and factories must not re-enter the same object.
