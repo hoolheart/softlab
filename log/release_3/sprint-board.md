@@ -4,7 +4,7 @@ Updated: 2026-10-06 | Integration branch: dev | Execution: **Mode D confirmed by
 
 | ID | Scope | Owner | Phase | Started | Expected completion | Blocker | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| R3-001 | Scoped Release 2 corrections and closure reconciliation | sw-celeste (review) | Code review | 2026-10-06 | 2026-10-09 | — | — |
+| R3-001 | Scoped Release 2 corrections and closure reconciliation | sw-mike (testing) | Testing | 2026-10-06 | 2026-10-09 | — | — |
 | R3-002 | Object builders and station membership | Unassigned | Backlog | — | — | R3-001 dev integration | — |
 | R3-003 | Shared clock, delayed graph, mock signals and atomic coordination | Unassigned | Backlog | — | — | R3-002 dev integration | — |
 | R3-004 | Connected guide/example and final delivery evidence | Unassigned | Backlog | — | — | R3-003 dev integration | — |
@@ -53,7 +53,9 @@ Progress:
   `-W error::Warning` gate green. One documented deviation: SIM-TC-06a test
   docstring wording neutralized to "authoritative input store" (assertion
   unchanged) — recorded in `7657eda`.
-- ▶ Independent code review (sw-celeste) in progress next.
+- ✅ Independent code review APPROVED, zero issues, `90d5bca` (CHK-08-1
+  scope checklist discharged by the review).
+- ▶ Testing (sw-mike) in progress next.
 
 R3-001 scope (from tasks.md): correct Release 2 standalone bridge readback,
 malformed callback-key errors and reset claims; reconcile closure records
