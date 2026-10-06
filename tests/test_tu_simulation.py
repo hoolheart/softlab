@@ -796,5 +796,176 @@ class FailureAtomicityOwnershipTests(unittest.TestCase):
         self.assertEqual(obj.observe_outputs(), pristine.observe_outputs())
 
 
+class MalformedCallbackKeyTests(unittest.TestCase):
+    """R3-TC-07e--07j: wrong/missing/extra callback keys — including
+    mixed string and non-string keys — raise the documented
+    ``ValueError``; non-mapping results remain ``TypeError``; failed
+    evolutions keep build-then-swap atomicity."""
+
+    def _object_with_evolve(self, evolve):
+        return SimulatedObject(
+            'malformed', {'u': 1.0}, {'x': 0.0}, ['y'], evolve,
+            observe=lambda x: {'y': x['x']},
+        )
+
+    def test_r3_tc_07e_mixed_extra_keys_evolve_value_error(self):
+        """R3-TC-07e: an ``evolve`` result mixing a string and a
+        non-string extra key raises the documented ``ValueError``
+        (never the incidental sorting ``TypeError``) and leaves the
+        committed state unchanged."""
+        obj = self._object_with_evolve(
+            lambda u, x: {'x': x['x'] + u['u'], 'z': 0.0, 2: 0.0})
+        snapshot = obj.get_state('x')
+        with self.assertRaises(ValueError) as cm:
+            obj.evolve_once()
+        message = str(cm.exception)
+        self.assertIn("'z'", message)
+        self.assertIn('2', message)
+        self.assertEqual(obj.get_state('x'), snapshot)
+
+    def test_r3_tc_07f_mixed_extra_keys_observe_value_error(self):
+        """R3-TC-07f: an ``observe`` result mixing a string and a
+        non-string extra key raises the documented ``ValueError`` and
+        touches no committed store."""
+        obj = SimulatedObject(
+            'malformed', {'u': 0.0}, {'x': 0.0}, ['y'],
+            evolve=lambda u, x: {'x': x['x']},
+            observe=lambda x: {'y': x['x'], 'z': 0.0, 2: 0.0},
+        )
+        with self.assertRaises(ValueError) as cm:
+            obj.observe_outputs()
+        self.assertIn("'z'", str(cm.exception))
+        self.assertEqual(obj.get_state('x'), 0.0)
+        self.assertEqual(obj.get_input('u'), 0.0)
+
+    def test_r3_tc_07g_single_non_string_extra_key_named(self):
+        """R3-TC-07g: a single non-string extra key still raises a
+        ``ValueError`` whose message names the key, byte-identical to
+        the pre-fix rendering."""
+        obj = self._object_with_evolve(
+            lambda u, x: {'x': x['x'] + u['u'], 2: 0.0})
+        with self.assertRaises(ValueError) as cm:
+            obj.evolve_once()
+        self.assertIn('extra [2]', str(cm.exception))
+
+    def test_r3_tc_07h_pure_string_key_discrepancies_named(self):
+        """R3-TC-07h: pure-string missing/extra key discrepancies raise
+        the documented ``ValueError`` naming the discrepancy."""
+        obj = self._object_with_evolve(lambda u, x: {})
+        with self.assertRaises(ValueError) as cm:
+            obj.evolve_once()
+        self.assertIn("'x'", str(cm.exception))
+        obj = self._object_with_evolve(
+            lambda u, x: {'x': x['x'] + u['u'], 'z': 0.0})
+        with self.assertRaises(ValueError) as cm:
+            obj.evolve_once()
+        self.assertIn("'z'", str(cm.exception))
+
+    def test_r3_tc_07i_non_mapping_results_remain_type_error(self):
+        """R3-TC-07i: non-mapping callback results raise ``TypeError``
+        ("must return a mapping") — checked before any key handling."""
+        obj = self._object_with_evolve(lambda u, x: [('x', 1.0)])
+        with self.assertRaises(TypeError) as cm:
+            obj.evolve_once()
+        self.assertIn('must return a mapping', str(cm.exception))
+        obj = SimulatedObject(
+            'malformed', {'u': 0.0}, {'x': 0.0}, ['y'],
+            evolve=lambda u, x: {'x': x['x']},
+            observe=lambda x: 42,
+        )
+        with self.assertRaises(TypeError) as cm:
+            obj.observe_outputs()
+        self.assertIn('must return a mapping', str(cm.exception))
+
+    def test_r3_tc_07j_failed_evolve_atomicity_under_malformed_keys(self):
+        """R3-TC-07j: the key-discrepancy ``ValueError`` raises before
+        the commit, so committed state stays bit-identical and a later
+        valid evolution still succeeds."""
+        calls = {'count': 0}
+
+        def evolve(u, x):
+            calls['count'] += 1
+            if calls['count'] == 2:
+                return {'x': x['x'], 'z': 0.0, 2: 0.0}
+            return {'x': x['x'] + u['u']}
+
+        obj = self._object_with_evolve(evolve)
+        obj.evolve_once()
+        self.assertEqual(obj.get_state('x'), 1.0)
+        snapshot = obj.get_state('x')
+        with self.assertRaises(ValueError):
+            obj.evolve_once()
+        self.assertEqual(obj.get_state('x'), snapshot)
+        obj.evolve_once()  # still fully usable
+        self.assertEqual(obj.get_state('x'), 2.0)
+
+
+class ResetRestorationCharacterizationTests(unittest.TestCase):
+    """R3-TC-07l/07m: reset restores owned stores from their declared
+    sources — re-invoking factories and tracking their current results
+    — and a failed reset preserves the owned stores and the identical
+    exception object."""
+
+    def test_r3_tc_07l_reset_reinvokes_factory_and_tracks_it(self):
+        """R3-TC-07l: each ``reset()`` re-invokes a factory-declared
+        variable's factory exactly once; the committed value tracks the
+        factory's current result — reset makes no equivalence claim to
+        fresh construction."""
+        calls = {'count': 0}
+
+        def factory():
+            calls['count'] += 1
+            return calls['count'] * 10.0
+
+        obj = SimulatedObject(
+            'tracked', {'u': factory}, {'x': 0.0}, ['y'],
+            evolve=lambda u, x: {'x': x['x'] + u['u']},
+            observe=lambda x: {'y': x['x']},
+        )
+        self.assertEqual(calls['count'], 1)
+        self.assertEqual(obj.get_input('u'), 10.0)
+        obj.set_input('u', 1.0)  # move away from the factory value
+        obj.evolve_once()
+        obj.reset()
+        self.assertEqual(calls['count'], 2)
+        self.assertEqual(obj.get_input('u'), 20.0)
+        obj.reset()
+        self.assertEqual(calls['count'], 3)
+        self.assertEqual(obj.get_input('u'), 30.0)
+
+    def test_r3_tc_07m_failed_reset_preserves_stores_and_identity(self):
+        """R3-TC-07m: a raising factory propagates the identical
+        original exception object; the owned inputs and states equal
+        the pre-reset snapshot exactly; a later reset succeeds."""
+        calls = {'count': 0, 'armed': False}
+        boom = RuntimeError('reset boom')
+
+        def factory():
+            calls['count'] += 1
+            if calls['armed']:
+                raise boom
+            return 0.0
+
+        obj = SimulatedObject(
+            'armed', {'u': 0.0}, {'x': factory}, ['y'],
+            evolve=lambda u, x: {'x': x['x'] + u['u']},
+            observe=lambda x: {'y': x['x']},
+        )
+        snap_input = obj.get_input('u')
+        snap_state = obj.get_state('x')
+        calls['armed'] = True
+        with self.assertRaises(RuntimeError) as cm:
+            obj.reset()
+        self.assertIs(cm.exception, boom)
+        self.assertIsNone(cm.exception.__cause__)
+        self.assertEqual(obj.get_input('u'), snap_input)
+        self.assertEqual(obj.get_state('x'), snap_state)
+        calls['armed'] = False
+        obj.reset()
+        self.assertEqual(obj.get_input('u'), 0.0)
+        self.assertEqual(obj.get_state('x'), 0.0)
+        self.assertEqual(obj.observe_outputs(), {'y': 0.0})
+
+
 if __name__ == '__main__':
     unittest.main()

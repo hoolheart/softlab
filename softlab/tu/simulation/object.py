@@ -773,12 +773,16 @@ class SimulatedObject:
         actual = set(result.keys())
         if actual != expected:
             missing = sorted(expected - actual)
-            extra = sorted(actual - expected)
+            extra = actual - expected
+            if all(isinstance(key, str) for key in extra):
+                rendered_extra = sorted(extra)
+            else:
+                rendered_extra = sorted(extra, key=repr)
             raise ValueError(
                 f'The {callback_name} callback must return exactly '
                 f'the declared '
                 f'{"state" if specs is not None else "output"} names; '
-                f'missing {missing}, extra {extra}')
+                f'missing {missing}, extra {rendered_extra}')
         validated: Dict[str, Any] = {}
         names = self._state_specs.keys() if specs is not None \
             else self._output_names
