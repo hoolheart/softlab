@@ -1,14 +1,16 @@
 # Sprint board — Release 2
 
-Updated: 2026-10-05 | Integration branch: dev | Execution: SIM-001 integrated into dev; release close pending
+Updated: 2026-10-06 (R3-001 reconciliation) | Integration branch: dev | Execution: SIM-001 integrated into dev; release acceptance ACCEPTED at c69272a (2026-10-05); main promotion unrecorded/pending — a separate user decision
 
 | ID | Scope | Owner | Phase | Started | Expected completion | Blocker | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | SIM-001 | Deterministic simulation foundation, bridge example and verification | sw-mike (test plan) → sw-celeste (design) → sw-tom (impl) → sw-celeste (review) → sw-mike (test) | Done | 2026-10-05 | 2026-10-05 | — | 9408c79 |
 
 SIM-001 completed all serial gates and was integrated into `dev` as merge
-commit `9408c79` (CI run 37298623628 success on Python 3.9 + 3.13; task branch
-deleted after merge). Evidence chain: baseline `86cddb4` → test plan `5caabc7`
+commit `9408c79` (pre-merge CI run 37298431248 on task tip cd90ff6 success on
+Python 3.9 + 3.13; post-merge dev run 37298623628 on merge 9408c79 also
+success; task branch deleted after merge). Evidence chain: baseline `86cddb4`
+→ test plan `5caabc7`
 (review `313ae9f`, closed `f1bbcd2`) → design `7ccac0d` (review `3d6cb13`,
 minors closed `0aa3908`/`917cfd7`) → implementation `4eab94d` (code review
 `dfa535c`, zero issues) → tests `e25a416`/results `88c140d` (135 tests OK,
@@ -25,3 +27,10 @@ Done requires gated integration into `dev`; `main` additionally needs acceptance
 
 OBS-004, OBS-005, OBS-006 and DEFECT-2 remain tracked Release 1 debt. Baseline
 cache/font diagnostics are recorded without a zero-warning claim or waiver.
+
+Reconciliation note (2026-10-06, R3-001): header status and CI run
+reference corrected against committed evidence — acceptance verdict
+ACCEPTED at `c69272a` ([acceptance.md](acceptance.md)); pre-merge CI
+run 37298431248 (head `cd90ff6`) distinguished from post-merge dev run
+37298623628 (head `9408c79`). `main` promotion remains unrecorded and
+pending; this note records no promotion.
