@@ -222,3 +222,34 @@ existing simulation test files without weakening any existing method, as
 the plan states. The 135-test baseline arithmetic (99 + 36) is
 reproduced in the baseline record and matches R3-TC-08a's expectation.
 Once issue 1 is closed, this plan is ready for implementation.
+
+## Closure log
+
+- **2026-10-06 — Issue 1 [minor] — RESOLVED (closed by sw-mike,
+  tester).** The required wording pin was added as a sibling manual
+  record check **R3-TC-07t** ("Bridge documentation wording, guide §9")
+  in the area 1 table of `log/release_3/test/r3-001-test-plan.md`, per
+  the reviewer's "or add a sibling manual record check" option
+  (extending R3-TC-07n was rejected because 07n is scoped to reset
+  claims; §9 read-back wording is a bridge-readback concern). The
+  checklist pins exactly the three required expectations: (a) the
+  corrected guide §9 read-back wording — a control read reflects the
+  object's authoritative input store, with the line-243 overpromise
+  ("equals the object's current (pending) input") gone; (b) the
+  standalone vs pending-source-across-a-connected-edge distinction,
+  deferring the connected half's semantics to R3-003; (c) the
+  conditional check that if the approved design changes the wiring,
+  the two-gate validation asymmetry paragraph and the guide error table
+  (§6) still match the implemented `Parameter.set` order (permission →
+  validate → decode → `before_set` → store → `after_set`) and error
+  contract. Traceability updated as required: the R3-AC-07 (bridge
+  readback) row now references R3-TC-07t; the manual-vs-automated
+  paragraph and the planned-files table row include it (the table
+  row's stale `07m–07q` range was corrected to `07n–07t` to match the
+  plan body, where 07l/07m are automated); area 1 note and risk note 1
+  cross-reference the new case. No existing case ID, assertion, or
+  verdict changed — the CHANGES-REQUESTED verdict stands for the
+  reviewer to re-confirm. Commit reference: `docs(log): close r3-001
+  test plan review issue 1` on `codex/r3-001-corrections` (single
+  commit containing both this entry and the test-plan change; full
+  hash reported in the tester handoff note).

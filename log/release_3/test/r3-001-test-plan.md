@@ -76,7 +76,7 @@ gaps", lines 110–126):
 | `tests/test_tu_simulation.py` (extend) | R3-TC-07e–07l: malformed callback keys, reset claims characterization (new test methods appended; no existing method is weakened) |
 | `tests/test_tu_simulation_integration.py` (extend) | R3-TC-07a–07d: standalone bridge readback (new test methods; SIM-TC-06a may need rebinding to the corrected documented pattern — see risk 3) |
 | (no new file) | R3-TC-08a–08d: full-suite regression, compile/import/warning gate, dependency check |
-| (manual record checks) | R3-TC-07m–07q: documentation wording and Release 2 closure reconciliation — record checks, not `unittest` cases |
+| (manual record checks) | R3-TC-07n–07t: documentation wording (reset claims, guide §9 bridge) and Release 2 closure reconciliation — record checks, not `unittest` cases |
 
 All synthetic fixtures; stdlib + NumPy only; temp dirs only; no real
 instruments; UI/hardware gates N/A.
@@ -99,6 +99,7 @@ object's current (pending) input").
 | R3-TC-07b **[PLAN]** (fails on baseline) | Read-back follows reset | Same fixture; evolve once away from the initial condition; `drive(3.0)` | `obj.reset()`; read `drive()` and `obj.get_input('u')` | `drive()` equals the restored initial input (0.0) — reset makes the stale stored value visible, so this case fails on the baseline |
 | R3-TC-07c **[PLAN]** (fails on baseline) | Read-back follows a second controller | Same object shared by `drive1` and `drive2` control parameters | `drive1(1.0)`; `drive2(2.0)`; read `drive1()`, `drive2()`, `obj.get_input('u')` | Both parameters' reads equal the authoritative input (2.0); the object's single input store is the one source of truth |
 | R3-TC-07d **[BASELINE-READY]** (passes on baseline; keep passing) | Rejected set keeps parameter and object consistent | Same fixture | `drive(1.0)`; attempt `drive('not-a-number')`; catch; read `drive()` and `obj.get_input('u')` | Parameter validator rejects before the bridge (`TypeError` from `ValNumber`); both stores remain 1.0; no partial write. Verbatim baseline evidence in `r3-001-baseline.md` §A (a4) |
+| R3-TC-07t **[PLAN]** (expected-to-fail until the guide correction lands) | Bridge documentation wording, guide §9 (manual record check) | Approved detailed design naming the corrected bridge pattern; corrected `docs/user-guide/simulation.md` §9 | Checklist: (a) §9 input-parameter text states the corrected read-back semantics — a control read via `get()` reflects the object's **authoritative input store** (after direct `set_input`, `reset()` and cross-controller writes) — with the overpromise at today's line 243 ("equals the object's current (pending) input") gone; (b) §9 explicitly distinguishes **standalone** readback (reads follow the authoritative input store) from **pending-source** readback across a connected delayed edge, deferring the connected half's semantics to R3-003 without stating them in R3-001's scope; (c) if the approved design changes the wiring (e.g. a `before_get` closure or bridge support), the two-gate validation asymmetry paragraph and the guide error table (§6) still match the implemented `Parameter.set` order (permission → validate → decode → `before_set` → store → `after_set`) and the implemented error contract — no stale ordering or error-class claim survives | Each checklist item verified against the guide with file/line citations recorded in the test-results document; nothing silently waived |
 
 Notes:
 
@@ -109,7 +110,8 @@ Notes:
 - Connected-mode readback (pending-source semantics across a delayed
   edge) is **out of scope** here per tasks.md — it belongs to R3-003;
   R3-001 only needs standalone behavior characterized and the guide
-  wording distinguishing the two.
+  wording distinguishing the two — the wording half is pinned by
+  R3-TC-07t.
 
 ## R3-AC-07 — area 2: malformed callback keys
 
@@ -181,7 +183,7 @@ mock interaction are **excluded** (R3-003/R3-004 scope).
 
 | AC (R3-001 scope) | Test cases |
 | --- | --- |
-| R3-AC-07 (bridge readback) | R3-TC-07a–07d (automated) |
+| R3-AC-07 (bridge readback) | R3-TC-07a–07d (automated); R3-TC-07t (manual guide §9 wording check) |
 | R3-AC-07 (malformed callback keys) | R3-TC-07e–07j (automated) |
 | R3-AC-07 (reset claims) | R3-TC-07k–07m (07k–07m automated; 07n wording check is manual — see note) |
 | R3-AC-07 (closure evidence) | R3-TC-07o–07s (manual record checks via git/gh) |
@@ -189,9 +191,10 @@ mock interaction are **excluded** (R3-003/R3-004 scope).
 
 Manual vs automated, explicitly: automated `unittest` cases are
 R3-TC-07a–07m and R3-TC-08a–08d; manual record checks are R3-TC-07n
-(documentation wording) and R3-TC-07o–07s (closure reconciliation), plus
-reviewer checklist CHK-08-1. Manual checks require only git, gh CLI
-access and file reading — no new tooling.
+(reset documentation wording), R3-TC-07t (guide §9 bridge wording) and
+R3-TC-07o–07s (closure reconciliation), plus reviewer checklist
+CHK-08-1. Manual checks require only git, gh CLI access and file
+reading — no new tooling.
 
 ## Risks and notes for the design/implementation review
 
@@ -200,7 +203,7 @@ access and file reading — no new tooling.
    parameter (reading `obj.get_input`), R3-TC-07d (validator fires
    before the bridge) and the two-gate asymmetry wording must be
    re-verified; the guide's §9 pattern and error table are part of the
-   correction scope.
+   correction scope (the wording half is pinned by R3-TC-07t).
 2. **SIM-TC-06a pins today's stale contract.** `tests/test_tu_simulation_integration.py` line 99 asserts `drive() == 1.0` immediately after the set — that still holds under a corrected bridge, but if the design changes the documented pattern the tester will rebind the fixture and record the rebind in the results document (test code may change outside `tu`).
 3. **Error message content for mixed keys.** R3-TC-07e/07f require
    `ValueError` and a useful message; the exact rendering of non-string
@@ -219,3 +222,12 @@ access and file reading — no new tooling.
 - **2026-10-06 — Revision 1** (tester: sw-mike): initial plan,
   written against the characterization baseline recorded the same day in
   `r3-001-baseline.md`.
+- **2026-10-06 — Revision 2** (tester: sw-mike): review issue 1
+  closure — added sibling manual record check R3-TC-07t (guide §9
+  bridge wording) pinning the corrected read-back wording, the
+  standalone vs pending-source distinction, and the conditional
+  two-gate asymmetry / error-table wording check; updated the
+  R3-AC-07 bridge-readback traceability row, the manual-vs-automated
+  paragraph, the planned-files table row (range corrected to
+  `07n–07t`), and risk note 1 cross-reference. No existing case ID or
+  assertion changed.
