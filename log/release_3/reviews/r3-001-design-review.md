@@ -300,3 +300,29 @@ them when closing the review section, and sw-tom/sw-mike must not byte-pin
 R3-TC-07e asserts only a `ValueError` naming the discrepancy). Per the
 serial workflow, sw-tom may proceed with implementation once the minors
 are recorded.
+
+## Closure (2026-10-06, sw-celeste)
+
+**Issues 1–2: RESOLVED.** Closed by the commit carrying this entry
+(`docs(log): close r3-001 design review issues` on
+`codex/r3-001-corrections`).
+
+- **Issue 1 (Area 2 "Preserved renderings")**: the mixed-key example in
+  the design document was corrected from the wrong predicted rendering
+  `extra [2, 'z']` to the verified deterministic rendering
+  `extra ['z', 2]` (`sorted({2, 'z'}, key=repr)`: the leading apostrophe
+  of `"'z'"`, U+0027, precedes the digit `'2'`, U+0032). No test-plan
+  change: R3-TC-07e asserts only a `ValueError` naming the discrepancy;
+  the mixed rendering remains implementation-pinned-by-mechanism, not
+  byte-pinned.
+- **Issue 2 (Area 1 decision text)**: the precedent citation was corrected
+  from `tests/test_tu_integration.py` to
+  `tests/test_tu_simulation_integration.py` (lines 72, 114, 159, 199),
+  where the `before_get=lambda stored: obj.observe_outputs()['y']` pattern
+  actually lives. Editorial only.
+- The design document's "Design Review" section was updated in the same
+  commit: Status **APPROVED** (verdict at `24f129f`), the C-6 **ACCEPT**
+  ruling recorded, and the closure of issues 1–2 referenced.
+
+The verdict (**APPROVED**) and all point-by-point findings above are
+unchanged.

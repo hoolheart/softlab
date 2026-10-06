@@ -94,7 +94,8 @@ ctrl = Parameter('drive', ..., validator=ValNumber(),
 This is the same hook the guide already documents for measurement
 parameters (`before_get=lambda stored: sim.observe_outputs()['y']`), and
 the same pattern as the existing precedent in
-`tests/test_tu_integration.py`. Per the golden rule, reusing an existing,
+`tests/test_tu_simulation_integration.py` (lines 72, 114, 159, 199). Per
+the golden rule, reusing an existing,
 documented hook beats introducing any bridge support class or new
 `Parameter` behavior — both would be entities beyond necessity.
 
@@ -244,9 +245,10 @@ flowchart TD
     `extra [None]`, `extra [('a',)]` — the `repr`-keyed sort of a
     single-element set yields the element itself, so these messages are
     byte-identical to today;
-  - mixed `{'z', 2}` → `ValueError` with `extra [2, 'z']`
-    (repr ordering: `'2'` precedes `"'z'"`) — deterministic, names the
-    discrepancy, never `TypeError`.
+  - mixed `{'z', 2}` → `ValueError` with `extra ['z', 2]`
+    (repr ordering: the leading apostrophe of `"'z'"`, U+0027, precedes
+    the digit `'2'`, U+0032) — deterministic, names the discrepancy,
+    never `TypeError`.
 - **Non-mapping results remain `TypeError`** ("must return a mapping, got
   {type}") — checked before any key handling (R3-TC-07i).
 - **Atomicity (R3-TC-07j)**: the `ValueError` raises inside
@@ -548,5 +550,21 @@ design element lacks a test.
 ## Design Review
 
 - **Reviewer**: sw-jerry
-- **Review Date**: [To be filled after review]
-- **Status**: PENDING
+- **Review Date**: 2026-10-06
+- **Status**: APPROVED
+- **Review record**:
+  [r3-001-design-review.md](../reviews/r3-001-design-review.md) — verdict
+  **APPROVED** at commit `24f129f` on `codex/r3-001-corrections`.
+- **C-6 ruling**: ACCEPT — `arch.md:291` (failed-operation observation
+  overclaim, sentence spanning lines 289–292) is ruled in scope for the
+  reset-claims correction (same claim family as the baseline-pinned sites;
+  required for an honest R3-TC-07n pass; within the authorized Release 2
+  correction scope).
+- **Minor issues 1–2: RESOLVED (2026-10-06, sw-celeste)** in the commit
+  that records this closure (`docs(log): close r3-001 design review
+  issues`): issue 1 — mixed-key example corrected to the actual
+  deterministic rendering `extra ['z', 2]` (Area 2 "Preserved renderings");
+  issue 2 — precedent citation corrected to
+  `tests/test_tu_simulation_integration.py` (lines 72, 114, 159, 199).
+  No test-plan change: R3-TC-07e asserts only a `ValueError` naming the
+  discrepancy; the mixed rendering is not byte-pinned.
