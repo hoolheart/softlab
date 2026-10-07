@@ -285,4 +285,31 @@ for implementation.
 
 ## Closure log
 
-(none yet — initial review)
+### 2026-10-07 — Issues 1 and 2 closed (sw-mike)
+
+- **Issue 1 (R3-TC-04h injection point): RESOLVED.** The case steps
+  now drive the invalid name through the public construction/insertion
+  entry's `name` argument ("attempt build-and-insert with an empty or
+  non-string `name` argument (e.g. `name=''` or `name=123`): the
+  invalid name enters at the entry point's `name` argument, not as
+  pre-existing object state"), removing the ambiguous "an object whose
+  effective name is" wording and the private-state-injection reading.
+  Expected result unchanged (explicit rejection before membership
+  changes; no partial registration); case ID unchanged; no
+  fault-injection variant added. No traceability row quoted the old
+  wording, so no table change was needed.
+- **Issue 2 (R3-TC-04o "documented" half): RESOLVED** via the
+  preferred option (a). CHK-04-1 is extended to pin that the
+  station-level object-construction entry's docstring documents the
+  unknown/unregistered-model error (class or category, per the
+  approved design), verified by a file/line citation of that docstring
+  recorded in the results document; risk note 3 updated to state that
+  "explicit" is pinned by the automated case and "documented" by
+  CHK-04-1's citation. R3-TC-04o's expected result retains "explicit
+  and documented".
+- **Commit:** `e6f1af2` (`docs(log): close r3-002 test plan review
+  issues`, test-plan file); closure entries in this file committed
+  with the same message. Branch `codex/r3-002-builders`, pushed to
+  `origin`.
+- **Closed by:** sw-mike (tester), 2026-10-07. Verdict unchanged
+  (CHANGES-REQUESTED recorded at `fa40165`; issues now resolved).
