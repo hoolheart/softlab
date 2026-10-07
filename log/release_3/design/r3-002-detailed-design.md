@@ -134,11 +134,15 @@ A station name identifies at most one member, across both kinds:
 Justification, in decreasing weight:
 
 1. **Delegation determinism.** `Delegated.__getattr__` iterates
-   `__delegate_attr_dicts`, a `set`, in unspecified order. If the same key
-   existed in both `_devices` and `_objects`, attribute-style access would
-   resolve to one or the other nondeterministically (run-to-run stable but
-   order-dependent and unprincipled). The shared namespace makes the
-   situation unreachable.
+   `__delegate_attr_dicts`, a `set` of `str`, in unspecified order
+   (delegated.py:17, 40–49). Under CPython string-hash randomization
+   (default `PYTHONHASHSEED`), that iteration order is stable only within
+   one interpreter process; it is **not** guaranteed stable across runs.
+   If the same key existed in both `_devices` and `_objects`,
+   attribute-style access would resolve to one or the other
+   nondeterministically — unspecified order that may vary across
+   interpreter runs, order-dependent and unprincipled. The shared
+   namespace makes the situation unreachable.
 2. **PRD line 81**: "New object names cannot silently shadow devices or
    another object."
 3. **R3-TC-04f** pins the object-side rejection; the device-side guard is
@@ -767,5 +771,30 @@ R3-TC-04b/04f/08c.
 ## Design Review
 
 - **Reviewer**: sw-jerry
-- **Review Date**: [to be filled after review]
-- **Status**: PENDING
+- **Review Date**: 2026-10-07
+- **Status**: APPROVED at `6973d9b` — review report:
+  [r3-002-design-review.md](../reviews/r3-002-design-review.md)
+- **Architect rulings on the three open questions** (all **ACCEPT**):
+  1. `add_device` additive cross-namespace guard (D2) — **ACCEPT**; the
+     guard realizes planned architecture (architecture-plan.md lines
+     90–92) and is an error-path addition in a previously unreachable
+     state, preserving R3-AC-08. Companion ruling: sw-mike **may** extend
+     the R3-TC-04b fixture at implementation time to attempt the
+     device-side insertion (`add_device` with a name already held by an
+     object) and assert rejection — this pins already-planned behavior
+     and requires **no** test-plan revision; either disposition must be
+     recorded in the results document.
+  2. `snapshot()`/`describe()` remain device-only with additive
+     simulation node deferred to R3-003 (D1) — **ACCEPT**; no Release 3
+     requirement needs an object entry in the legacy snapshot now.
+  3. `RuntimeError` for unknown model (D5 gate 2) — **ACCEPT**; verbatim
+     analog of the device convention (station.py:142–144), authorized by
+     test-plan risk note 3.
+- **Issue 1 (minor, D2 justification 1) — CLOSED**: the parenthetical
+  "run-to-run stable" understated the nondeterminism; under hash
+  randomization the set iteration order can vary **across interpreter
+  runs**. The D2 justification text is corrected in this commit
+  (resolution order unspecified, may vary across runs). Architectural
+  conclusion unaffected — strengthened. No test-plan impact
+  (R3-TC-04f/04g pin rejection, not iteration order). Closed by
+  sw-celeste, 2026-10-07.

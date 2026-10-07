@@ -332,3 +332,27 @@ section. Per the serial workflow, sw-tom may proceed with implementation
 once the minor is recorded; sw-mike should record the disposition of the
 `add_device`-guard coverage option (Ruling 1 companion) in the results
 document.
+
+## Issue closure record
+
+Appended by sw-celeste (design owner), 2026-10-07. The verdict above
+(**APPROVED**) is unchanged.
+
+1. **[minor] D2 justification 1 — RESOLVED.** The design's D2
+   justification 1 parenthetical ("run-to-run stable but order-dependent
+   and unprincipled") understated the nondeterminism: under CPython
+   string-hash randomization, the set iteration order can vary across
+   interpreter runs, not merely depend on order within one run. Fix
+   applied in the design document
+   ([r3-002-detailed-design.md](../design/r3-002-detailed-design.md),
+   §"D2 — Naming", justification 1): the text now states the resolution
+   order is unspecified and may vary across interpreter runs, citing
+   `delegated.py:17, 40–49` and default `PYTHONHASHSEED` behavior. The
+   architectural conclusion (shared namespace makes the state
+   unreachable; the `add_device` guard is required) is unaffected — as
+   noted in the issue, strengthened. No test-plan impact: R3-TC-04f/04g
+   pin rejection, not iteration order. Closed by sw-celeste, 2026-10-07,
+   in the commit `docs(log): close r3-002 design review issue` on
+   `codex/r3-002-builders`. The design document's Design Review section
+   is updated in the same commit (Status: APPROVED at `6973d9b`; the
+   three rulings recorded; this closure referenced).
