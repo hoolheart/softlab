@@ -9,11 +9,14 @@ row, `log/release_3/architecture-plan.md` lines 29–34, and the cited code in
 `softlab/tu/station/station.py`, `softlab/tu/station/device.py`,
 `softlab/tu/simulation/object.py`, `tests/test_tu_contracts.py`)
 
-**Verdict: CHANGES-REQUESTED** — two minor implementability issues (issue 1:
-ambiguous fixture injection point in R3-TC-04h; issue 2: the "documented"
-half of R3-TC-04o's expectation is pinned by no check). Both are small
-wording/clarification fixes; the coverage, scope and safety-case structure
-are otherwise sound and every other case is implementable as written.
+**Verdict: APPROVED** — originally CHANGES-REQUESTED with two minor
+implementability issues (issue 1: ambiguous fixture injection point in
+R3-TC-04h; issue 2: the "documented" half of R3-TC-04o's expectation
+pinned by no check). Both issues were re-confirmed CLOSED on
+2026-10-07 against Revision 2 of the test plan (`6b34844`); see the
+closure log and re-confirmation note below. The coverage, scope and
+safety-case structure were sound throughout and every case is
+implementable as written.
 
 ## What I inspected
 
@@ -91,7 +94,8 @@ are otherwise sound and every other case is implementable as written.
   injection so it does not masquerade as a public-API test. Update the
   traceability row wording if it quotes the case text.
 - **Owner:** sw-mike (tester).
-- **Status: OPEN.**
+- **Status: CLOSED** (sw-mike fix, sw-tom re-confirmation
+  2026-10-07) — see re-confirmation note in the closure log.
 
 ### 2. [minor] R3-TC-04o: "explicit and documented" — the "documented" half is pinned by no check
 
@@ -115,7 +119,8 @@ are otherwise sound and every other case is implementable as written.
   R3-TC-04o's expected result. Option (a) is preferred for consistency
   with the repo docstring convention; either closes the issue.
 - **Owner:** sw-mike (tester).
-- **Status: OPEN.**
+- **Status: CLOSED** (sw-mike fix, sw-tom re-confirmation
+  2026-10-07) — see re-confirmation note in the closure log.
 
 ## Answers to the five review points
 
@@ -313,3 +318,45 @@ for implementation.
   `origin`.
 - **Closed by:** sw-mike (tester), 2026-10-07. Verdict unchanged
   (CHANGES-REQUESTED recorded at `fa40165`; issues now resolved).
+
+### 2026-10-07 — Re-confirmation and APPROVED (sw-tom)
+
+I re-reviewed the test plan Revision 2 against both issues on
+2026-10-07 at branch tip `6b34844` (synced with
+`origin/codex/r3-002-builders`).
+
+- **Issue 1 — CLOSED, confirmed.** R3-TC-04h's steps now drive the
+  invalid name explicitly through the public construction/insertion
+  entry's `name` argument ("attempt build-and-insert with an empty or
+  non-string `name` argument (e.g. `name=''` or `name=123'): the
+  invalid name enters at the entry point's `name` argument, not as
+  pre-existing object state"). The ambiguous "an object whose effective
+  name is" wording and the private-state-injection reading are gone.
+  The expected result is verbatim unchanged ("Explicit rejection before
+  membership changes; no partial registration"), the case ID is
+  unchanged, and the "(passes vacuously on baseline; keep passing)"
+  disclosure is preserved. The constructor-guard cross-references
+  (object.py 294–296, device.py 143–145) remain as supporting context.
+  No fault-injection variant was added, as agreed.
+- **Issue 2 — CLOSED, confirmed.** CHK-04-1 (traceability section,
+  lines 224–228) now pins the "documented" half of R3-TC-04o: the
+  station-level object-construction entry's docstring must document the
+  unknown/unregistered-model error (class or category, per the approved
+  design), verified by a file/line citation recorded in the results
+  document. This is the preferred option (a) from my issue. Risk note 3
+  now explicitly assigns "explicit" to the automated case and
+  "documented" to CHK-04-1's citation, and R3-TC-04o's expected result
+  retains "explicit and documented" — so the case text and the pinning
+  check are now consistent.
+- **No collateral damage.** The full revision diff (`fa40165..6b34844`)
+  touches only R3-TC-04h's steps cell, the CHK-04-1 paragraph, risk
+  note 3, and the revision history — three review fixes plus their
+  record. No other case was modified, weakened or re-labeled; the
+  [BASELINE-READY]/[PLAN] accounting (147-test baseline reference,
+  23 automated + 04m conditional-manual tally), traceability rows,
+  scope-split paragraph, and safety-case pins (04n `assertIs`,
+  04q/04r independence) are identical to Revision 1. No scope
+  expansion: no connected-simulation, ownership, or R3-003/004 content
+  was added.
+
+**Final verdict: APPROVED.** This plan is ready for implementation.
