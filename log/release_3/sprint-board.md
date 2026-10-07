@@ -4,8 +4,8 @@ Updated: 2026-10-06 | Integration branch: dev | Execution: **Mode D confirmed by
 
 | ID | Scope | Owner | Phase | Started | Expected completion | Blocker | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| R3-001 | Scoped Release 2 corrections and closure reconciliation | sw-mike (testing) | Testing | 2026-10-06 | 2026-10-09 | — | — |
-| R3-002 | Object builders and station membership | Unassigned | Backlog | — | — | R3-001 dev integration | — |
+| R3-001 | Scoped Release 2 corrections and closure reconciliation | sw-mike (testing) | Done | 2026-10-06 | 2026-10-07 | — | `6dc4d36` |
+| R3-002 | Object builders and station membership | sw-mike (test plan) | Test plan / characterization | 2026-10-07 | 2026-10-09 | — | — |
 | R3-003 | Shared clock, delayed graph, mock signals and atomic coordination | Unassigned | Backlog | — | — | R3-002 dev integration | — |
 | R3-004 | Connected guide/example and final delivery evidence | Unassigned | Backlog | — | — | R3-003 dev integration | — |
 
@@ -55,7 +55,17 @@ Progress:
   unchanged) — recorded in `7657eda`.
 - ✅ Independent code review APPROVED, zero issues, `90d5bca` (CHK-08-1
   scope checklist discharged by the review).
-- ▶ Testing (sw-mike) in progress next.
+- ✅ Testing PASS (21/21 cases), `79cdec8`; principle inspection PASS,
+  `ba61b52`; candidate CI 37590504447 SUCCESS.
+- ✅ Integrated into `dev` as `6dc4d36`; dev CI 37590725020 SUCCESS;
+  task branch deleted. R3-001 complete.
+
+## Active task: R3-002
+
+Object builder/registry and station object membership, explicit lookup,
+naming, build failure safety and independent instances (membership/builder
+portion of R3-AC-04; R3-AC-08). Task branch `codex/r3-002-builders` from dev
+`6dc4d36`. Pipeline identical to R3-001.
 
 R3-001 scope (from tasks.md): correct Release 2 standalone bridge readback,
 malformed callback-key errors and reset claims; reconcile closure records
