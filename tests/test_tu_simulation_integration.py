@@ -63,7 +63,8 @@ def build_bridge():
     control = Device('controls')
     drive = Parameter(
         'drive', ValNumber(),
-        before_set=lambda old, new: obj.set_input('u', new))
+        before_set=lambda old, new: obj.set_input('u', new),
+        before_get=lambda stored: obj.get_input('u'))
     drive(0.0)
     control.add_parameter(drive)
     observer = Device('observer')
@@ -80,8 +81,8 @@ class ParameterBridgeTests(unittest.TestCase):
     def test_sim_tc_06a_parameter_bridge_for_inputs(self):
         """SIM-TC-06a: setting the input parameter through its normal
         set path updates the object's committed input exactly once,
-        evolves nothing, and the read-back reflects the stored
-        (pending) input."""
+        evolves nothing, and the read-back reflects the object's
+        authoritative input store."""
         obj, calls = make_accumulator()
         sets = []
 
@@ -89,7 +90,9 @@ class ParameterBridgeTests(unittest.TestCase):
             sets.append(new)
             obj.set_input('u', new)
 
-        drive = Parameter('drive', ValNumber(), before_set=on_set)
+        drive = Parameter(
+            'drive', ValNumber(), before_set=on_set,
+            before_get=lambda stored: obj.get_input('u'))
         drive(0.0)
         sets.clear()
         drive(1.0)
@@ -228,6 +231,85 @@ class HuoProcessIntegrationTests(unittest.TestCase):
         self.assertEqual(
             proc2.record.table['drive'].tolist(),
             table['drive'].tolist())
+
+
+class BridgeReadbackCorrectionTests(unittest.TestCase):
+    """R3-TC-07a--07d: standalone bridge readback — a control
+    parameter wired with the corrected documented pattern (a
+    ``before_get`` closure reading the object's input store) returns
+    the object's authoritative input after direct ``set_input``
+    changes, ``reset()`` and writes through a second controller; the
+    parameter validator still gates before the bridge."""
+
+    def _control(self, obj):
+        return Parameter(
+            'drive', ValNumber(),
+            before_set=lambda old, new: obj.set_input('u', new),
+            before_get=lambda stored: obj.get_input('u'))
+
+    def test_r3_tc_07a_readback_follows_direct_input_changes(self):
+        """R3-TC-07a: after a direct ``set_input`` behind the
+        parameter's back, the parameter read returns the
+        authoritative input; exactly one object update per parameter
+        set; no evolution on set or read."""
+        obj, calls = make_accumulator()
+        sets = []
+
+        def on_set(old, new):
+            sets.append(new)
+            obj.set_input('u', new)
+
+        drive = Parameter(
+            'drive', ValNumber(), before_set=on_set,
+            before_get=lambda stored: obj.get_input('u'))
+        drive(1.0)
+        self.assertEqual(sets, [1.0])  # exactly one set_input per set
+        obj.set_input('u', 5.0)  # direct change behind the bridge
+        self.assertEqual(drive(), 5.0)
+        self.assertEqual(drive(), obj.get_input('u'))
+        self.assertEqual(calls['evolve'], 0)  # reads never evolve
+
+    def test_r3_tc_07b_readback_follows_reset(self):
+        """R3-TC-07b: after evolving away and driving the input,
+        ``reset()`` restores the initial input and the parameter read
+        follows it."""
+        obj, calls = make_accumulator()
+        drive = self._control(obj)
+        drive(3.0)
+        obj.evolve_once()  # move away from the initial condition
+        self.assertEqual(obj.get_state('x'), 3.0)
+        obj.reset()
+        self.assertEqual(drive(), 0.0)  # restored initial input
+        self.assertEqual(drive(), obj.get_input('u'))
+        self.assertEqual(calls['evolve'], 1)  # reset evolves nothing
+
+    def test_r3_tc_07c_readback_follows_second_controller(self):
+        """R3-TC-07c: two control parameters sharing one object both
+        read the object's single authoritative input store."""
+        obj, _ = make_accumulator()
+        drive1 = self._control(obj)
+        drive2 = Parameter(
+            'drive2', ValNumber(),
+            before_set=lambda old, new: obj.set_input('u', new),
+            before_get=lambda stored: obj.get_input('u'))
+        drive1(1.0)
+        drive2(2.0)  # write through the second controller
+        self.assertEqual(drive1(), 2.0)
+        self.assertEqual(drive2(), 2.0)
+        self.assertEqual(obj.get_input('u'), 2.0)
+
+    def test_r3_tc_07d_rejected_set_keeps_stores_consistent(self):
+        """R3-TC-07d: a validator-rejected set fires before the
+        bridge, so both the parameter and the object remain at the
+        last valid value."""
+        obj, calls = make_accumulator()
+        drive = self._control(obj)
+        drive(1.0)
+        with self.assertRaises(TypeError):
+            drive('not-a-number')
+        self.assertEqual(obj.get_input('u'), 1.0)
+        self.assertEqual(drive(), 1.0)
+        self.assertEqual(calls['evolve'], 0)
 
 
 if __name__ == '__main__':

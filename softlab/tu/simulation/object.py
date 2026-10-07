@@ -657,16 +657,22 @@ class SimulatedObject:
         value into fresh local dicts, with the committed stores
         untouched — then **swap** — rebind the internal input store
         and state store. Never invokes ``evolve`` or ``observe``. On
-        success the object is behaviorally identical to a newly
-        constructed one, including any time inputs/states.
+        success the owned input and state stores are restored from
+        their declared sources, including any time inputs/states. This
+        is a restoration of owned stores only, not an equivalence to
+        fresh construction: a factory with external state may
+        return a different value on each invocation, and reproducible
+        behavior additionally requires deterministic callbacks and
+        reproducible factories.
 
         Any exception during the build phase — a raising factory (the
         documented injection point) or a factory result that violates
         the specification — propagates as the identical original
-        exception object and leaves the object in its complete,
-        unmodified pre-reset committed state: inputs, states and
-        therefore all subsequent observations are exactly as before
-        the call, and the object remains fully usable
+        exception object and leaves the owned inputs and states exactly
+        as they were before the call. Subsequent observations are
+        therefore unchanged under a deterministic ``observe``; a
+        stateful ``observe`` follows its own external state, which is
+        outside this guarantee. The object remains fully usable
         (:meth:`set_input`, :meth:`evolve_once`,
         :meth:`observe_outputs` and a later :meth:`reset` all behave
         normally). No rollback path exists because no mutation
@@ -773,12 +779,16 @@ class SimulatedObject:
         actual = set(result.keys())
         if actual != expected:
             missing = sorted(expected - actual)
-            extra = sorted(actual - expected)
+            extra = actual - expected
+            if all(isinstance(key, str) for key in extra):
+                rendered_extra = sorted(extra)
+            else:
+                rendered_extra = sorted(extra, key=repr)
             raise ValueError(
                 f'The {callback_name} callback must return exactly '
                 f'the declared '
                 f'{"state" if specs is not None else "output"} names; '
-                f'missing {missing}, extra {extra}')
+                f'missing {missing}, extra {rendered_extra}')
         validated: Dict[str, Any] = {}
         names = self._state_specs.keys() if specs is not None \
             else self._output_names

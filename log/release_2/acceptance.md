@@ -140,3 +140,17 @@ delivered behavior or the user's ability to find the evidence. Release 2
 is accepted; `main` promotion is unblocked from the Product Owner side.
 
 **Signed**: sw-camille, Product Owner
+
+## Reconciliation addendum (2026-10-06, R3-001)
+
+The CI references above cite run 37298623628 as "before the `dev`
+merge". Verified via `gh run view`: run 37298623628 ran on branch
+`dev` at head `9408c79` — i.e. *after* the merge. The pre-merge
+evidence is run **37298431248** (branch
+`codex/sim-001-simulation-foundation`, head `cd90ff6`, both matrix
+jobs success, 2026-10-05T10:43:54Z, before the dev push of `9408c79`
+at 10:45:40Z). The substance — green CI on Python 3.9 + 3.13 before
+integration — stands with the corrected run reference; both runs are
+green. This addendum corrects the reference only; the verdict and its
+evidence are otherwise unchanged, and no `main` promotion is recorded
+or implied.

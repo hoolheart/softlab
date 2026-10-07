@@ -1,7 +1,7 @@
 # Sprint summary — Release 2 (SIM-001 simulation foundation)
 
 Owner: coordinator | Date: 2026-10-05 | Sprint: single-task sprint, resumed same day
-Integration branch: `dev` | Baseline: `80b0b05` | Final dev tip: `c69272a`
+Integration branch: `dev` | Baseline: `f04e783` (task branch created from dev @ `f04e783` per sim-001-baseline.md; `80b0b05` is an earlier dev ancestor) | Final dev tip: `c69272a`
 
 ## Sprint goal and achievements
 
@@ -19,7 +19,8 @@ by sw-camille (PASS) at `c69272a`.**
 ## Quality metrics
 
 - Test pass rate: **100%** — 135/135 unittest cases OK (99 baseline + 36 new),
-  locally and in CI (run 37298623628, Python 3.9 + 3.13).
+  locally and in CI (pre-merge run 37298431248 on task tip cd90ff6 and
+  post-merge dev run 37298623628, Python 3.9 + 3.13).
 - Warning gate: **0 warnings** — `-W error::Warning` suite run green; CI
   regression steps green.
 - Review issues resolved: **100%** — test-plan review 1 blocker + 3 minors
@@ -85,3 +86,10 @@ by sw-camille (PASS) at `c69272a`.**
    `codex/tu-simulation-foundation` (no longer referenced; kept so far).
 3. Future releases may build on the foundation (feedthrough, clock/context,
    multi-object scheduling are documented exclusions, not commitments).
+
+Reconciliation note (2026-10-06, R3-001): baseline reference corrected
+from `80b0b05` (a Release 1 record commit, earlier dev ancestor) to
+the actual task-branch parent `f04e783`; CI reference corrected to
+distinguish pre-merge run 37298431248 from post-merge run 37298623628
+(see acceptance.md addendum). Acceptance stands at `c69272a`; `main`
+promotion is unrecorded.
