@@ -134,7 +134,7 @@ there is no cross-namespace rule because objects cannot be members yet.
 | --- | --- | --- | --- | --- |
 | R3-TC-04f **[PLAN]** | Object name colliding with an existing device name | Station holding device `acc`; object also named `acc` | Attempt to add the object | Explicit rejection (`ValueError` or per design); device remains the only `acc`; no silent shadowing of either namespace |
 | R3-TC-04g **[PLAN]** | Duplicate object names rejected | Station holding object `acc`; second object named `acc` | Attempt to add | Explicit rejection naming the collision; first object still retrievable and unmodified |
-| R3-TC-04h **[PLAN]** (passes vacuously on baseline; keep passing) | Empty/non-string object name rejected | Station | Per design's construction/insertion path, attempt insertion of an object whose effective name is empty or non-string (cf. existing `SimulatedObject` constructor guard, object.py lines 294–296; `Device` name guard, device.py lines 143–145) | Explicit rejection before membership changes; no partial registration |
+| R3-TC-04h **[PLAN]** (passes vacuously on baseline; keep passing) | Empty/non-string object name rejected | Station | Via the public construction/insertion entry, attempt build-and-insert with an empty or non-string `name` argument (e.g. `name=''` or `name=123`): the invalid name enters at the entry point's `name` argument, not as pre-existing object state (cf. existing `SimulatedObject` constructor guard, object.py lines 294–296; `Device` name guard, device.py lines 143–145) | Explicit rejection before membership changes; no partial registration |
 | R3-TC-04i **[PLAN]** | Renaming an in-station object cannot orphan its lookup key | Station holding object `o` under name `n` | Per the design's mutability contract, attempt whatever rename path exists (or assert names are immutable once members) | Either rename is forbidden for station members, or the membership key follows the rename atomically — the baseline device defect (rename after `add_device` orphans the key: `device('orig')` returns the renamed device, `device('renamed')` returns None — baseline §C) must NOT be reproduced for objects |
 
 ## R3-AC-04 — area 3: object builder and model-keyed registry
@@ -221,7 +221,11 @@ convention as Release 2 CHK-06-1 / R3-001 CHK-08-1):
 softlab/mu` must be empty; production runtime changes confined to
 `softlab/tu/`; no connected-simulation production code
 (coordinator/edges/clock) may appear in this task's diff — that scope
-belongs to R3-003.
+belongs to R3-003. In addition, CHK-04-1 pins the "documented" half of
+R3-TC-04o: the station-level object-construction entry's docstring must
+document the unknown/unregistered-model error (class or category, per
+the approved design), verified by a file/line citation of that docstring
+recorded in the results document.
 
 ## Risks and notes for the design/implementation review
 
@@ -235,7 +239,9 @@ belongs to R3-003.
    device side is Release 1 debt, **not** in scope here.
 3. **Exception class for unknown object model** is design work
    (device analog raises `RuntimeError`); R3-TC-04o asserts only an
-   explicit documented error with unchanged membership.
+   explicit documented error with unchanged membership — "explicit" is
+   pinned by the automated case, "documented" by CHK-04-1's docstring
+   file/line citation.
 4. **Delegation precedence is existing behavior** (real members win
    over delegated names; device.py lines 129–133 document the
    OBS-006 category). R3-TC-04d requires the same precedence and the
@@ -258,3 +264,10 @@ belongs to R3-003.
   written against the characterization baseline recorded the same day
   in `r3-002-baseline.md` (branch `codex/r3-002-builders`, tip
   `f279958`).
+- **2026-10-07 — Revision 2** (tester: sw-mike): review-issue fixes —
+  R3-TC-04h reworded so the invalid name enters via the public
+  construction/insertion entry's `name` argument (expectation
+  unchanged); CHK-04-1 extended to pin the docstring documentation of
+  the unknown/unregistered-model error with a file/line citation
+  (closing the "documented" half of R3-TC-04o); risk note 3 updated
+  accordingly. Case IDs and all other content unchanged.
