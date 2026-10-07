@@ -1,11 +1,11 @@
 # Sprint board — Release 3 execution
 
-Updated: 2026-10-06 | Integration branch: dev | Execution: **Mode D confirmed by user — all four tasks, strict serial**
+Updated: 2026-10-07 | Integration branch: dev | Execution: **PAUSED by user during R3-002 pre-implementation**
 
 | ID | Scope | Owner | Phase | Started | Expected completion | Blocker | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | R3-001 | Scoped Release 2 corrections and closure reconciliation | sw-mike (testing) | Done | 2026-10-06 | 2026-10-07 | — | `6dc4d36` |
-| R3-002 | Object builders and station membership | sw-celeste (design) | Detailed design | 2026-10-07 | 2026-10-09 | — | — |
+| R3-002 | Object builders and station membership | sw-tom (implementation, pending) | Design approved | 2026-10-07 | 2026-10-09 | USER PAUSE 2026-10-07 | — |
 | R3-003 | Shared clock, delayed graph, mock signals and atomic coordination | Unassigned | Backlog | — | — | R3-002 dev integration | — |
 | R3-004 | Connected guide/example and final delivery evidence | Unassigned | Backlog | — | — | R3-003 dev integration | — |
 
@@ -71,7 +71,9 @@ Progress:
 - ✅ Test plan + baseline `89d6f62` (24 cases; 18 new-capability cases
   vacuous-fail on baseline as required); review CHANGES-REQUESTED `fa40165`
   (2 minor); closed by sw-mike `6b34844`; re-confirmed APPROVED `5a982d5`.
-- ▶ Detailed design (sw-celeste) in progress next.
+- ✅ Detailed design `59c97e7`; architect review APPROVED `6973d9b` (rulings:
+  add_device guard / device-only snapshot / RuntimeError all ACCEPT); 1 minor
+  issue closed by sw-celeste `fefe992`. Implementation authorized when resumed.
 
 R3-001 scope (from tasks.md): correct Release 2 standalone bridge readback,
 malformed callback-key errors and reset claims; reconcile closure records
