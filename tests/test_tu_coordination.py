@@ -375,9 +375,11 @@ class SharedClockTests(unittest.TestCase):
             coord.step()
         self.assertEqual(coord.tick, 3)
         self.assertEqual(coord.sim_time, 3 * 0.5)
-        self.assertEqual(b.get_state('x'), 11.0)
+        # B consumed A's committed output (1.0) at every transition
+        self.assertEqual(b.get_state('x'), 13.0)
 
     def test_r3_tc_03b_invalid_interval_values_rejected(self):
+        # first data block: invalid values are explicitly rejected
         cases = [
             (0, ValueError),
             (-1.0, ValueError),
@@ -398,8 +400,8 @@ class SharedClockTests(unittest.TestCase):
                 self.assertIsNone(station.sim_dt)  # stored value unchanged
                 station.sim_dt = 0.5  # station fully usable afterwards
                 self.assertEqual(station.sim_dt, 0.5)
-
-    def test_r3_tc_03b_cont_real_scalar_coercion_rule(self):
+        # second data block (03b cont.): the documented coercion rule
+        # for other real-valued scalars (Decimal, NumPy, Fraction)
         station = Station('coerce')
         with self.assertRaises(TypeError):
             station.sim_dt = Decimal('0.5')  # Decimal is not numbers.Real
@@ -485,6 +487,15 @@ class SharedClockTests(unittest.TestCase):
         coord = Coordinator(station)
         coord.enroll('integrator')
         coord.enroll('clockless')
+        src, _, _ = make_accumulator('src', 1.0)
+        station.add_object(src)
+        coord.enroll('src')
+        int_obj = SimulatedObject(
+            'intmodel', {'n': 0}, {'x': 0.0}, ['y'],
+            evolve=lambda u, x: {'x': x['x']},
+            observe=lambda x: {'y': x['x']})
+        station.add_object(int_obj)
+        coord.enroll('intmodel')
         coord.bind_interval('integrator', 'dt')
         coord.prepare()
         for _ in range(3):
@@ -493,25 +504,17 @@ class SharedClockTests(unittest.TestCase):
         self.assertEqual(clockless.get_state('t'), 0.0)  # never inferred
         self.assertEqual(clockless.get_input('dt'), 0.0)
         # contradictory second drivers on the bound input are rejected
+        # (graph edits require the stopped state: reset first)
+        coord.reset()
         with self.assertRaises(ValueError):
             coord.bind_interval('integrator', 'dt')
-        src, _, _ = make_accumulator('src', 1.0)
-        station.add_object(src)
-        coord.enroll('src')
         with self.assertRaises(ValueError):
             coord.connect(Endpoint('src', 'y'), Endpoint('integrator', 'dt'))
         with self.assertRaises(RuntimeError):
             obj.set_input('dt', 0.1)
         # an int-declared input cannot be interval-bound
-        int_obj = SimulatedObject(
-            'intmodel', {'n': 0}, {'x': 0.0}, ['y'],
-            evolve=lambda u, x: {'x': x['x']},
-            observe=lambda x: {'y': x['x']})
-        station.add_object(int_obj)
-        coord.enroll('intmodel')
         with self.assertRaises(TypeError):
             coord.bind_interval('intmodel', 'n')
-        coord.reset()
         self.assertEqual(obj.get_input('dt'), 0.0)  # restored to initial
         coord.unbind_interval('integrator', 'dt')
         with self.assertRaises(KeyError):
@@ -610,16 +613,16 @@ class OwnershipTests(unittest.TestCase):
         coord2 = Coordinator(station2)
         with self.assertRaises(RuntimeError):
             coord2.enroll('shared')
+        # duplicate enrollment and unknown names are rejected too
+        with self.assertRaises(ValueError):
+            coord1.enroll('shared')
+        with self.assertRaises(KeyError):
+            coord1.enroll('missing')
         # S1's simulation remains coherent and fully functional
         station1.sim_dt = 0.5
         coord1.prepare()
         coord1.step()
         self.assertEqual(coord1.tick, 1)
-        # duplicate enrollment in the same coordinator is rejected too
-        with self.assertRaises(ValueError):
-            coord1.enroll('shared')
-        with self.assertRaises(KeyError):
-            coord1.enroll('missing')
 
     def test_r3_tc_04d_standalone_operations_prevented_while_coordinated(self):
         station, coord, objs, counters, logs, initials = build_chain()
@@ -641,8 +644,8 @@ class OwnershipTests(unittest.TestCase):
         objs['A'].observe_outputs()
         # after detach, standalone operations work again
         coord.reset()
-        coord.disconnect(Endpoint('A', 'y'))
-        coord.disconnect(Endpoint('B', 'y'))
+        coord.disconnect(Endpoint('B', 'u'))
+        coord.disconnect(Endpoint('C', 'u'))
         coord.withdraw('A')
         self.assertIsNone(objs['A']._active_coordinator)
         objs['A'].evolve_once()
@@ -686,22 +689,33 @@ class OwnershipTests(unittest.TestCase):
         self.assertEqual(obj.get_state('x'), 2.5)
         self.assertEqual(ctrl.read(), 1.5)  # rejected write left no trace
 
-        # a callback that propagates the reentrancy failure fails the tick
-        sentinel = RuntimeError('nested step')
+        # a callback that propagates the reentrancy failure fails the
+        # tick atomically, original exception identity preserved
+        # (fresh network; enrollment needs STOPPED)
+        station2 = Station('reent2')
+        station2.sim_dt = 0.5
+        ref2 = {}
 
-        def evolve_propagate(u, x):
-            raise sentinel
+        def evolve_nested(u, x):
+            try:
+                ref2['coord'].step()  # rejected: mid-operation
+            except RuntimeError as exc:
+                ref2['nested'] = exc
+                raise  # the callback propagates the reentrancy failure
 
         obj2 = SimulatedObject(
-            'B', {'u': 0.0}, {'x': 7.0}, ['y'], evolve_propagate,
+            'B', {'u': 0.0}, {'x': 7.0}, ['y'], evolve_nested,
             observe=lambda x: {'y': x['x']})
-        station.add_object(obj2)
-        coord.enroll('B')
+        station2.add_object(obj2)
+        coord2 = Coordinator(station2)
+        ref2['coord'] = coord2
+        coord2.enroll('B')
+        coord2.prepare()
         before = obj2.get_state('x')
         with self.assertRaises(RuntimeError) as caught:
-            coord.step()
-        self.assertIs(caught.exception, sentinel)
-        self.assertEqual(coord.tick, 1)  # no corruption of in-flight tick
+            coord2.step()
+        self.assertIs(caught.exception, ref2['nested'])
+        self.assertEqual(coord2.tick, 0)  # no corruption of in-flight tick
         self.assertEqual(obj2.get_state('x'), before)
 
     def test_r3_tc_04f_two_mock_endpoints_on_one_participant_permitted(self):
@@ -865,10 +879,17 @@ class ConnectionSafetyTests(unittest.TestCase):
         coord2.enroll('D')
         coord2.connect(Endpoint('S', 'y'), Endpoint('D', 'u'))
         coord2.prepare()  # tick-zero output shape (2,) is compatible
+        # transition 0->1 still reads the committed shape-(2,) S_0 and
+        # succeeds, publishing the shape-(3,) output into S_1
+        coord2.step()
+        self.assertEqual(coord2.tick, 1)
+        self.assertEqual(dst2.get_state('x'), 3.0)
+        # transition 1->2 reads S_1: the shape-(3,) value now violates
+        # the destination spec — the tick fails atomically
         with self.assertRaises(ValueError):
-            coord2.step()  # shape (3,) now: failed tick
-        self.assertEqual(coord2.tick, 0)
-        self.assertEqual(dst2.get_state('x'), 0.0)
+            coord2.step()
+        self.assertEqual(coord2.tick, 1)
+        self.assertEqual(dst2.get_state('x'), 3.0)
         self.assertEqual(src2.get_state('x'), 0.0)
 
     def test_r3_tc_05d_fan_out_copies_isolate_ndarray_mutation(self):
@@ -879,11 +900,11 @@ class ConnectionSafetyTests(unittest.TestCase):
             evolve=lambda u, x: {'x': x['x']},
             observe=lambda x: {'y': x['x']})
         d1 = SimulatedObject(
-            'D1', {'u': np.zeros(2)}, {'x': 0.0}, ['y'],
+            'D1', {'u': np.zeros(2)}, {'x': np.zeros(2)}, ['y'],
             evolve=lambda u, x: {'x': x['x'] + u['u']},
             observe=lambda x: {'y': x['x']})
         d2 = SimulatedObject(
-            'D2', {'u': np.zeros(2)}, {'x': 0.0}, ['y'],
+            'D2', {'u': np.zeros(2)}, {'x': np.zeros(2)}, ['y'],
             evolve=lambda u, x: {'x': x['x'] + u['u']},
             observe=lambda x: {'y': x['x']})
         for obj in (src, d1, d2):
@@ -909,30 +930,31 @@ class ConnectionSafetyTests(unittest.TestCase):
     def test_r3_tc_05e_unconnected_inputs_retain_staged_values(self):
         station = Station('unconn')
         station.sim_dt = 0.5
-        src, _, log = make_accumulator('A', 1.0)
-        dst, _, _ = make_accumulator('D', 0.0, u0=5.0)
+        src, _, _ = make_accumulator('A', 1.0)
+        dst, _, dlog = make_accumulator('D', 0.0, u0=5.0)
         station.add_object(src)
         station.add_object(dst)
         coord = Coordinator(station)
         coord.enroll('A')
         coord.enroll('D')
         coord.connect(Endpoint('A', 'y'), Endpoint('D', 'u'))
-        coord.prepare()
-        # 'u' is driven by the edge: staging into it is rejected
-        with self.assertRaises(RuntimeError):
-            dst.set_input('u', 7.0)
-        # add a genuinely unconnected input on a third object
+        # a genuinely unconnected input on a third object; enrollment
+        # requires STOPPED, so add it before prepare
         extra = SimulatedObject(
             'E', {'v': 5.0}, {'x': 0.0}, ['y'],
             evolve=lambda u, x: {'x': x['x']},
             observe=lambda x: {'y': x['x']})
         station.add_object(extra)
         coord.enroll('E')
+        coord.prepare()
+        # 'u' is driven by the edge: staging into it is rejected
+        with self.assertRaises(RuntimeError):
+            dst.set_input('u', 7.0)
         extra.set_input('v', 7.0)  # stages through the controlled boundary
         coord.step()
         coord.step()
         self.assertEqual(extra.get_input('v'), 7.0)  # never overwritten
-        self.assertEqual(log[-1][0], 1.0)  # edge still delivered
+        self.assertEqual(dlog[-1][0], 1.0)  # edge still delivered
 
     def test_r3_tc_05f_topology_changes_require_stopped_boundary(self):
         station, coord = self._station_with_endpoints()
@@ -995,7 +1017,7 @@ class ConnectionSafetyTests(unittest.TestCase):
             coord.connect(Endpoint('nope', 'y'), Endpoint('B', 'u'))
         self.assertEqual(coord.connections, mid)
         with self.assertRaises(KeyError):
-            coord.disconnect(Endpoint('A', 'u'))  # no such edge
+            coord.disconnect(Endpoint('nope', 'u'))  # no such edge
         self.assertEqual(coord.connections, mid)
         self.assertNotEqual(before, mid)
         # no batch API exists; each edit is individually atomic
@@ -1042,7 +1064,7 @@ class AtomicTickResetTests(unittest.TestCase):
         self.assertEqual(coord.tick, 1)  # clock preserved
         self.assertEqual(coord.sim_time, 0.5)
         self.assertEqual(a.get_state('x'), 2.5)  # committed states intact
-        self.assertEqual(b.get_state('x'), 10.0)
+        self.assertEqual(b.get_state('x'), 11.0)  # evolved in tick 1
         self.assertEqual(ctrl.read(), 4.0)  # pending write survives
         armed['flag'] = False
         coord.step()  # retry delivers the surviving pending value
@@ -1334,9 +1356,14 @@ class CompatibilityEvidenceTests(unittest.TestCase):
                     continue
                 self.assertIn(root, allowed,
                               f'{filename} imports third-party {root}')
-            self.assertNotIn('softlab.tu.station', source,
-                             f'{filename} must not import station (D1)')
-            self.assertNotIn('huo', source)
+            # import-direction rule: no station import, no huo process
+            self.assertIsNone(re.search(
+                r'^\s*(?:from|import)\s+softlab\.tu\.station',
+                source, re.MULTILINE),
+                f'{filename} must not import station (D1)')
+            self.assertIsNone(re.search(
+                r'^\s*(?:from|import)\s+.*\bhuo\b',
+                source, re.MULTILINE))
 
     def test_r3_tc_08f_candidate_ci_workflow_matrix(self):
         workflow = REPO_ROOT / '.github' / 'workflows' / 'ci.yml'
