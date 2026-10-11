@@ -245,6 +245,9 @@ class StationBuildObject(unittest.TestCase):
         error = RuntimeError('construction failed')
 
         class FailingBuilder(ObjectBuilder):
+            def __init__(self) -> None:
+                super().__init__('failing')
+
             def build(self, name: str, **kwargs) -> SimulatedObject:
                 raise error
 
@@ -298,13 +301,16 @@ class StationBuildObject(unittest.TestCase):
     def test_04r_already_owned_instance_rejected(self):
         station = Station('station')
         register_object_builder(SameInstanceBuilder())
+        # station inserts under obj.name: the misbehaving builder names
+        # its single instance 'alias', so the first member lands there
         station.build_object('same-instance', 'a')
-        first = station.object('a')
+        first = station.object('alias')
+        self.assertIsInstance(first, SimulatedObject)
         with self.assertRaises(ValueError):
             station.build_object('same-instance', 'b')
-        self.assertIs(station.object('a'), first)
+        self.assertIs(station.object('alias'), first)
         self.assertIsNone(station.object('b'))
-        self.assertEqual(list(station.objects), ['a'])
+        self.assertEqual(list(station.objects), ['alias'])
 
 
 if __name__ == '__main__':
