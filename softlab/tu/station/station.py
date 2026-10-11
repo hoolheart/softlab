@@ -1,5 +1,7 @@
 """Define ``Station`` class and its corresponding functions"""
 
+import numbers
+import math
 from typing import(
     Any,
     Dict,
@@ -19,6 +21,9 @@ from softlab.tu.simulation import (
     ObjectBuilder,
     get_object_builder,
 )
+# Intra-package reuse of the documented simulation-interval rule
+# (design D6, steps 1-4); shared with Coordinator.prepare re-validation.
+from softlab.tu.simulation.coordination import _validate_interval
 from softlab.jin.misc import Delegated
 
 class Station(Delegated):
@@ -52,6 +57,14 @@ class Station(Delegated):
       non-exist
     - build_object --- build a simulated object by using object builder
     - snapshot --- return snapshot of station information
+
+    A station may optionally participate in a coordinated simulation
+    (R3-003): ``sim_dt`` holds the shared simulation interval and a
+    ``Coordinator`` (constructed explicitly as ``Coordinator(station)``)
+    registers itself in ``_coordinator``. Both slots are inert when
+    unused — ordinary station/device work never requires them — and
+    objects enrolled in an active coordinated simulation cannot be
+    removed until the coordinator releases them.
     """
 
     def __init__(self, name: str) -> None:
@@ -65,6 +78,10 @@ class Station(Delegated):
         self._objects: Dict[str, SimulatedObject] = {}
         self.add_delegate_attr_dict('_objects')
         self._created_at: datetime = datetime.now()
+        # optional coordinated-simulation composition (R3-003); both
+        # inert when unused (None), never created lazily
+        self._sim_dt: Optional[float] = None
+        self._coordinator: Any = None
 
     @property
     def name(self) -> str:
@@ -85,6 +102,100 @@ class Station(Delegated):
     def objects(self) -> Sequence[str]:
         """Get sequence of object names"""
         return self._objects.keys()
+
+    @property
+    def sim_dt(self) -> Optional[float]:
+        """
+        Shared simulation interval of an optional coordinated
+        simulation (R3-003); None until set.
+
+        Ordinary station/device use never requires it. While a
+        coordinator is prepared (RUNNING) or mid-operation, changes are
+        rejected by the setter until a coordinated reset.
+
+        Returns: the stored interval, or None.
+
+        Errors: none.
+
+        Side-effects: none.
+        """
+        return self._sim_dt
+
+    @sim_dt.setter
+    def sim_dt(self, value: Any) -> None:
+        """
+        Set the shared simulation interval (documented rule, design D6).
+
+        **Coercion/representability rule:** non-bool ``numbers.Real``
+        values are coerced to the IEEE-754 double nearest the original
+        value via ``float()`` — the stored interval is always a plain
+        ``float``. ``Decimal`` is rejected (it is not registered as
+        ``numbers.Real``); NumPy real scalars and ``Fraction`` are
+        accepted through coercion. Booleans are rejected explicitly
+        (``bool`` subclasses ``int`` and registers as
+        ``numbers.Real``, so the bool check precedes the real check).
+
+        Validation order: bool -> TypeError; non-real -> TypeError;
+        coerce to float; non-finite -> ValueError; non-positive ->
+        ValueError; coordinator prepared or mid-operation (``_busy``)
+        -> RuntimeError. The prepared/busy rejection closes the
+        callback-reachable window during ``prepare()`` and
+        STOPPED-state ``reset()``, so no interval change can land
+        mid-operation and the interval observed during a run is
+        constant (the coordinator reads it live; no caching exists).
+
+        Every rejection leaves the stored interval unchanged and the
+        station fully usable.
+
+        Args:
+        - value --- candidate interval
+
+        Returns: None.
+
+        Errors:
+        - TypeError --- bool or non-real value
+        - ValueError --- NaN, ±inf, zero or negative value
+        - RuntimeError --- an associated coordinator is prepared
+          (RUNNING) or mid-operation; reset first
+
+        Side-effects: on success only, replaces the stored interval.
+        """
+        if type(value) is bool:
+            raise TypeError(
+                'sim_dt must be a positive finite real number; '
+                'booleans are rejected')
+        if not isinstance(value, numbers.Real):
+            raise TypeError(
+                f'sim_dt must be a positive finite real number, got '
+                f'{type(value).__name__}')
+        if not math.isfinite(float(value)):
+            raise ValueError(f'sim_dt must be finite, got {value!r}')
+        if float(value) <= 0.0:
+            raise ValueError(f'sim_dt must be positive, got {value!r}')
+        coordinator = self._coordinator
+        if coordinator is not None and \
+                (coordinator.prepared or coordinator._busy):
+            raise RuntimeError(
+                'sim_dt is fixed while the coordinated simulation is '
+                'prepared or mid-operation; reset it first')
+        self._sim_dt = _validate_interval(value)
+
+    @property
+    def coordinator(self) -> Optional[Any]:
+        """
+        The coordinator associated with this station, None if none.
+
+        Read-only view of the composition slot: never creates a
+        coordinator (inspection purity — reading station state never
+        invokes simulation callbacks or prepares anything).
+
+        Returns: the registered coordinator or None.
+
+        Errors: none.
+
+        Side-effects: none.
+        """
+        return self._coordinator
 
     def __repr__(self) -> str:
         return f'{type(self)}/{self.name}'
@@ -202,12 +313,35 @@ class Station(Delegated):
     def rm_object(self, object_name: str) -> Optional[SimulatedObject]:
         """Remove an object with name ``object_name`` from station
 
-        Removal performs no cleanup of the removed object. Note that
-        removal of an object enrolled in an active coordinated
-        simulation will be rejected by the future ownership layer
-        (R3-003 scope), not by this method.
+        Removal performs no cleanup of the removed object (membership
+        bookkeeping only). An object enrolled in an active coordinated
+        simulation (its ownership slot is claimed by a coordinator) is
+        rejected with RuntimeError naming the active coordination:
+        detach it first via the coordinator's safe-detach sequence
+        (disconnect -> withdraw), then remove it. Missing names keep
+        the lenient None semantics; unclaimed objects pop exactly as
+        before.
+
+        Args:
+        - object_name --- name of the object member to remove
+
+        Returns: the removed object, or None if no such member.
+
+        Errors:
+        - RuntimeError --- the object is enrolled in an active
+          coordinated simulation
+
+        Side-effects: on success only, one removal from the object
+        membership; no hardware or simulation cleanup is attempted.
         """
-        return self._objects.pop(str(object_name), None)
+        name = str(object_name)
+        obj = self._objects.get(name)
+        if obj is not None and \
+                getattr(obj, '_active_coordinator', None) is not None:
+            raise RuntimeError(
+                f'Object {name!r} is enrolled in an active '
+                'coordinated simulation; detach it before removal')
+        return self._objects.pop(name, None)
 
     def object(self, object_name: str) -> Optional[SimulatedObject]:
         """Access object with name ``object_name``"""
