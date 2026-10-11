@@ -429,4 +429,45 @@ implementation.
 
 ## Closure log
 
-(No entries yet — issues 1–4 OPEN, awaiting sw-mike.)
+### 2026-10-11 — Issues 1–4 RESOLVED (closed by sw-mike)
+
+**Issue 1 — RESOLVED.** `r3-003-test-plan.md` Revision 2: R3-TC-03b
+split into two data rows. Explicit rejection is now pinned only for
+`0`, `-1.0`, `nan`, `±inf`, `True`/`False`, `'0.5'`, `None`, `0.5+0j`
+(zero/negative/non-finite/non-real/bool per R3-AC-03). The
+`Decimal('0.5')` and NumPy-scalar values moved to a second row "R3-TC-03b
+(cont.)" that pins only "matches the design's documented
+coercion/representability rule — documented and enforced", with the rule's
+documentation location cited via CHK-03-1 (same convention as R3-TC-03f).
+No type-strictness beyond the AC is pinned. Failure-mode table gained the
+row "Real-valued scalar (Decimal/NumPy) sim_dt coercion per documented
+rule → R3-TC-03b (cont.)".
+
+**Issue 2 — RESOLVED.** New case **R3-TC-04f** added to the R3-AC-04
+table: one participant in S1's active simulation with two distinct mock
+endpoints (controls K1/K2 driving different inputs, optionally plus a
+measurement M1); both pending writes delivered across their edges at the
+next boundary; measurement shows its delivered sample; single-driver
+(R3-TC-05b) unaffected. Added to the traceability row R3-AC-04
+("04a–04f") and to the failure-mode table ("Multiple mock endpoints per
+participant (positive: permitted within one simulation) → R3-TC-04f").
+Total automated cases 40 → **41** (04a–04f).
+
+**Issue 3 — RESOLVED.** R3-TC-01d extended: the two registration-order
+runs now also register the mock control/measurement endpoints in reversed
+order (measurement-before-control vs control-before-measurement),
+interleaved with the object builds; bit-identical expectation unchanged.
+AC-01's "object/device registration or iteration order" wording now
+covers endpoint registration order explicitly in the expected result.
+
+**Issue 4 — RESOLVED.** Planned-test-files table corrected to
+"R3-TC-01a–01e, 02a–02f, 03a–03f, 04a–04e" (34 coordination cases, 40
+automated at review time); with the issue-2 addition of R3-TC-04f the
+row reads 04a–04f and the plan's tally is 41 automated — the per-section
+tables, traceability summary and files table are now mutually consistent.
+
+Commit: see git log entry `docs(log): close r3-003 test plan review
+issues` on `codex/r3-003-coordination` (this commit). Verdict unchanged:
+the CHANGES-REQUESTED issues 1–4 are closed by tester-side rewordings;
+the plan (now Revision 2) is ready for the detailed-design gate and
+implementation per the "Implementability confirmation" section.

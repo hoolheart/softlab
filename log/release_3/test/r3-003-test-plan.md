@@ -99,7 +99,7 @@ fan-out and permitted cycles).
 
 | File | Covers |
 | --- | --- |
-| `tests/test_tu_coordination.py` (new) | R3-TC-01a–01e, 02a–02e, 03a–03f, 04a–04c, 05a–05g, 06a–06e: coordinated network, tick-zero, clock, ownership, connections, atomicity (automated `unittest`; synthetic fixtures only) |
+| `tests/test_tu_coordination.py` (new) | R3-TC-01a–01e, 02a–02f, 03a–03f, 04a–04f, 05a–05g, 06a–06e: coordinated network, tick-zero, clock, ownership, connections, atomicity (automated `unittest`; synthetic fixtures only) |
 | (no new file) | R3-TC-08a–08f: full-suite regression, compile/import/warning gates, dependency/scope checks |
 | (manual record checks) | CHK-03-1: reviewer/design-gate scope checklist, including the five tasks.md design-gate proofs |
 
@@ -128,7 +128,7 @@ exists (baseline §2/§3) — [PLAN] cases fail by absent API today.
 | R3-TC-01a **[PLAN]** | Chain A→B→C advances at most one edge per transition | Prepared network of three accumulator objects connected A→B→C; distinct known initial states/inputs | Prepare at tick 0; perform transition 0→1; record B's input, C's input, all states | B consumes A's tick-0 output; C consumes B's **tick-0** output (NOT B's newly computed one); A's new output reaches C no earlier than transition 1→2. Numeric expectations computed in-test from the fixture's declared initial values |
 | R3-TC-01b **[PLAN]** | Fan-out one source to two destinations | Prepared network; source S connected to D1 and D2 | Transition 0→1; record D1 and D2 inputs | Both destinations received the identical S tick-0 value; one source feeding multiple destinations is legal |
 | R3-TC-01c **[PLAN]** | Feedback edge uses initialized previous value on first transition | Prepared network with feedback edge C→A (cycle); documented initial edge value | Transition 0→1; record A's consumed feedback input | A consumed the initialized/declared boundary value, not a same-tick C output; cycles are permitted (no cycle rejection, no solver) |
-| R3-TC-01d **[PLAN]** | Determinism independent of registration/iteration order | Same logical network registered in two different orders (build B before A vs A before B; dict-traversal-hostile orders), plus a run after listing/inspecting members | Prepare and run both networks for ≥3 transitions with identical fixture callbacks and initial values | Bit-identical committed states, delivered samples and clock on every tick across both orders and across the inspection interleaving; insertion/traversal order cannot change deterministic results (PRD lines 19–21) |
+| R3-TC-01d **[PLAN]** | Determinism independent of registration/iteration order | Same logical network registered in two different orders (build B before A vs A before B; dict-traversal-hostile orders), plus a run after listing/inspecting members; the two runs ALSO register the mock control/measurement endpoints in reversed order (measurement before control vs control before measurement), interleaving endpoint registration with the object builds | Prepare and run both networks for ≥3 transitions with identical fixture callbacks and initial values | Bit-identical committed states, delivered samples and clock on every tick across both orders, both endpoint-registration orders and across the inspection interleaving; insertion/traversal order of objects AND of mock endpoints cannot change deterministic results (PRD lines 19–21; AC-01 "regardless of object/device registration or iteration order") |
 | R3-TC-01e **[PLAN]** | No edge uses a newly computed same-tick source — negative assertion | Prepared network; per-tick trace recording each object's computed outputs vs delivered edge values | Run 3 transitions | For every tick k→k+1 and every edge, the delivered value equals the source's committed output at tick k (asserted against an in-test golden trace); any same-tick value fails the case |
 
 ## R3-AC-02 — defined initial state and device timing
@@ -158,7 +158,8 @@ model-dt binding. Baseline: `Station.sim_dt` absent (baseline §2).
 | ID | Case | Preconditions | Steps | Expected result |
 | --- | --- | --- | --- | --- |
 | R3-TC-03a **[PLAN]** | Valid explicit sim_dt accepted and shared | Station; ordinary `Station(name)` constructed with no simulation argument | Set a valid interval (e.g. `0.5`); prepare a multi-participant network; run 3 transitions; query each participant's view of simulated time and tick | Ordinary station/device use requires no new argument or simulation initialization (baseline §4 anchor 7 unchanged); all participants observe the same tick count and the same accumulated simulated time (k × sim_dt within documented float policy); interval applies uniformly |
-| R3-TC-03b **[PLAN]** (data-driven) | Invalid sim_dt values rejected | Station not yet started | Attempt to set each of: `0`, `-1.0`, `float('nan')`, `float('inf')`, `float('-inf')`, `True`, `False`, `'0.5'`, `None`, `0.5+0j`, a `Decimal`/NumPy-scalar value | Each is explicitly rejected before any run state changes (exact error classes per approved design; message names the invalid value category); after every rejection the station remains usable with a valid interval (PRD line 57: strictly positive finite real duration, booleans rejected) |
+| R3-TC-03b **[PLAN]** (data-driven) | Invalid sim_dt values rejected | Station not yet started | Attempt to set each of: `0`, `-1.0`, `float('nan')`, `float('inf')`, `float('-inf')`, `True`, `False`, `'0.5'`, `None`, `0.5+0j` | Each is explicitly rejected before any run state changes (exact error classes per approved design; message names the invalid value category); after every rejection the station remains usable with a valid interval (PRD line 57: strictly positive finite real duration, booleans rejected) |
+| R3-TC-03b (cont.) **[PLAN]** (data-driven) | Other real-valued scalars (Decimal, NumPy) follow the documented coercion rule | Station not yet started | Attempt to set a positive finite real scalar that is not a built-in `int`/`float`: a `Decimal('0.5')` and a NumPy real scalar (e.g. `np.float64(0.5)`) | The outcome matches the design's documented coercion/representability rule — accepted via documented coercion or explicitly rejected per that rule; this row pins only "rule documented and enforced", not type-strictness beyond R3-AC-03 (same convention as R3-TC-03f); the rule's documentation location is cited by CHK-03-1 |
 | R3-TC-03c **[PLAN]** | Failed ticks do not advance the clock | Prepared network; evolve callback armed to raise at a chosen transition | Run transitions up to and including the failing one; record tick/time before and after the failure | Tick count and simulated time identical before/after the failed attempt (PRD line 61: failed ticks do not advance); original exception identity preserved (cross-ref R3-TC-06a) |
 | R3-TC-03d **[PLAN]** | Mid-run interval change rejected until coordinated reset | Prepared and stepped network | Attempt to change the interval mid-run (each documented setter path); catch; run one more successful transition; then coordinated-reset and change the interval | Every mid-run change attempt is rejected explicitly with clock/network untouched; after reset the change succeeds and the new interval governs subsequent ticks (architecture-plan lines 73–76) |
 | R3-TC-03e **[PLAN]** | Model-dt binding is explicit, validated, never inferred by name | Model declaring a dt input (e.g. input named `dt`); prepared network | Bind the model's declared dt input to the station interval per the documented binding mechanism; run transitions and check the model received k × sim_dt; then attempt a contradictory second driver/write onto the same dt input | Bound model receives values consistent with the shared interval at every tick (no silent disagreement — PRD line 66); a second connection driver or contradictory write onto the bound input is rejected; the binding is by explicit declaration, never by name inference (architecture-plan lines 76–77); binding mechanism and its semantics are documented (CHK-03-1 cites the doc location) |
@@ -183,6 +184,7 @@ absent API today.
 | R3-TC-04c **[PLAN]** | Shared-active-ownership conflict rejected | One mutable object; two stations (or two coordinators) | Enroll the object in station S1's active simulation; attempt enrollment/activation in S2 | Explicit rejection of the second activation; S1's simulation remains coherent and fully functional; multiple mock controllers/readers *within* S1's simulation are permitted (PRD line 84–85: at most one active coordinated simulation per mutable participant) |
 | R3-TC-04d **[PLAN]** | Standalone evolve/reset prevented while coordinated | Prepared connected network | Attempt `obj.evolve_once()` and `obj.reset()` directly on a coordinated participant; also attempt a write onto a *connected* object input via `set_input` | Each attempt is explicitly prevented/rejected rather than silently invalidating snapshots (PRD lines 86–87; architecture-plan line 81); unconnected-input writes may still stage pending values through the controlled boundary (positive sub-assertion); read access remains safe; after reset/detach the standalone operations work again |
 | R3-TC-04e **[PLAN]** | Reentrancy guard | Prepared network with a callback that attempts a control write / second step from inside a tick | Run a transition with the reentrant callback | The nested operation is rejected or deferred per the documented reentrancy rule (architecture-plan line 82: mid-tick/reentrant control writes guarded); no corruption of the in-flight snapshot; original user exception behavior documented |
+| R3-TC-04f **[PLAN]** | Two distinct mock endpoints on one participant are permitted within one active simulation | One mutable object enrolled in S1's active simulation with input `u1` already driven by mock control K1 (per R3-TC-02c); mock control K2 driving input `u2` (different input) and/or mock measurement M1 on the object output | Attach the second mock endpoint K2 (and/or M1) to the enrolled participant; write pending values through both controls; run one transition; read both control readbacks and the measurement | Both mock endpoints are functional within S1's single active simulation: both staged pending writes are delivered across their respective edges at the next boundary, and the measurement shows its delivered sample (PRD line 85: multiple mock controllers/readers *within* one simulation are permitted). Single-driver-per-input (R3-TC-05b) is unaffected — the two controls drive *different* inputs. A participant remains enrolled in exactly one active coordinated simulation (negative half pinned by R3-TC-04c) |
 
 ## R3-AC-05 — valid safe connections
 
@@ -238,7 +240,7 @@ The worked connected example is **excluded** (R3-004 scope).
 | R3-AC-01 — uniform delayed network | R3-TC-01a–01e (automated) |
 | R3-AC-02 — initial state and device timing | R3-TC-02a–02f (automated) |
 | R3-AC-03 — shared clock | R3-TC-03a–03f (automated); CHK-03-1 (binding/numeric-limit documentation citations) |
-| R3-AC-04 — connected removal & shared-active-ownership (remaining clause) | R3-TC-04a–04e (automated); R3-AC-04 regression portion: R3-TC-08a/08c |
+| R3-AC-04 — connected removal & shared-active-ownership (remaining clause) | R3-TC-04a–04f (automated); R3-AC-04 regression portion: R3-TC-08a/08c |
 | R3-AC-05 — valid safe connections | R3-TC-05a–05g (automated) |
 | R3-AC-06 — atomic tick/reset | R3-TC-06a–06e (automated) |
 | R3-AC-08 — compatibility portion | R3-TC-08a–08f (automated); CHK-03-1 (reviewer checklist) |
@@ -272,6 +274,7 @@ CHK-06-1 / R3-001 CHK-08-1 / R3-002 CHK-04-1):
 | Failure mode | Covering cases |
 | --- | --- |
 | Conflicting/invalid sim_dt (zero, negative, NaN, ±inf, bool, non-real) | R3-TC-03b |
+| Real-valued scalar (Decimal/NumPy) sim_dt coercion per documented rule | R3-TC-03b (cont.) |
 | Mid-run sim_dt change | R3-TC-03d |
 | Clock overflow/precision boundaries | R3-TC-03f |
 | Connection cycles (positive: permitted with delay) | R3-TC-01c |
@@ -280,6 +283,7 @@ CHK-06-1 / R3-001 CHK-08-1 / R3-002 CHK-04-1):
 | Reset failure atomicity (mid-staging, factory raise) | R3-TC-06c, 06e |
 | Tick failure atomicity (evolve, observe/validation) | R3-TC-06a, 06b; clock aspect R3-TC-03c |
 | Ownership conflicts (connected removal, dual activation, standalone evolve/reset while coordinated, connected-input write, reentrancy) | R3-TC-04a–04e |
+| Multiple mock endpoints per participant (positive: permitted within one simulation) | R3-TC-04f |
 | Pending-write loss across failed tick | R3-TC-06a (survival asserted) |
 | ndarray aliasing across fan-out/snapshots | R3-TC-05d |
 | Failed tick-zero preparation | R3-TC-02b |
@@ -306,7 +310,7 @@ CHK-06-1 / R3-001 CHK-08-1 / R3-002 CHK-04-1):
    measurements read buffered deliveries, distinct from standalone
    bridge readback (R3-001 semantics — architecture-plan lines 24–27).
 6. **Ownership is this task's scope** (tasks.md R3-003 row; PRD
-   R3-AC-04 remaining clause): R3-TC-04a–04e are new-work cases, not
+   R3-AC-04 remaining clause): R3-TC-04a–04f are new-work cases, not
    regression; the `rm_object` forward-looking docstring (station.py
    lines 205–208) will be reconciled with the delivered behavior and
    the citation updated in the results document.
@@ -325,3 +329,15 @@ CHK-06-1 / R3-001 CHK-08-1 / R3-002 CHK-04-1):
   against the characterization baseline recorded the same day in
   `r3-003-baseline.md` (branch `codex/r3-003-coordination`, head
   `72379f4`).
+- **2026-10-11 — Revision 2** (tester: sw-mike): four minor fixes from
+  `../reviews/r3-003-test-plan-review.md` (reviewer sw-tom at `88a4e5b`):
+  (1) R3-TC-03b split — explicit rejection now pinned only for
+  non-positive/non-finite/non-real/bool values; Decimal/NumPy real
+  scalars defer to the design's documented coercion rule via CHK-03-1
+  (new second data row "03b (cont.)", R3-TC-03f convention);
+  (2) new R3-TC-04f positive two-mock-endpoint case (PRD line 85
+  positive half); (3) R3-TC-01d now also reverses mock-endpoint
+  registration order across the two runs; (4) planned-test-files table
+  ranges corrected (02a–02f, 04a–04e; now 04a–04f with the new case).
+  Total automated cases: 40 → 41 (01a–e 5 + 02a–f 6 + 03a–f 6 +
+  04a–f 6 + 05a–g 7 + 06a–e 5 + 08a–f 6).
