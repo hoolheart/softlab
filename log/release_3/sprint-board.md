@@ -5,7 +5,7 @@ Updated: 2026-10-07 | Integration branch: dev | Execution: **Mode D confirmed by
 | ID | Scope | Owner | Phase | Started | Expected completion | Blocker | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | R3-001 | Scoped Release 2 corrections and closure reconciliation | sw-mike (testing) | Done | 2026-10-06 | 2026-10-07 | — | `6dc4d36` |
-| R3-002 | Object builders and station membership | sw-tom (implementation) | Implementation | 2026-10-07 | 2026-10-09 | — | — |
+| R3-002 | Object builders and station membership | sw-celeste (review) | Code review | 2026-10-07 | 2026-10-09 | — | — |
 | R3-003 | Shared clock, delayed graph, mock signals and atomic coordination | Unassigned | Backlog | — | — | R3-002 dev integration | — |
 | R3-004 | Connected guide/example and final delivery evidence | Unassigned | Backlog | — | — | R3-003 dev integration | — |
 
@@ -74,6 +74,12 @@ Progress:
 - ✅ Detailed design `59c97e7`; architect review APPROVED `6973d9b` (rulings:
   add_device guard / device-only snapshot / RuntimeError all ACCEPT); 1 minor
   issue closed by sw-celeste `fefe992`. Implementation authorized when resumed.
+- ✅ Implementation complete (TDD red/green: `1ff6d6b` red → `90282ba`/`06cd8b3`
+  green): builder registry `90282ba`, station membership `06cd8b3`, fixture
+  fixes `a4b717a`, device-side guard coverage `ceec02f` (companion ruling
+  disposition: implemented, passing). Self-test: 165 tests OK, zero warnings
+  under `-W error::Warning`, compile/import clean. No deviations.
+- ▶ Independent code review (sw-celeste) in progress next.
 
 R3-001 scope (from tasks.md): correct Release 2 standalone bridge readback,
 malformed callback-key errors and reset claims; reconcile closure records
