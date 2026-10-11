@@ -1,7 +1,5 @@
 """Define ``Station`` class and its corresponding functions"""
 
-import numbers
-import math
 from typing import(
     Any,
     Dict,
@@ -160,25 +158,14 @@ class Station(Delegated):
 
         Side-effects: on success only, replaces the stored interval.
         """
-        if type(value) is bool:
-            raise TypeError(
-                'sim_dt must be a positive finite real number; '
-                'booleans are rejected')
-        if not isinstance(value, numbers.Real):
-            raise TypeError(
-                f'sim_dt must be a positive finite real number, got '
-                f'{type(value).__name__}')
-        if not math.isfinite(float(value)):
-            raise ValueError(f'sim_dt must be finite, got {value!r}')
-        if float(value) <= 0.0:
-            raise ValueError(f'sim_dt must be positive, got {value!r}')
+        interval = _validate_interval(value)  # documented rule, D6
         coordinator = self._coordinator
         if coordinator is not None and \
                 (coordinator.prepared or coordinator._busy):
             raise RuntimeError(
                 'sim_dt is fixed while the coordinated simulation is '
                 'prepared or mid-operation; reset it first')
-        self._sim_dt = _validate_interval(value)
+        self._sim_dt = interval
 
     @property
     def coordinator(self) -> Optional[Any]:
