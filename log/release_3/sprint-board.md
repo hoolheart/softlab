@@ -1,12 +1,12 @@
 # Sprint board — Release 3 execution
 
-Updated: 2026-10-07 | Integration branch: dev | Execution: **Mode D confirmed by user — all four tasks, strict serial**
+Updated: 2026-10-11 | Integration branch: dev | Execution: **PAUSED by user during R3-003 test-plan review cycle**
 
 | ID | Scope | Owner | Phase | Started | Expected completion | Blocker | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | R3-001 | Scoped Release 2 corrections and closure reconciliation | sw-mike (testing) | Done | 2026-10-06 | 2026-10-07 | — | `6dc4d36` |
 | R3-002 | Object builders and station membership | sw-mike (testing) | Done | 2026-10-07 | 2026-10-11 | — | `0bd97d5` |
-| R3-003 | Shared clock, delayed graph, mock signals and atomic coordination | sw-mike (test plan) | Test plan / characterization | 2026-10-11 | 2026-10-16 | — | — |
+| R3-003 | Shared clock, delayed graph, mock signals and atomic coordination | sw-tom (review re-confirm, pending) | Test plan review | 2026-10-11 | 2026-10-16 | USER PAUSE 2026-10-11 | — |
 | R3-004 | Connected guide/example and final delivery evidence | Unassigned | Backlog | — | — | R3-003 dev integration | — |
 
 ## Execution authorization
@@ -97,6 +97,12 @@ all. Task branch `codex/r3-003-coordination` from dev `0bd97d5`. Design must
 prove snapshot publication, ownership/reentrancy, safe detach, model-dt binding
 and numeric clock limits before implementation (required design gates per
 tasks.md).
+
+Progress:
+- ✅ Test plan + baseline `6fcdb4e` (41 automated cases after review fixes,
+  covering R3-AC-01–06 + R3-AC-08 compatibility; coordinated capability
+  confirmed absent on baseline); review CHANGES-REQUESTED `88a4e5b` (4 minor);
+  closed by sw-mike `9ee0394`. Awaiting reviewer (sw-tom) re-confirmation.
 
 R3-001 scope (from tasks.md): correct Release 2 standalone bridge readback,
 malformed callback-key errors and reset claims; reconcile closure records
