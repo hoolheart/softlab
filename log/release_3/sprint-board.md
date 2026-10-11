@@ -6,7 +6,7 @@ Updated: 2026-10-11 | Integration branch: dev | Execution: **Mode D confirmed by
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | R3-001 | Scoped Release 2 corrections and closure reconciliation | sw-mike (testing) | Done | 2026-10-06 | 2026-10-07 | — | `6dc4d36` |
 | R3-002 | Object builders and station membership | sw-mike (testing) | Done | 2026-10-07 | 2026-10-11 | — | `0bd97d5` |
-| R3-003 | Shared clock, delayed graph, mock signals and atomic coordination | sw-celeste (design) | Detailed design | 2026-10-11 | 2026-10-16 | — | — |
+| R3-003 | Shared clock, delayed graph, mock signals and atomic coordination | sw-tom (implementation) | Implementation | 2026-10-11 | 2026-10-16 | — | — |
 | R3-004 | Connected guide/example and final delivery evidence | Unassigned | Backlog | — | — | R3-003 dev integration | — |
 
 ## Execution authorization
@@ -103,7 +103,11 @@ Progress:
   covering R3-AC-01–06 + R3-AC-08 compatibility; coordinated capability
   confirmed absent on baseline); review CHANGES-REQUESTED `88a4e5b` (4 minor);
   closed by sw-mike `9ee0394`; re-confirmed APPROVED `8b34583`.
-- ▶ Detailed design (sw-celeste) in progress next.
+- ✅ Detailed design `92eaa62` (1267 lines; 5 CHK-03-1 proofs); architect
+  review APPROVED `e8d9841` (all 6 rulings ACCEPT; proofs withstood attack;
+  golden traces re-derived exactly); 4 minor issues closed `f5d8680`
+  (sim_dt `_busy` guard now normative; endpoint resolution rule explicit).
+- ▶ Implementation (sw-tom) in progress next.
 
 R3-001 scope (from tasks.md): correct Release 2 standalone bridge readback,
 malformed callback-key errors and reset claims; reconcile closure records
