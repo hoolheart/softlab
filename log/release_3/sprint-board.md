@@ -1,11 +1,11 @@
 # Sprint board — Release 3 execution
 
-Updated: 2026-10-06 | Integration branch: dev | Execution: **Mode D confirmed by user — all four tasks, strict serial**
+Updated: 2026-10-07 | Integration branch: dev | Execution: **Mode D confirmed by user — all four tasks, strict serial**
 
 | ID | Scope | Owner | Phase | Started | Expected completion | Blocker | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| R3-001 | Scoped Release 2 corrections and closure reconciliation | sw-mike (testing) | Testing | 2026-10-06 | 2026-10-09 | — | — |
-| R3-002 | Object builders and station membership | Unassigned | Backlog | — | — | R3-001 dev integration | — |
+| R3-001 | Scoped Release 2 corrections and closure reconciliation | sw-mike (testing) | Done | 2026-10-06 | 2026-10-07 | — | `6dc4d36` |
+| R3-002 | Object builders and station membership | sw-mike (testing) | Testing | 2026-10-07 | 2026-10-09 | — | — |
 | R3-003 | Shared clock, delayed graph, mock signals and atomic coordination | Unassigned | Backlog | — | — | R3-002 dev integration | — |
 | R3-004 | Connected guide/example and final delivery evidence | Unassigned | Backlog | — | — | R3-003 dev integration | — |
 
@@ -55,6 +55,33 @@ Progress:
   unchanged) — recorded in `7657eda`.
 - ✅ Independent code review APPROVED, zero issues, `90d5bca` (CHK-08-1
   scope checklist discharged by the review).
+- ✅ Testing PASS (21/21 cases), `79cdec8`; principle inspection PASS,
+  `ba61b52`; candidate CI 37590504447 SUCCESS.
+- ✅ Integrated into `dev` as `6dc4d36`; dev CI 37590725020 SUCCESS;
+  task branch deleted. R3-001 complete.
+
+## Active task: R3-002
+
+Object builder/registry and station object membership, explicit lookup,
+naming, build failure safety and independent instances (membership/builder
+portion of R3-AC-04; R3-AC-08). Task branch `codex/r3-002-builders` from dev
+`6dc4d36`. Pipeline identical to R3-001.
+
+Progress:
+- ✅ Test plan + baseline `89d6f62` (24 cases; 18 new-capability cases
+  vacuous-fail on baseline as required); review CHANGES-REQUESTED `fa40165`
+  (2 minor); closed by sw-mike `6b34844`; re-confirmed APPROVED `5a982d5`.
+- ✅ Detailed design `59c97e7`; architect review APPROVED `6973d9b` (rulings:
+  add_device guard / device-only snapshot / RuntimeError all ACCEPT); 1 minor
+  issue closed by sw-celeste `fefe992`. Implementation authorized when resumed.
+- ✅ Implementation complete (TDD red/green: `1ff6d6b` red → `90282ba`/`06cd8b3`
+  green): builder registry `90282ba`, station membership `06cd8b3`, fixture
+  fixes `a4b717a`, device-side guard coverage `ceec02f` (companion ruling
+  disposition: implemented, passing). Self-test: 165 tests OK, zero warnings
+  under `-W error::Warning`, compile/import clean. No deviations.
+- ✅ Independent code review APPROVED, zero issues, `8d20542` (5 targeted
+  production mutations all killed by the designed tests; CHK-04-1 discharged,
+  docstring citation station.py:234).
 - ▶ Testing (sw-mike) in progress next.
 
 R3-001 scope (from tasks.md): correct Release 2 standalone bridge readback,
