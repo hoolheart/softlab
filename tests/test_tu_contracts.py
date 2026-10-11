@@ -193,6 +193,24 @@ class DeviceContracts(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 station.build_device("missing", "none")
 
+    def test_station_shared_namespace_rejects_device_shadowing_object(self):
+        # companion ruling to R3-TC-04b: adding a device whose name is
+        # already held by an object member is rejected (R3-002 D2 guard)
+        from softlab.tu.simulation import SimulatedObject
+
+        station = Station("test")
+        obj = SimulatedObject(
+            "shared",
+            {"u": 0.0}, {"x": 0.0}, ["y"],
+            evolve=lambda u, x: {"x": x["x"] + u["u"]},
+            observe=lambda x: {"y": 2.0 * x["x"]},
+        )
+        station.add_object(obj)
+        with self.assertRaises(ValueError):
+            station.add_device(Device("shared"))
+        self.assertIsNone(station.device("shared"))
+        self.assertIs(station.object("shared"), obj)
+
 
 class VisaContracts(unittest.TestCase):
     def setUp(self):
