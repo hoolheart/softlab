@@ -9,12 +9,20 @@ tasks.md R3-003 row + design-gate requirements (lines 41–44),
 `log/release_3/architecture-plan.md`, and the cited code in
 `softlab/tu/simulation/object.py`, `softlab/tu/simulation/builder.py`,
 `softlab/tu/station/station.py`, `tests/test_tu_simulation.py`,
-`tests/test_tu_station_objects.py`)
+`tests/test_tu_station_objects.py`).
+Re-confirmation input: same test plan, Revision 2 at `2c3d486`, diffed
+against Revision 1 (`6fcdb4e`) — the delta contains exactly the four
+issue fixes and no other content change (verified line-by-line from
+`git diff 6fcdb4e 9ee0394`).
 
-**Verdict: CHANGES-REQUESTED** — four minor issues, none structural. The
+**Verdict: APPROVED** (re-confirmed 2026-10-11, at `2c3d486`) — issues 1–4
+CLOSED; see the closure log and re-confirmation note below. Original
+review verdict was CHANGES-REQUESTED — four minor issues, none
+structural. The
 criterion coverage, failure-mode matrix, baseline consistency, scope
-containment and design-gate mapping are all sound; every one of the 40
-automated cases is implementable as written once the capability exists.
+containment and design-gate mapping are all sound; every one of the
+(then) 40 automated cases was implementable as written once the
+capability exists.
 The issues are: one over-constrained data row (R3-TC-03b pins rejection
 of real-valued scalar types the AC text would permit), two under-tested
 permissions (the positive half of PRD line 85; device/endpoint
@@ -116,7 +124,17 @@ requires re-baselining or scope change.
   as a bounded decision requiring PO/architect sign-off, since it goes
   beyond the AC text.
 - **Owner:** sw-mike (tester).
-- **Status: OPEN**.
+- **Status: CLOSED** (2026-10-11, Revision 2) — re-confirmed by
+  reviewer: R3-TC-03b now pins explicit rejection only for `0`,
+  `-1.0`, `nan`, `±inf`, `True`/`False`, `'0.5'`, `None`, `0.5+0j`
+  (all genuinely non-positive/non-finite/non-real/bool per R3-AC-03);
+  the new "R3-TC-03b (cont.)" row pins only "matches the design's
+  documented coercion/representability rule — documented and enforced"
+  for `Decimal('0.5')`/`np.float64(0.5)`, with the documentation
+  location cited via CHK-03-1 under the same convention R3-TC-03f
+  already uses. No type-strictness beyond the AC and architecture plan
+  is pinned. Failure-mode table gained the matching row. Exact change
+  requested, implemented verbatim.
 
 ### 2. [minor] Positive half of PRD line 85 — multiple mock controllers/readers within one simulation is asserted but never exercised
 
@@ -140,7 +158,18 @@ requires re-baselining or scope change.
   its delivered sample). Single-driver-per-input (R3-TC-05b) is
   unaffected: the two controls drive *different* inputs.
 - **Owner:** sw-mike (tester).
-- **Status: OPEN**.
+- **Status: CLOSED** (2026-10-11, Revision 2) — re-confirmed by
+  reviewer: new case R3-TC-04f enrolls one participant in S1's active
+  simulation with two distinct mock endpoints (controls K1/K2 driving
+  *different* inputs, optionally plus measurement M1), writes pending
+  values through both controls, runs one transition, and asserts both
+  staged writes delivered across their respective edges plus the
+  measurement's delivered sample — with PRD line 85 cited, the
+  negative half cross-referenced to R3-TC-04c, and R3-TC-05b's
+  single-driver-per-input rule explicitly unaffected. The case is
+  present in the R3-AC-04 traceability row ("04a–04f") and in the
+  failure-mode table as the positive "multiple mock endpoints per
+  participant" row. Exactly the required positive case.
 
 ### 3. [minor] R3-TC-01d varies object registration order but not mock-endpoint (device-side) registration order
 
@@ -162,7 +191,18 @@ requires re-baselining or scope change.
   justification in the plan for why endpoint registration order cannot
   influence committed results.
 - **Owner:** sw-mike (tester).
-- **Status: OPEN**.
+- **Status: CLOSED** (2026-10-11, Revision 2) — re-confirmed by
+  reviewer: R3-TC-01d now states the two determinism runs ALSO
+  register the mock control/measurement endpoints in reversed order
+  (measurement-before-control vs control-before-measurement),
+  interleaved with the object builds, and the expected result now
+  pins bit-identity "across both orders, both endpoint-registration
+  orders and across the inspection interleaving", explicitly quoting
+  AC-01's "regardless of object/device registration or iteration
+  order" so endpoint order falls inside the AC's "device registration"
+  wording. The bit-identical expectation is unchanged; this is an
+  extension, not a weakening. AC-01 coverage now exercises the
+  asserted-but-unexercised permission directly.
 
 ### 4. [minor] Planned-test-files table mislabels two case ranges (02a–02e, 04a–04c) — tally reads 37 instead of 40
 
@@ -180,7 +220,15 @@ requires re-baselining or scope change.
   03a–03f, 04a–04e, 05a–05g, 06a–06e" (31 → 34 coordination cases,
   40 automated including R3-TC-08a–08f); no other content changes.
 - **Owner:** sw-mike (tester).
-- **Status: OPEN**.
+- **Status: CLOSED** (2026-10-11, Revision 2) — re-confirmed by
+  reviewer: the planned-test-files row now reads "R3-TC-01a–01e,
+  02a–02f, 03a–03f, 04a–04f, 05a–05g, 06a–06e" = 5+6+6+6+7+5 = 35
+  coordination cases; with R3-TC-08a–08f (6) the automated total is
+  **41**, matching the revision-history tally (40 → 41 with R3-TC-04f)
+  and the per-section tables and traceability summary (01a–01e,
+  02a–02f, 03a–03f, 04a–04f, 05a–05g, 06a–06e, 08a–08f). The files
+  table, per-section tables, traceability summary and failure-mode
+  table are now mutually consistent.
 
 ## Answers to the five review points
 
@@ -467,7 +515,53 @@ row reads 04a–04f and the plan's tally is 41 automated — the per-section
 tables, traceability summary and files table are now mutually consistent.
 
 Commit: see git log entry `docs(log): close r3-003 test plan review
-issues` on `codex/r3-003-coordination` (this commit). Verdict unchanged:
-the CHANGES-REQUESTED issues 1–4 are closed by tester-side rewordings;
-the plan (now Revision 2) is ready for the detailed-design gate and
-implementation per the "Implementability confirmation" section.
+issues` (`9ee0394`) on `codex/r3-003-coordination`. Verdict at that
+point: the CHANGES-REQUESTED issues 1–4 were closed by tester-side
+rewordings; the plan (now Revision 2) is ready for the
+detailed-design gate and implementation per the "Implementability
+confirmation" section.
+
+### 2026-10-11 — Re-confirmation: verdict APPROVED (sw-tom, at `2c3d486`)
+
+I re-verified each issue against Revision 2 directly, independently of
+the closure log, by reading the full Revision 2 plan and diffing it
+against Revision 1 (`git diff 6fcdb4e 9ee0394`):
+
+- **Issue 1 — CLOSED, confirmed.** R3-TC-03b pins explicit rejection
+  only for `0`, `-1.0`, `nan`, `±inf`, `True`/`False`, `'0.5'`,
+  `None`, `0.5+0j` (every one genuinely non-positive, non-finite,
+  non-real or bool per R3-AC-03); the "03b (cont.)" row defers
+  `Decimal('0.5')`/`np.float64(0.5)` to the design's documented
+  coercion/representability rule with the location cited via CHK-03-1,
+  exactly the R3-TC-03f convention the issue asked for. Failure-mode
+  table row present. No residual over-constraint.
+- **Issue 2 — CLOSED, confirmed.** R3-TC-04f exercises the positive
+  two-endpoint scenario (two controls on different inputs, optional
+  measurement; both pending writes delivered at the next boundary;
+  measurement shows its sample; 05b unaffected; 04c negative half
+  cross-referenced). Present in the R3-AC-04 traceability row and the
+  failure-mode table. The asserted-but-unexercised permission of PRD
+  line 85 is now exercised.
+- **Issue 3 — CLOSED, confirmed.** R3-TC-01d reverses mock-endpoint
+  registration order (measurement-before-control vs
+  control-before-measurement) across the two determinism runs,
+  interleaved with the object builds; the bit-identical expectation is
+  unchanged and now explicitly covers endpoint order under AC-01's
+  "object/device registration" wording.
+- **Issue 4 — CLOSED, confirmed.** Files-table ranges corrected to
+  02a–02f and 04a–04f (now "01a–01e, 02a–02f, 03a–03f, 04a–04f,
+  05a–05g, 06a–06e"); tally 5+6+6+6+7+5+6 = **41 automated**,
+  consistent across files table, per-section tables, traceability
+  summary, risk note 6 (04a–04f) and the revision-history tally.
+- **No weakening.** The Revision 1→2 delta contains only these four
+  fixes: no existing case lost an assertion (03b kept every
+  AC-grounded rejection; 01d was extended, not relaxed; 04c and all
+  other cases are byte-identical), and the traceability/failure-mode
+  tables gained rows without contradicting any existing row.
+
+**Final verdict: APPROVED.** The plan (Revision 2, 41 automated cases
++ CHK-03-1 manual checks) is confirmed implementable per the
+"Implementability confirmation" section and is ready for the
+detailed-design gate and implementation. The gate sequence stands:
+detailed design (with the five CHK-03-1 proofs) → implementation →
+independent review → testing.
