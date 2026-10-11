@@ -83,10 +83,14 @@ structural: there is no rollback path because no mutation precedes
 publication.
 
 Delay semantics (R3-AC-01) fall out of a single data structure — the
-**committed source snapshot** `S_k`, mapping each edge source to the value
-committed at boundary `k`. A transition `k→k+1` reads exclusively from
-`S_k` (plus the frozen pending control values, which are boundary-`k`
-data by definition) and writes `S_{k+1}` only at publication. No code path
+**committed source snapshot** `S_k`, mapping **every enrolled
+participant's output Endpoint** to the value committed at boundary `k`.
+The cardinality is fixed and stated once here: `S_k` holds **all
+per-participant outputs** — edge sources or not — matching the D9/D10
+publication text and the `_snapshot` row of the data-structure table. A
+transition `k→k+1` reads exclusively from `S_k` (plus the frozen pending
+control values, which are boundary-`k` data by definition) and writes
+`S_{k+1}` only at publication. No code path
 can deliver a same-tick value because the candidate outputs do not exist
 in any readable place until publication replaces the snapshot atomically.
 
@@ -172,6 +176,17 @@ Rationale:
   participant instance and stores both the `Endpoint` key and the resolved
   references in the edge record — identity survives anything except
   explicit `disconnect` + detach.
+- **Resolution rule (explicit, base rule of the design)**: an `Endpoint`
+  with `signal=None` resolves in the **mock-endpoint namespace** (the
+  enrolled `MockControl`/`MockMeasurement` of the same name); an
+  `Endpoint` with a `str` signal resolves to an **enrolled object's
+  declared signal** (input or output of that name). The two namespaces
+  are disjoint: `(name, None)` and `(name, 'u')` are distinct keys with
+  disjoint resolution targets. Consequently a mock endpoint **may share
+  a name with an enrolled object** — the sharing is permitted by design
+  and disambiguated by signal presence (the simpler disposition;
+  rejecting the collision at `add_control`/`add_measurement` would add a
+  cross-namespace check for zero requirement — entity beyond necessity).
 
 ### D4 — Ownership: claimed at enrollment, released only at explicit withdraw
 
@@ -269,14 +284,22 @@ RUNNING→STOPPED transition.
    `value <= 0.0` → `ValueError` (zero/negative). `5e-324` (smallest
    positive subnormal) is positive and finite → accepted; the largest
    finite double is accepted (overflow then surfaces at tick time — D7).
-5. If `self._coordinator is not None and self._coordinator.prepared` →
-   `RuntimeError` (mid-run change rejected until reset, R3-TC-03d).
+5. If `self._coordinator is not None and
+   (self._coordinator.prepared or self._coordinator._busy)` →
+   `RuntimeError` (mid-run change rejected until reset, R3-TC-03d). The
+   `_busy` half is **required, not optional**: it closes the
+   callback-reachable window during `prepare()` and STOPPED-state
+   `reset()` (both run user code with `prepared` still False), so no
+   interval change can land mid-operation (architect review Issue 1,
+   preferred resolution adopted as normative design behavior; code
+   review verifies this line).
 
 `prepare()` requires `station.sim_dt is not None` (else `RuntimeError`)
 and **re-validates the stored value** with the same rule (defense against
 private-slot circumvention only). The coordinator reads
 `station.sim_dt` live at each step; because step 5 forbids changes while
-RUNNING, the interval observed during a run is constant — no caching, no
+RUNNING **or while any coordinator operation is in flight** (`_busy`),
+the interval observed during a run is constant — no caching, no
 staleness window.
 
 ### D7 — Clock representation and numeric limits (proof P5 below)
@@ -356,7 +379,9 @@ Phase 4 — publication (no user code, unconditional sequence):
    (R3-TC-05c's connection-time path; tick-time incompatibilities, e.g.
    output shape changing between ticks, fail the tick instead — both
    documented).
-4. Publication: `S_0` := tick-zero outputs; `tick=0`, `sim_time=0.0`;
+4. Publication: `S_0` := tick-zero outputs (full per-participant output
+   dicts — the fixed snapshot cardinality stated in the Overview);
+   `tick=0`, `sim_time=0.0`;
    state := RUNNING. Measurements are **not** delivered to (their
    constructor-declared initial sample remains the tick-zero read —
    R3-TC-02d; architecture-plan line 60: stage initial mock samples
@@ -520,7 +545,11 @@ are rejected.
    `rm_measurement`) checks `self._busy` first and raises `RuntimeError`
    if set; the flag is held for the whole operation and cleared in
    `finally`. `MockControl.write` consults its coordinator's `_busy` when
-   enrolled. A callback attempting a nested `step()` or a control write
+   enrolled, and the station `sim_dt` setter likewise rejects when the
+   coordinator is `_busy` (D6 step 5) — a callback-reached interval
+   change during `prepare()` or STOPPED-state `reset()` is rejected, so
+   no unspecified behavior window remains. A callback attempting a
+   nested `step()` or a control write
    mid-tick is therefore rejected; if the callback then propagates, that
    exception is the tick failure with full atomicity (P1-4). The
    existing object contract ("callbacks must not re-enter the same
@@ -556,10 +585,15 @@ changes are atomic.
    (`rm_control`/`rm_measurement`/`withdraw` reject while any edge or
    binding names the target; `rm_object` rejects while owned). The
    invariant "no edge references a non-enrolled participant or
-   non-enrolled endpoint" is established at `connect` (resolution fails
-   with `KeyError` otherwise) and preserved because removal implies
-   prior reference removal. Induction over the only two mutating
-   operations closes the proof. ∎ (R3-TC-04a/04b)
+   non-enrolled endpoint" is **established** at `connect` (resolution
+   fails with `KeyError` otherwise) and **preserved** across every
+   graph-mutating operation: `disconnect`, `unbind_interval`,
+   `rm_control`/`rm_measurement` and `withdraw` remove references or are
+   gated on reference absence, the station-side `rm_object` is gated on
+   the claim, and the non-removing operations (`connect`,
+   `bind_interval`, `enroll`, `add_control`/`add_measurement`) only add
+   edges/bindings between resolved, enrolled parties. Induction over
+   these establish/preserve operations closes the proof. ∎ (R3-TC-04a/04b)
 3. *Stopped boundary*: all of the above require STOPPED; mid-run
    topology mutation is rejected uniformly (R3-TC-05f).
 4. *Unconnected inputs*: the coordinator writes an object's input store
@@ -597,8 +631,9 @@ rejected; mid-run changes fail until reset.
    binding is by explicit `bind_interval` call only — a model declaring
    an input literally named `dt` without binding receives no special
    treatment whatsoever. ∎ (R3-TC-03e)
-4. *Fixed mid-run*: the setter rejects while `coordinator.prepared`;
-   reset returns to STOPPED where the change succeeds and governs
+4. *Fixed mid-run*: the setter rejects while `coordinator.prepared` **or
+   `coordinator._busy`** (D6 step 5); reset returns to STOPPED with
+   `_busy` cleared, where the change succeeds and governs
    subsequent ticks. ∎ (R3-TC-03d)
 
 ### P5 — Numeric clock limits (gate 5; R3-AC-03)
@@ -929,7 +964,12 @@ reentrancy — R3-TC-04e):
 | `rm_control` / `rm_measurement` | `name: str` | `RuntimeError` referenced by an edge (D12); missing name → lenient `None` return (station `rm_*` convention) | Removes and clears the link; returns the endpoint or `None` |
 
 **Connections** (STOPPED only; individually atomic — validate fully,
-mutate once; **no batch API by design**, P3-1):
+mutate once; **no batch API by design**, P3-1). Resolution rule (D3,
+stated for the contract): a source/dest `Endpoint` with `signal=None`
+resolves in the mock-endpoint namespace; one with a `str` signal
+resolves to an enrolled object's declared signal. The namespaces are
+disjoint, so mock/object name sharing is permitted and unambiguous —
+disambiguated by signal presence.
 
 | Method | Parameters | Errors | Effect |
 | ------ | ---------- | ------ | ------ |
@@ -997,7 +1037,7 @@ class Station(Delegated):
 | Member | Description |
 | ------ | ----------- |
 | `sim_dt` (property) | `Optional[float]`; `None` until set. Ordinary station/device use never requires it (R3-TC-03a anchor). |
-| `sim_dt` (setter) | Applies the D6 rule in order: bool → `TypeError`; non-`numbers.Real` → `TypeError`; `float()` coercion; non-finite → `ValueError`; `<= 0` → `ValueError`; coordinator prepared → `RuntimeError`. Every rejection leaves the stored interval unchanged and the station fully usable. |
+| `sim_dt` (setter) | Applies the D6 rule in order: bool → `TypeError`; non-`numbers.Real` → `TypeError`; `float()` coercion; non-finite → `ValueError`; `<= 0` → `ValueError`; coordinator prepared **or busy** → `RuntimeError` (the `_busy` half is required — D6 step 5). Every rejection leaves the stored interval unchanged and the station fully usable. |
 | `coordinator` (property) | Read-only access to the associated coordinator, `None` if none. Never creates one (inspection purity, R3-TC-02a/02f). |
 | `rm_object` (guard) | New first step: resolve the member; if present and `obj._active_coordinator is not None` → `RuntimeError` naming the active coordination (R3-TC-04a). Missing names keep lenient `None` semantics; unclaimed objects pop exactly as before. The R3-002 forward-looking docstring is replaced by the delivered contract (test-plan risk note 6: citation updated in the results document). |
 
@@ -1018,7 +1058,7 @@ business).
 | `_edges` | `Dict[Endpoint, Endpoint]` | Destination → source | Single-driver by key uniqueness; destinations never interval-bound inputs |
 | `_resolved` | `Dict[Endpoint, Tuple[Any, Optional[str]]]` | Destination → resolved `(source_obj, signal)` references | Same keys as `_edges`; references resolved at `connect` (D3) |
 | `_bindings` | `Set[Tuple[str, str]]` | `(object_name, input_name)` interval bindings | Inputs never edge destinations |
-| `_snapshot` | `Dict[Endpoint, Any]` | Committed source snapshot `S_k` (object outputs by source Endpoint) | Written only at publication; values are validated copies; control values are NOT stored here — read fresh from pending stores each transition (D8) |
+| `_snapshot` | `Dict[Endpoint, Any]` | Committed source snapshot `S_k`: **all enrolled participants' output Endpoints** (full per-participant outputs — the fixed cardinality, whether or not the output currently sources an edge) → validated committed values | Written only at publication (wholesale rebuild per D8/D9/D10); values are validated copies; control values are NOT stored here — read fresh from pending stores each transition (D8) |
 | `_tick` / `_sim_time` | `int` / `float` | Committed clock | Written only at publication; `sim_time == float(_tick) * sim_dt` |
 | `_prepared` / `_started` / `_busy` | `bool` | Lifecycle (D5) | `_started` once True stays True (reset keeps clock readable) |
 
@@ -1155,7 +1195,8 @@ over manual type lists precisely because it makes the coercion rule
   only after the precondition checks that must raise their own
   specific errors (document the check order in each docstring).
 - Docstrings **must** carry, for CHK-03-1 citation: the sim_dt
-  coercion/representability rule (setter), the clock multiplication
+  coercion/representability rule **and the prepared/busy rejection**
+  (setter), the clock multiplication
   policy and overflow boundary (`step`/`sim_time`), the model-dt binding
   semantics (`bind_interval`), the tick-zero measurement initial-sample
   rule (`MockMeasurement.__init__`), the reentrancy rule (class
@@ -1263,5 +1304,55 @@ architecture rule (lines 85–86) and is exercised indirectly by
 ## Design Review
 
 - **Reviewer**: sw-jerry
-- **Review Date**: [to be filled after review]
-- **Status**: PENDING
+- **Review Date**: 2026-10-11
+- **Status**: APPROVED
+- **Review record**:
+  [r3-003-design-review.md](../reviews/r3-003-design-review.md) — verdict
+  **APPROVED** at review head `e8d9841` (design reviewed at `92eaa62`);
+  issue closure committed as `docs(log): close r3-003 design review
+  issues` on `codex/r3-003-coordination`.
+- **Architect rulings on the six open questions** (all **ACCEPT**):
+  1. Reset lands STOPPED (Q-a, D5) — ACCEPT; forced by R3-TC-05f/06d.
+  2. Ownership claimed at `enroll`, not `prepare` (Q-b, D4) — ACCEPT,
+     and ruled load-bearing for the P3 no-dangling proof.
+  3. `Decimal` rejected, NumPy real scalars coerced (Q-c, D6) — ACCEPT;
+     verified live on CPython 3.13.15.
+  4. Mock endpoints are coordinator-owned ports, not station devices
+     (Q-d, D2) — ACCEPT.
+  5. Clock overflow raises `OverflowError` as a failed tick (Q-e, D7) —
+     ACCEPT; one mechanism with AC-06 atomicity.
+  6. One coordinator per station, permanent (Q-f, D1) — ACCEPT.
+- **Review issues — all closed by sw-celeste, 2026-10-11**:
+  1. `sim_dt` setter `_busy` window — RESOLVED: the preferred resolution
+     is adopted as a **required implementation behavior**; D6 setter
+     step 5, P2-2, P4-4, the Station interface row and the docstring
+     citation list now specify rejection when the coordinator is
+     `prepared` **or** `_busy`.
+  2. Endpoint resolution rule implicit — RESOLVED: the rule
+     (`signal=None` → mock-endpoint namespace; `str` signal → enrolled
+     object's declared signal; disjoint namespaces) is stated explicitly
+     in D3 and in the `connect` contract; mock/object name sharing is
+     documented as permitted, disambiguated by signal presence.
+  3. P3-2 editorial miscount — RESOLVED: the induction now names the
+     establish operation (`connect`) and the preserve operations
+     explicitly.
+  4. Snapshot cardinality wording tension — RESOLVED: one cardinality
+     stated — `_snapshot` holds **all enrolled participants' output
+     Endpoints** (full per-participant outputs), matching D9/D10;
+     Overview, D9 step 4 and the data-structure table updated.
+- **Recorded hand-offs**:
+  - **sw-tom** implements this design as amended. In particular the
+    `sim_dt` setter `_busy` guard (Issue 1's preferred resolution) is a
+    **required implementation behavior**, verifiable at code review
+    against D6 step 5.
+  - **sw-mike** records the R3-TC-02b injection-point rebind disposition
+    in the test-results document: factories do not fire at `prepare()`
+    (D9 step 2 — factories fire at construction/reset only); the 02b
+    injection point is the tick-zero `observe` evaluation (test-plan
+    risk note 1 rebind). If the Issue-1 guard is exercised, sw-mike may
+    optionally extend R3-TC-04e's reentrant callback to attempt an
+    interval change — no test-plan revision required.
+  - **sw-camille/sw-prod** carry the review's scope note into R3-004
+    planning: the additive, inert simulation description node for
+    `snapshot()`/`describe()` is deferred to R3-004 and must be
+    explicitly picked up or consciously dropped there.

@@ -589,3 +589,45 @@ recorded; sw-mike should record the R3-TC-02b injection-point rebind
 (and, if Issue 1's guard is adopted, the optional R3-TC-04e extension
 disposition) in the results document; sw-camille/sw-prod should carry
 the simulation-description-node scope note into R3-004 planning.
+
+## Issue closure — 2026-10-11 (sw-celeste)
+
+All four minor issues are closed in the design document, committed as
+`docs(log): close r3-003 design review issues` on
+`codex/r3-003-coordination` (successor of review head `e8d9841`). The
+verdict of this review (**APPROVED**) is untouched.
+
+1. **[minor] `sim_dt` setter `_busy` window — RESOLVED.** The preferred
+   resolution is adopted and made a required implementation behavior:
+   D6 setter step 5 now rejects when the coordinator is `prepared`
+   **or** `_busy`, closing the callback-reachable window during
+   `prepare()` and STOPPED-state `reset()` structurally; P2-2, P4-4, the
+   Station interface table row and the Implementation Notes docstring
+   citation list updated to match. Closed by sw-celeste, 2026-10-11.
+2. **[minor] Endpoint resolution rule — RESOLVED.** D3 and the
+   `connect` contract now state the rule explicitly: `signal=None`
+   resolves in the mock-endpoint namespace; a `str` signal resolves to
+   an enrolled object's declared signal; the namespaces are disjoint.
+   Mock/object name sharing is documented as permitted, disambiguated by
+   signal presence — the simpler disposition per the Simplicity Mandate.
+   Closed by sw-celeste, 2026-10-11.
+3. **[minor, editorial] P3-2 miscount — RESOLVED.** The induction now
+   names the establish operation (`connect`) and the preserve operations
+   (`disconnect`, `unbind_interval`, `rm_control`/`rm_measurement`,
+   `withdraw`, station-side `rm_object`; the non-removing
+   `bind_interval`/`enroll`/`add_*` only add references between
+   resolved, enrolled parties) explicitly; the induction structure is
+   unchanged. Closed by sw-celeste, 2026-10-11.
+4. **[minor, editorial] Snapshot cardinality — RESOLVED.** One
+   cardinality stated: `_snapshot` holds all enrolled participants'
+   output Endpoints (full per-participant outputs, edge sources or
+   not) — the all-outputs disposition recommended by this review,
+   matching the D9/D10 text. Overview, D9 step 4 and the
+   data-structure table updated. Closed by sw-celeste, 2026-10-11.
+
+The design's "Design Review" section is updated accordingly (Status:
+APPROVED at `e8d9841`; the six architect rulings recorded as ACCEPT;
+hand-offs recorded for sw-tom — the `sim_dt` `_busy` guard is a required
+implementation behavior — and sw-mike — R3-TC-02b injection-point
+rebind: factories do not fire at `prepare()`; the injection is the
+tick-zero `observe` evaluation).
