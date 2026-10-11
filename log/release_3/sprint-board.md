@@ -1,12 +1,12 @@
 # Sprint board — Release 3 execution
 
-Updated: 2026-10-11 | Integration branch: dev | Execution: **Mode D confirmed by user — all four tasks, strict serial**
+Updated: 2026-10-11 | Integration branch: dev | Execution: **PAUSED by user during R3-003 pre-code-review**
 
 | ID | Scope | Owner | Phase | Started | Expected completion | Blocker | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | R3-001 | Scoped Release 2 corrections and closure reconciliation | sw-mike (testing) | Done | 2026-10-06 | 2026-10-07 | — | `6dc4d36` |
 | R3-002 | Object builders and station membership | sw-mike (testing) | Done | 2026-10-07 | 2026-10-11 | — | `0bd97d5` |
-| R3-003 | Shared clock, delayed graph, mock signals and atomic coordination | sw-tom (implementation) | Implementation | 2026-10-11 | 2026-10-16 | — | — |
+| R3-003 | Shared clock, delayed graph, mock signals and atomic coordination | sw-celeste (review, pending) | Implementation done | 2026-10-11 | 2026-10-16 | USER PAUSE 2026-10-11 | — |
 | R3-004 | Connected guide/example and final delivery evidence | Unassigned | Backlog | — | — | R3-003 dev integration | — |
 
 ## Execution authorization
@@ -107,7 +107,14 @@ Progress:
   review APPROVED `e8d9841` (all 6 rulings ACCEPT; proofs withstood attack;
   golden traces re-derived exactly); 4 minor issues closed `f5d8680`
   (sim_dt `_busy` guard now normative; endpoint resolution rule explicit).
-- ▶ Implementation (sw-tom) in progress next.
+- ✅ Implementation complete (TDD red `5d8fc6a` → green, 7 atomic commits):
+  mock endpoints `9a65f0f`, coordinator `a1015e0`, object candidate/commit
+  helpers + guards `f4ab4d0`, station sim_dt/coordinator integration
+  `f8535d9`, test greening `63251c2`, interval-rule single-sourcing
+  `8199d2b`. Self-test: 206 tests OK (165 + 41), zero warnings under
+  `-W error::Warning`, compile/import clean. No deviations; 6 documented
+  ambiguity choices.
+- ▶ Independent code review (sw-celeste) in progress next.
 
 R3-001 scope (from tasks.md): correct Release 2 standalone bridge readback,
 malformed callback-key errors and reset claims; reconcile closure records
