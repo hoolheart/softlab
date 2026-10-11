@@ -101,3 +101,86 @@ the counterweight.
 **PASS** — R3-001 task-completion principle compliance: all 11 principles pass,
 all seven required verifications pass, zero FAIL items. Integration to `dev`
 remains gated on candidate-commit CI (not run, not claimed) per principle 11.
+
+---
+
+# R3-002 task-completion inspection — object builders/registry and station object membership
+
+Owner: coordinator | Inspector: sw-mike (verification duty) | Date: 2026-10-11
+Phase: task completion | Inspected revision: `99386c9` on
+`codex/r3-002-builders` (verified synced: `git rev-parse HEAD
+origin/codex/r3-002-builders` both `99386c9a25ea…`; `git status` clean;
+`git diff --check` exit 0)
+Basis: repository `principles.md` (11 active principles) and AGENTS.md.
+Self-check limitation: the inspector (sw-mike) authored the R3-002 test plan,
+characterization baseline and test results, so those artifacts are
+**self-inspected**; the test-plan review (sw-tom), detailed design +
+design-review closure (sw-celeste), architect review (sw-jerry) and code
+review (sw-celeste) are independent of the inspector. Where evidence is the
+inspector's own record, independent reviewer re-verification (including the
+code review's mutation-kill table and red-commit worktree reproduction) and
+this inspection's own re-executions are cited as the counterweight.
+
+## Per-principle verdicts
+
+| Principle | Evidence / criterion checked | Result | Limits |
+| --- | --- | --- | --- |
+| 1. Five-element architecture | Independently re-verified `git diff dev...HEAD --stat -- softlab/huo softlab/jin softlab/shui softlab/mu` → **empty** (exit 0, CHK-04-1 scope gate); production diff confined to `softlab/tu/` (3 files: simulation `__init__.py` +5, `builder.py` +101 NEW, `station.py` +110); connected-simulation grep over the production diff shows no coordinator/edges/clock code | PASS | — |
+| 2. Characterize before changing | `r3-002-baseline.md` (`89d6f62`) records GAP-1/GAP-2 absence probes, C-1…C-6 no-regression anchors (verbatim) and the C-3 device-side defect **explicitly out of scope**, all before design/implementation; the plan's [PLAN] cases fail by `AttributeError`/`ImportError` on baseline — red state independently re-verified by this inspection via a detached worktree at `1ff6d6b`: `ImportError: cannot import name 'ObjectBuilder' from 'softlab.tu.simulation'`, FAILED (errors=1) | PASS | — |
+| 3. Documented TDD gates | Commit order verified via `git log --format='%h %ct'` sorted by commit time: test plan+baseline `89d6f62` → review `fa40165` → issues closed `e6f1af2`/`6b34844` → APPROVED `5a982d5` → design `59c97e7` → design review `6973d9b` → issue closed `fefe992` → (recorded user pause `ed32710`) → red `1ff6d6b` → green `90282ba`/`06cd8b3` → fixture fixes `a4b717a` → companion coverage `ceec02f` → code review `8d20542` → testing `93939b0` → test results `99386c9`. Red precedes green; every gate artifact committed on-branch after its target | PASS | — |
+| 4. One active task | Single task R3-002 in flight on `codex/r3-002-builders` from dev `6dc4d36`; board rows R3-003/004 in Backlog with serial blockers; history append-only (verified — no rewrites; a user pause and resume were recorded transparently, `ed32710`/`c25c47a`) | PASS | — |
+| 5. Role and review ownership | Test-plan issues 1–2 closed by tester sw-mike (`6b34844`) then **re-confirmed CLOSED and APPROVED by reviewer sw-tom** (`5a982d5`, re-confirmation note verbatim in the review); design issue closed by designer sw-celeste (`fefe992`); architect rulings 1–3 explicit ACCEPT (`6973d9b`); code review zero issues (`8d20542`); test failures: none, so nothing to close; CHK-04-1 discharged by code review (docstring citation station.py:234) and tester-side re-verified in results §9 | PASS | — |
+| 6. Evidence committed and pushed | Per-file `git log -- <file>` run for all 24 files under `log/release_3/`: every file traces to ≥1 `docs(log):` commit (table below); working tree clean; local HEAD == `origin/codex/r3-002-builders` == `99386c9`; no circular self-hashes (results record cites commits strictly before `99386c9`) | PASS | — |
+| 7. Environment verified | Inspector independently re-ran on `.venv` Python 3.13.15: `python -W error::Warning -m unittest discover -s tests -p 'test_*.py'` → **Ran 165 tests, OK, exit 0**; `python -m compileall -q softlab` exit 0; import smoke → `0.3.0`. Candidate CI run 38126151850 re-queried via `gh run view`: conclusion `success`, head `93939b0`, both matrix jobs (3.13 / 3.9) green including Regression suite / Compile sources / Import smoke check steps. Versions, warnings, skips, limits recorded in baseline §8 ledger and results §Environment; `conda activate` non-interactive limit recorded, `.venv/bin/python` used (same interpreter) | PASS | Python 3.9 legibility evidenced by CI matrix run, not local execution, per AGENTS.md; CI ran at head `93939b0`, one commit before the results record `99386c9` (log-only diff — recorded, not concealed) |
+| 8. Baseline vs regression | Baseline ledger distinguishes new-capability gaps (GAP-1…GAP-3, confirmed and delivered) from Release 1 debt OBS-004/005/006 + DEFECT-2 (unchanged, tracked, untouched) and the device C-3 rename defect (out of scope, explicitly not expanded). Zero new warnings: full suite green under `-W error::Warning` (independent rerun, exit 0) — proven, not inferred. The baseline's one unverified item (`-W error::Warning` gate, "executed as R3-TC-08b") was executed and verified green in results §2 and re-verified by this inspection. Grep over `log/release_3/` for waivers/"won't fix" shows only "not waived"/"no waiver" statements | PASS | — |
+| 9. Instrument/data safety | No real instruments (N/A per task); all fixtures synthetic; characterization scripts ran from temp dirs outside the repo (baseline §1 note); data-backend tests write temp sqlite/HDF5 files under `$TMPDIR`; no UI gates | PASS | — |
+| 10. Minimal compatible extension | `git diff dev...HEAD -- pyproject.toml setup.py` → **0 lines**; no new dependencies (stdlib + NumPy only per results §Environment); new public surface exactly the designed six names (code review simplicity audit); no `DeviceBuilder` refactor (device.py byte-untouched); no framework/Python-support change; 147 pre-existing tests pass unmodified inside the 165-suite | PASS | — |
+| 11. Reproducible completion | Evidence commands re-executed by this inspection with matching results (165 OK under warnings-as-errors, compileall clean, smoke 0.3.0, red-commit ImportError reproduced, CI run re-queried); candidate-commit CI explicitly recorded with run ID; dev integration and release acceptance **not** claimed — task-completion inspection only, integration gate pending | PASS | — |
+
+## Required-verification items (from the inspection brief)
+
+1. **TDD ordering** — PASS (see principle 3; ordering `89d6f62 < fa40165 < 6b34844 < 5a982d5 < 59c97e7 < 6973d9b < fefe992 < 1ff6d6b < 90282ba/06cd8b3 < 8d20542 < 99386c9` confirmed by `git log`; red commit `1ff6d6b` independently reproduced failing by `ImportError` before any production commit).
+2. **Zero unfixed issues** — PASS. Test-plan review: 2 minor issues, CLOSED `6b34844`, reviewer re-confirmed APPROVED `5a982d5`. Design review: 1 minor issue, CLOSED `fefe992` (design owner sw-celeste). Code review: **zero issues** (`8d20542`, incl. 5/5 mutation-kill evidence). Test results: zero failures (24/24 cases PASS, §"Per-case results"). No waived/"won't fix" items anywhere.
+3. **Environment completeness** — PASS. No skipped testing; "Unverifiable items: none" recorded in results §Environment; warning gate (R3-TC-08b) executed and independently re-verified; limits (`conda activate` non-interactive, Python 3.9 via CI) recorded in baseline §8 and results, not waived.
+4. **Frontend design-first** — **N/A: no UI changes** in R3-002 (no Figma prototypes involved); recorded explicitly per brief.
+5. **Zero-warning** — PASS. Independent re-run 2026-10-11: `python -W error::Warning -m unittest discover -s tests -p 'test_*.py'` → **Ran 165 tests in 0.482s, OK, exit 0**; `python -m compileall -q softlab` exit 0, no output; import smoke `0.3.0`. The two backend "Connected to …" lines are informational prints, not warnings.
+6. **Log files committed & pushed** — PASS. Every file under `log/release_3/` traced:
+
+   | File | Commit(s) |
+   | --- | --- |
+   | `architecture-plan.md` | `2052b60` |
+   | `design/r3-001-detailed-design.md` | `46a17fe`, `88ca37d` |
+   | `design/r3-002-detailed-design.md` | `59c97e7`, `fefe992` |
+   | `prd.md` | `9586b2b` |
+   | `principle_compliance_report.md` | `8ef37df`, `ba61b52` (+ this inspection) |
+   | `reviews/prd.md` | `ed2276a` |
+   | `reviews/r3-001-code-review.md` | `90d5bca` |
+   | `reviews/r3-001-design-review.md` | `24f129f`, `88ca37d` |
+   | `reviews/r3-001-test-plan-review.md` | `5ffda3a`, `b5f2202`, `d657e13` |
+   | `reviews/r3-002-code-review.md` | `8d20542` |
+   | `reviews/r3-002-design-review.md` | `6973d9b`, `fefe992` |
+   | `reviews/r3-002-test-plan-review.md` | `fa40165`, `6b34844`, `5a982d5` |
+   | `sprint-board.md` | `f279958`, `342110f`, `ed32710`, `c25c47a`, `04f56fe`, `93939b0` |
+   | `tasks.md` | `5175fed` |
+   | `test/r3-001-baseline.md` | `b1bed62` |
+   | `test/r3-001-test-plan.md` | `b1bed62`, `b5f2202` |
+   | `test/r3-001-test-results.md` | `79cdec8` |
+   | `test/r3-002-baseline.md` | `89d6f62` |
+   | `test/r3-002-test-plan.md` | `89d6f62`, `e6f1af2` |
+   | `test/r3-002-test-results.md` | `99386c9` |
+
+   Tree clean; local == origin == `99386c9`.
+7. **Additional principles beyond the initial six** — principles 7–11 inspected above with concrete criteria (independent reruns, baseline ledger vs debt, dependency-diff emptiness, instrument safety, CI honesty); all PASS.
+
+## Observations (not violations)
+
+- **Board lag (same category as R3-001)**: `sprint-board.md` last updated at `93939b0` ("advance to testing phase"); the test-results verdict (`99386c9`) and this inspection are recorded in their own commits. The board's "▶ Testing in progress next" line is one step behind; the testing→inspection→integration transition update is part of the handoff following this inspection (per principle 6, this report is committed/pushed before handoff).
+- **CI head vs results head**: candidate CI ran at `93939b0`; the results record `99386c9` is a log-only commit on top. Recorded here for accuracy; the integration gate will require the merge-candidate CI per principle 11.
+- **Self-check**: the test plan, baseline and test results were authored by the inspector; their pass claims rest on (a) verbatim recorded commands re-executable by anyone, (b) independent reviewer re-verification at each gate (test-plan re-confirmation, architect rulings, code review incl. mutation kills and red-commit reproduction), and (c) this inspection's independent reruns (warnings-as-errors suite, compileall, import smoke, red-commit worktree, CI run re-query). Review reports and design were produced by other roles and are not self-checked.
+
+## Overall verdict
+
+**PASS** — R3-002 task-completion principle compliance: all 11 principles pass,
+all seven required verifications pass, zero FAIL items. Integration to `dev`
+remains gated on the merge-candidate CI per principle 11; release acceptance
+before `main` is a separate, later gate.
