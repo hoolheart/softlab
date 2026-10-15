@@ -1,12 +1,12 @@
 # Sprint board — Release 3 execution
 
-Updated: 2026-10-07 | Integration branch: dev | Execution: **Mode D confirmed by user — all four tasks, strict serial**
+Updated: 2026-10-11 | Integration branch: dev | Execution: **Mode D confirmed by user — all four tasks, strict serial**
 
 | ID | Scope | Owner | Phase | Started | Expected completion | Blocker | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | R3-001 | Scoped Release 2 corrections and closure reconciliation | sw-mike (testing) | Done | 2026-10-06 | 2026-10-07 | — | `6dc4d36` |
-| R3-002 | Object builders and station membership | sw-mike (testing) | Testing | 2026-10-07 | 2026-10-09 | — | — |
-| R3-003 | Shared clock, delayed graph, mock signals and atomic coordination | Unassigned | Backlog | — | — | R3-002 dev integration | — |
+| R3-002 | Object builders and station membership | sw-mike (testing) | Done | 2026-10-07 | 2026-10-11 | — | `0bd97d5` |
+| R3-003 | Shared clock, delayed graph, mock signals and atomic coordination | sw-mike (testing) | Testing | 2026-10-11 | 2026-10-16 | — | — |
 | R3-004 | Connected guide/example and final delivery evidence | Unassigned | Backlog | — | — | R3-003 dev integration | — |
 
 ## Execution authorization
@@ -82,6 +82,42 @@ Progress:
 - ✅ Independent code review APPROVED, zero issues, `8d20542` (5 targeted
   production mutations all killed by the designed tests; CHK-04-1 discharged,
   docstring citation station.py:234).
+- ✅ Testing PASS (24/24 cases), `99386c9`; principle inspection PASS,
+  `a4d3ad1`; candidate CI 38126716631 SUCCESS.
+- ✅ Integrated into `dev` as `0bd97d5`; dev CI 38126816882 SUCCESS; task
+  branch deleted. R3-002 complete.
+
+## Active task: R3-003
+
+Cohesive coordinated simulation: opt-in mock endpoints, connections,
+ownership, shared sim_dt, tick-zero preparation, delayed stepping and atomic
+reset (R3-AC-01–06; compatibility portion of R3-AC-08). Deliberately one task —
+graph, clock, ownership and transaction publication ship together or not at
+all. Task branch `codex/r3-003-coordination` from dev `0bd97d5`. Design must
+prove snapshot publication, ownership/reentrancy, safe detach, model-dt binding
+and numeric clock limits before implementation (required design gates per
+tasks.md).
+
+Progress:
+- ✅ Test plan + baseline `6fcdb4e` (41 automated cases after review fixes,
+  covering R3-AC-01–06 + R3-AC-08 compatibility; coordinated capability
+  confirmed absent on baseline); review CHANGES-REQUESTED `88a4e5b` (4 minor);
+  closed by sw-mike `9ee0394`; re-confirmed APPROVED `8b34583`.
+- ✅ Detailed design `92eaa62` (1267 lines; 5 CHK-03-1 proofs); architect
+  review APPROVED `e8d9841` (all 6 rulings ACCEPT; proofs withstood attack;
+  golden traces re-derived exactly); 4 minor issues closed `f5d8680`
+  (sim_dt `_busy` guard now normative; endpoint resolution rule explicit).
+- ✅ Implementation complete (TDD red `5d8fc6a` → green, 7 atomic commits):
+  mock endpoints `9a65f0f`, coordinator `a1015e0`, object candidate/commit
+  helpers + guards `f4ab4d0`, station sim_dt/coordinator integration
+  `f8535d9`, test greening `63251c2`, interval-rule single-sourcing
+  `8199d2b`. Self-test: 206 tests OK (165 + 41), zero warnings under
+  `-W error::Warning`, compile/import clean. No deviations; 6 documented
+  ambiguity choices.
+- ✅ Independent code review: CHANGES-REQUESTED `ee4339a` (1 medium + 2 low,
+  docstring/test-cosmetic), fixed by sw-tom `1aa961f`, re-confirmed
+  APPROVED `7a4a30b` (6 kill-mutations verified; greening commit audited
+  genuinely fixture-side).
 - ▶ Testing (sw-mike) in progress next.
 
 R3-001 scope (from tasks.md): correct Release 2 standalone bridge readback,

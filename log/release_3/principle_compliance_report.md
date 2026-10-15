@@ -184,3 +184,64 @@ this inspection's own re-executions are cited as the counterweight.
 all seven required verifications pass, zero FAIL items. Integration to `dev`
 remains gated on the merge-candidate CI per principle 11; release acceptance
 before `main` is a separate, later gate.
+
+---
+
+# R3-003 task-completion inspection — cohesive coordinated simulation
+
+Owner: coordinator | Inspector: sw-mike (verification duty) | Date: 2026-10-16
+Phase: task completion | Inspected revision: `5ecebf7` on
+`codex/r3-003-coordination` (verified synced: `git rev-parse HEAD
+origin/codex/r3-003-coordination` both `5ecebf7b8cf5…`; `git status`
+clean; `git diff --check` exit 0)
+Basis: repository `principles.md` (11 active principles) and AGENTS.md.
+Self-check limitation: the inspector (sw-mike) authored the R3-003 test
+plan, characterization baseline and test results, so those artifacts are
+**self-inspected**; the test-plan review (sw-tom), detailed design +
+design-review closure (sw-celeste), architect review (sw-jerry) and code
+review (sw-celeste) are independent of the inspector. Where evidence is
+the inspector's own record, independent reviewer re-verification (the
+code review's mutation-kill table, runtime probes and red-commit
+reproduction) and this inspection's own re-executions are cited as the
+counterweight.
+
+## Per-principle verdicts
+
+| Principle | Evidence / criterion checked | Result | Limits |
+| --- | --- | --- | --- |
+| 1. Five-element architecture | Independently re-verified `git diff dev...HEAD --stat -- softlab/huo softlab/jin softlab/shui softlab/mu` → **empty** (exit 0); production diff confined to exactly the 5 design-listed `softlab/tu/` files (`simulation/__init__.py` +8, `coordination.py` +1376 NEW, `mock.py` +215 NEW, `object.py` +218/−9, `station/station.py` +131); grep over the production diff for added `huo`/`scheduler` lines → **0 matches** (the 3 test-file matches are R3-TC-08e's own absence assertions; remaining matches are log prose) | PASS | — |
+| 2. Characterize before changing | `r3-003-baseline.md` (`6fcdb4e`) records the eight-gap absence inventory with verbatim probes and seven no-regression anchors before any implementation; red commit independently re-verified by this inspection via detached worktree at `5d8fc6a`: `python -m unittest tests.test_tu_coordination` → **FAILED (errors=1)** — the documented red mode (module-level `ImportError` on `Coordinator`, stopping collection) | PASS | — |
+| 3. Documented TDD gates | Commit order verified via `git log --format='%h %ct'` sorted by commit time (strictly monotonic): plan+baseline `6fcdb4e` → review `88a4e5b` → issues closed `9ee0394` → APPROVED `8b34583` → design `92eaa62` → design review `e8d9841` → issues closed `f5d8680` → **red `5d8fc6a`** → production `9a65f0f`/`a1015e0`/`f4ab4d0`/`f8535d9` → green/fixture `63251c2` → refactor `8199d2b` → code review `ee4339a` → fix `1aa961f` → APPROVED `7a4a30b` → testing `0003f5d` → results `5ecebf7`. Red precedes every production commit; every gate artifact committed on-branch | PASS | Two recorded user pauses (`093a45c`, `b5ce572`) transparently resumed (`2c3d486`, `d5abc9b`) |
+| 4. One active task | Single task R3-003 in flight on `codex/r3-003-coordination` from dev `0bd97d5`; R3-004 in Backlog behind the R3-003 dev-integration blocker; history append-only (timestamps monotonic, no rewrites) | PASS | — |
+| 5. Role and review ownership | Test-plan issues 1–4 closed by tester sw-mike (`9ee0394`), re-confirmed item-by-item and APPROVED by reviewer sw-tom (`8b34583`, +107-line re-confirmation added to the review doc); design issues 1–4 closed by designer sw-celeste (`f5d8680`, incl. the normative D6-step-5 `_busy` guard); architect rulings 1–6 all ACCEPT (`e8d9841`); code review issues 1–3 (1 medium + 2 low) closed by sw-tom `1aa961f`, re-confirmed CLOSED by reviewer sw-celeste (`7a4a30b`, fix diff docstring/cosmetic only); test failures: none, so nothing to close; CHK-03-1 items 1–2 discharged by code review, items 3–4 verified in results §§6–7 | PASS | — |
+| 6. Evidence committed and pushed | Per-file `git log -1 -- <file>` run for all 24 files under `log/release_3/`: every file traces to ≥1 `docs(log):` commit (table below); working tree clean; local HEAD == `origin/codex/r3-003-coordination` == `5ecebf7`; no circular self-hashes (results record cites commits strictly before `5ecebf7`) | PASS | — |
+| 7. Environment verified | Inspector independently re-ran 2026-10-16 on `.venv` Python 3.13.15: `python -W error::Warning -m unittest discover -s tests -p 'test_*.py'` → **Ran 207 tests, OK, exit 0** (verbatim log in `/tmp/opencode/r3_gate.log`); `python -m compileall -q softlab` exit 0; import smoke → `0.3.0`. Candidate CI run 38758868819 re-queried via `gh run view`: conclusion `success`, head `0003f5d`, branch `codex/r3-003-coordination`. Versions, warnings (none), skips (none), limits (`conda activate` non-interactive → `.venv/bin/python`; Python 3.9 evidenced by CI matrix) recorded in results §Environment | PASS | Python 3.9 legibility evidenced by CI matrix run, not local execution, per AGENTS.md |
+| 8. Baseline vs regression | Baseline ledger distinguishes new-capability gaps (8 rows, confirmed absent, delivered) from Release 1 debt OBS-004/005/006 + DEFECT-2 (unchanged, tracked, untouched). Zero new warnings: 207-suite green under `-W error::Warning` (independent rerun, exit 0) — proven, not inferred; no debt warning fired. Grep over `log/release_3/` for waiver language returns only "not waived"/"no waiver"/prohibition statements — **no actual waiver anywhere**. The two recorded dispositions (02b injection-point rebind; optional 04e extension TAKEN) are dispositions of test-scope questions, not defect waivers | PASS | — |
+| 9. Instrument/data safety | No real instruments (N/A per task); all fixtures synthetic `SimulatedObject`s/mock endpoints; temp dirs only (data-backend tests write temp sqlite/HDF5 under `$TMPDIR`); no `huo` process, scheduler or automatic advancement in the production diff | PASS | — |
+| 10. Minimal compatible extension | `git diff dev...HEAD --stat -- pyproject.toml setup.py` → **untouched** (not in diff); no new dependencies (stdlib `numbers`/`math`/`typing` + already-imported NumPy); production diff exactly the 5 design-listed files; new public surface exactly the designed four names; ordinary `Station(name)` requires no simulation argument (R3-TC-03a/08d); no framework/Python-support change | PASS | — |
+| 11. Reproducible completion | Evidence commands re-executed by this inspection with matching results (207 OK under warnings-as-errors, compileall clean, smoke 0.3.0, red-commit FAILED reproduced, CI run re-queried success); candidate-commit CI explicitly recorded with run ID; dev integration and release acceptance **not** claimed — task-completion inspection only, integration gate pending | PASS | — |
+
+## Required-verification items (from the inspection brief)
+
+1. **TDD ordering** — PASS. `6fcdb4e < 88a4e5b < 9ee0394 < 8b34583 < 92eaa62 < e8d9841 < f5d8680 < 5d8fc6a < 9a65f0f..f8535d9 < 63251c2/8199d2b < ee4339a < 1aa961f < 7a4a30b < 5ecebf7`, confirmed by committer-date-sorted `git log`; red commit `5d8fc6a` independently reproduced failing (errors=1).
+2. **Zero unfixed issues** — PASS. Test-plan review: 4 minor issues, CLOSED `9ee0394`, reviewer re-confirmed APPROVED `8b34583`. Design review: 4 minor issues, CLOSED `f5d8680`. Code review: 3 issues (1 medium, 2 low), CLOSED `1aa961f`, re-confirmed `7a4a30b`. Test results: zero failures (all 41 planned cases + 1 recorded test-only extension + CHK-03-1 PASS, suite 207 OK). No waivers (grep evidence above).
+3. **Environment completeness** — PASS. Warning gate verified: independent re-run 207 OK under `-W error::Warning` (exit 0); limits recorded in results §Environment (none unverifiable); nothing skipped.
+4. **Frontend design-first** — **N/A: no UI changes** in R3-003 (no Figma prototypes involved); recorded explicitly per brief.
+5. **Zero-warning** — PASS. Independent re-run 2026-10-16: `-W error::Warning` full suite → **Ran 207 tests in 1.138s, OK, exit 0**; `compileall -q softlab` exit 0, no output. Backend "Connected to …" lines are informational prints, not warnings.
+6. **Log files committed & pushed** — PASS. Every file under `log/release_3/` traces to a `docs(log):` commit; R3-003 chain: baseline+plan `6fcdb4e`, plan issues closed `9ee0394`, plan approval `8b34583`, design `92eaa62` + closure `f5d8680`, design review `e8d9841`, code review `ee4339a` + approval `7a4a30b`, results `5ecebf7`, board `0003f5d` (R3-003-relevant). Tree clean; local == origin == `5ecebf7`.
+7. **Scope** — PASS. Production diff confined to the 5 design-listed `softlab/tu/` files (+1 new test file); `pyproject.toml`/`setup.py` untouched; `huo`/`jin`/`shui`/`mu` diff empty; no scheduler/automatic-advancement code (production-diff grep = 0).
+8. **Principles 7–11** — each inspected with a concrete criterion above (independent reruns; baseline ledger vs debt with waiver grep; dependency-diff emptiness; instrument safety; CI-honesty); all PASS.
+
+## Observations (not violations)
+
+- **Board lag (same category as R3-001/R3-002)**: `sprint-board.md` last updated at `0003f5d` ("advance to testing phase"); the test-results verdict (`5ecebf7`) and this inspection are recorded in their own commits. The board's "▶ Testing (sw-mike) in progress next" line is one step behind; the testing→inspection→integration transition update is part of the handoff following this inspection (per principle 6, this report is committed/pushed before handoff).
+- **CI head vs results head**: candidate CI ran at `0003f5d`; the results record `5ecebf7` (log + one test-only method) sits on top and is explicitly noted in results §9. Recorded here for accuracy; the integration gate will require the merge-candidate CI per principle 11.
+- **Review-doc citation nuance**: the test-plan review's re-confirmation header cites branch head `2c3d486` (the resume marker, board-only diff); the re-confirmation text itself was committed in the review document at `8b34583` (verified via `git show`). Chain consistent: issues closed `9ee0394`, APPROVED recorded `8b34583`.
+- **Self-check**: the test plan, baseline and test results were authored by the inspector; their pass claims rest on (a) verbatim recorded commands re-executable by anyone, (b) independent reviewer re-verification at each gate (test-plan re-confirmation, architect proof attacks + 6 rulings, code review incl. mutation kills, runtime probes and red-commit reproduction) and (c) this inspection's independent reruns (warnings-as-errors 207-suite, compileall, import smoke, red-commit worktree, CI run re-query). Review reports and design were produced by other roles and are not self-checked.
+
+## Overall verdict
+
+**PASS** — R3-003 task-completion principle compliance: all 11 principles pass,
+all eight required verifications pass, zero FAIL items. Integration to `dev`
+remains gated on the merge-candidate CI per principle 11; release acceptance
+before `main` is a separate, later gate.

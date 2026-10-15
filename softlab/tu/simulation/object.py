@@ -384,6 +384,10 @@ class SimulatedObject:
 
         self._inputs: Dict[str, Any] = committed_inputs
         self._states: Dict[str, Any] = committed_states
+        # ownership slot for coordinated simulation (design D4): None
+        # for standalone objects; set/cleared only by Coordinator
+        # enroll/withdraw; opaque reference, duck-typed calls only
+        self._active_coordinator: Any = None
 
     @staticmethod
     def _resolve_initial(
@@ -500,6 +504,10 @@ class SimulatedObject:
 
         Errors:
         - KeyError --- unknown input name, naming the variable
+        - RuntimeError --- while enrolled in a coordinated simulation
+          (see the coordinator's ``_guard_set_input``): the write is
+          mid-operation or the input is driven by a connection or an
+          interval binding
         - TypeError --- value outside the supported categories, or
           scalar category mismatch against the pinned specification
         - ValueError --- ndarray dtype/shape mismatch, or non-numeric
@@ -510,6 +518,8 @@ class SimulatedObject:
         """
         if name not in self._input_specs:
             raise KeyError(f'Unknown input variable {name!r}')
+        if self._active_coordinator is not None:
+            self._active_coordinator._guard_set_input(self, name)
         prepared = _validate_against_spec(
             name, value, self._input_specs[name])
         self._inputs[name] = _copy_value(prepared)
@@ -559,6 +569,9 @@ class SimulatedObject:
           callback propagates (never caught, wrapped or replaced),
           including ``BaseException`` subclasses; committed state and
           the input store are left untouched
+        - RuntimeError --- while enrolled in an active coordinated
+          simulation: standalone ``evolve_once`` is rejected while
+          claimed (withdraw first)
         - TypeError --- the callback returned a non-mapping
         - ValueError --- the result keys are not exactly the declared
           state names (message names the discrepancy)
@@ -570,6 +583,11 @@ class SimulatedObject:
         with the validated next states; exactly one ``evolve``
         invocation per call and from nowhere else.
         """
+        if self._active_coordinator is not None:
+            raise RuntimeError(
+                f'Object {self._name!r} is enrolled in an active '
+                'coordinated simulation; standalone evolve_once is '
+                'rejected while claimed (withdraw first)')
         evolve_inputs = {
             var: _copy_value(value)
             for var, value in self._inputs.items()
@@ -683,12 +701,155 @@ class SimulatedObject:
 
         Returns: None.
 
-        Errors: any factory or validation exception propagates
-        identically (never caught, wrapped or replaced).
+        Errors:
+        - any factory or validation exception propagates identically
+          (never caught, wrapped or replaced)
+        - RuntimeError --- while enrolled in an active coordinated
+          simulation: standalone ``reset`` is rejected while claimed
+          (withdraw first)
 
         Side-effects: on success, rebinds the committed input and
         state stores; at most one factory invocation per
         factory-declared variable; no callback invocation.
+        """
+        if self._active_coordinator is not None:
+            raise RuntimeError(
+                f'Object {self._name!r} is enrolled in an active '
+                'coordinated simulation; standalone reset is '
+                'rejected while claimed (withdraw first)')
+        inputs, states = self._reset_candidate()
+        self._commit(inputs, states)
+
+    def _evolve_candidate(
+        self,
+        inputs: Dict[str, Any],
+        previous_states: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """
+        Build detached next states (candidate phase of one evolution).
+
+        Invokes the ``evolve`` callback exactly once with fresh
+        defensive copies of the given input store and previous-state
+        store, validates the returned mapping exactly like
+        :meth:`evolve_once`, and returns the detached candidate dict.
+        Never mutates any committed store — publication happens only
+        via :meth:`_commit`.
+
+        Args:
+        - inputs --- input store to evolve from (copied before use)
+        - previous_states --- state store to evolve from (copied
+          before use)
+
+        Returns: a fresh dict of validated, copied-in next states.
+
+        Errors: exactly the :meth:`evolve_once` error set; the
+        identical exception object raised by the callback propagates.
+
+        Side-effects: exactly one ``evolve`` callback invocation;
+        no committed store is touched.
+        """
+        evolve_inputs = {
+            var: _copy_value(value)
+            for var, value in inputs.items()
+        }
+        previous = {
+            var: _copy_value(value)
+            for var, value in previous_states.items()
+        }
+        result = self._evolve(evolve_inputs, previous)
+        return self._validate_callback_result(
+            result, self._state_specs, 'evolve')
+
+    def _observe_candidate(self, states: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Build detached outputs (candidate phase of one observation).
+
+        Invokes the ``observe`` callback exactly once with a fresh copy
+        of the given state store and validates the returned mapping
+        exactly like :meth:`observe_outputs`. Never mutates any
+        committed store.
+
+        Args:
+        - states --- state store to observe (copied before use)
+
+        Returns: a fresh dict of validated, copied-in outputs.
+
+        Errors: exactly the :meth:`observe_outputs` error set; the
+        identical exception object raised by the callback propagates.
+
+        Side-effects: exactly one ``observe`` callback invocation; no
+        committed store is touched.
+        """
+        observed = {
+            var: _copy_value(value)
+            for var, value in states.items()
+        }
+        result = self._observe(observed)
+        return self._validate_callback_result(result, None, 'observe')
+
+    def _step_candidate(
+        self,
+        delivered: Mapping[str, Any],
+    ) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
+        """
+        Build the full candidate triple for one coordinated tick.
+
+        Candidate inputs are a copy of the object's own committed input
+        store overlaid solely with the validated, copied delivered
+        values (edge deliveries and interval bindings); an unconnected
+        input's entry is therefore carried forward unchanged. Then one
+        ``evolve`` invocation produces candidate states and one
+        ``observe`` invocation on those candidate states produces
+        candidate outputs. Never mutates any committed store.
+
+        Args:
+        - delivered --- mapping from declared input name to the value
+          delivered this transition (already validated and copied by
+          the caller; re-validated and re-copied here against the
+          pinned input specification)
+
+        Returns: ``(inputs_c, states_c, outputs_c)`` — detached
+        candidate dicts ready for :meth:`_commit` and snapshot
+        publication.
+
+        Errors: KeyError --- delivered name is not a declared input;
+        TypeError/ValueError --- a delivered value violates the pinned
+        specification; callback exceptions propagate identically.
+
+        Side-effects: exactly one ``evolve`` and one ``observe``
+        callback invocation; no committed store is touched.
+        """
+        inputs_c: Dict[str, Any] = {
+            var: _copy_value(value)
+            for var, value in self._inputs.items()
+        }
+        for name, value in delivered.items():
+            prepared = _validate_against_spec(
+                name, value, self._input_specs[name])
+            inputs_c[name] = _copy_value(prepared)
+        states_c = self._evolve_candidate(inputs_c, self._states)
+        outputs_c = self._observe_candidate(states_c)
+        return inputs_c, states_c, outputs_c
+
+    def _reset_candidate(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        """
+        Build the complete initial condition (reset build phase).
+
+        Extracted verbatim from the former :meth:`reset` build phase:
+        fresh copies of pristine literal initial values and fresh
+        factory invocations for factory-declared variables, in
+        declaration order, with original exception identity. Never
+        mutates any committed store — publication happens only via
+        :meth:`_commit`.
+
+        Returns: ``(inputs_c, states_c)`` — detached candidate dicts.
+
+        Errors: any factory or validation exception propagates
+        identically (never caught, wrapped or replaced).
+
+        Side-effects: at most one factory invocation per
+        factory-declared variable; no callback invocation; no
+        committed store is touched.
         """
         new_inputs: Dict[str, Any] = {}
         for var, spec in self._input_specs.items():
@@ -700,8 +861,57 @@ class SimulatedObject:
             new_states[var] = self._reset_value(
                 var, spec, self._state_sources[var],
                 self._pristine_states)
-        self._inputs = new_inputs
-        self._states = new_states
+        return new_inputs, new_states
+
+    def _commit(self, inputs: Dict[str, Any], states: Dict[str, Any]) -> None:
+        """
+        Publish already-built candidate stores (publication phase).
+
+        Rebinds the committed input store and state store to the given
+        candidate dicts. The candidates must already be validated,
+        owned copies (produced by the ``_evolve_candidate`` /
+        ``_reset_candidate`` family): this helper performs **no
+        copies, no validation and invokes no user code** — publication
+        only. Because no mutation precedes publication, atomicity is
+        structural and there is no rollback path.
+
+        Args:
+        - inputs --- candidate input store to commit
+        - states --- candidate state store to commit
+
+        Returns: None.
+
+        Errors: none.
+
+        Side-effects: rebinds the two committed stores.
+        """
+        self._inputs = inputs
+        self._states = states
+
+    def _validate_input_value(self, name: str, value: Any) -> Any:
+        """
+        Validate one candidate value against an input's pinned spec.
+
+        Used by the coordinator for prepare-time edge validation and
+        tick-time delivery validation. Performs validation only —
+        copying remains the caller's duty.
+
+        Args:
+        - name --- declared input variable name
+        - value --- candidate value
+
+        Returns: the value, validated.
+
+        Errors:
+        - KeyError --- unknown input name, naming the variable
+        - TypeError --- value outside the pinned scalar category
+        - ValueError --- ndarray dtype/shape mismatch
+
+        Side-effects: none.
+        """
+        if name not in self._input_specs:
+            raise KeyError(f'Unknown input variable {name!r}')
+        return _validate_against_spec(name, value, self._input_specs[name])
 
     def _reset_value(
         self,
