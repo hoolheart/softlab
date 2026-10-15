@@ -1,12 +1,12 @@
 # Sprint board — Release 3 execution
 
-Updated: 2026-10-11 | Integration branch: dev | Execution: **PAUSED by user during R3-003 pre-code-review**
+Updated: 2026-10-11 | Integration branch: dev | Execution: **Mode D confirmed by user — all four tasks, strict serial**
 
 | ID | Scope | Owner | Phase | Started | Expected completion | Blocker | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | R3-001 | Scoped Release 2 corrections and closure reconciliation | sw-mike (testing) | Done | 2026-10-06 | 2026-10-07 | — | `6dc4d36` |
 | R3-002 | Object builders and station membership | sw-mike (testing) | Done | 2026-10-07 | 2026-10-11 | — | `0bd97d5` |
-| R3-003 | Shared clock, delayed graph, mock signals and atomic coordination | sw-celeste (review, pending) | Implementation done | 2026-10-11 | 2026-10-16 | USER PAUSE 2026-10-11 | — |
+| R3-003 | Shared clock, delayed graph, mock signals and atomic coordination | sw-celeste (review) | Code review | 2026-10-11 | 2026-10-16 | — | — |
 | R3-004 | Connected guide/example and final delivery evidence | Unassigned | Backlog | — | — | R3-003 dev integration | — |
 
 ## Execution authorization
