@@ -719,6 +719,40 @@ class OwnershipTests(unittest.TestCase):
         self.assertEqual(coord2.tick, 0)  # no corruption of in-flight tick
         self.assertEqual(obj2.get_state('x'), before)
 
+    def test_r3_tc_04e_sim_dt_setter_busy_guard_extension(self):
+        """Test-phase extension to R3-TC-04e (permitted without a plan
+        revision; code review M6/Observation 2): pin the normative
+        D6-step-5 ``_busy`` half of the ``Station.sim_dt`` setter —
+        an interval change attempted from inside a callback during
+        ``prepare()`` (STOPPED, not yet RUNNING) is rejected with
+        ``RuntimeError``, the stored interval is unchanged, and the
+        preparation still succeeds."""
+        station = Station('busy-guard')
+        station.sim_dt = 0.5
+        outcome = {}
+
+        def observe(x):
+            try:
+                station.sim_dt = 0.25  # mid-operation: must be rejected
+                outcome['set'] = None
+            except RuntimeError as exc:
+                outcome['set'] = exc
+            return {'y': x['x']}
+
+        obj = SimulatedObject(
+            'A', {'u': 1.0}, {'x': 1.0}, ['y'],
+            evolve=lambda u, x: {'x': x['x'] + u['u']}, observe=observe)
+        station.add_object(obj)
+        coord = Coordinator(station)
+        coord.enroll('A')
+        coord.prepare()
+        self.assertIsInstance(outcome['set'], RuntimeError)
+        self.assertEqual(station.sim_dt, 0.5)  # interval unchanged
+        self.assertTrue(coord.prepared)  # prepare unaffected
+        coord.step()
+        self.assertEqual(coord.tick, 1)
+        self.assertEqual(coord.sim_time, 0.5)
+
     def test_r3_tc_04f_two_mock_endpoints_on_one_participant_permitted(self):
         station = Station('multi')
         station.sim_dt = 0.5
