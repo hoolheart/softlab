@@ -1,7 +1,12 @@
 # Code Review — R3-003: Cohesive coordinated simulation
 
-Reviewer: sw-celeste | Date: 2026-10-15
+Reviewer: sw-celeste | Date: 2026-10-15 | Re-confirmed: 2026-10-11
 Branch: `codex/r3-003-coordination` | Head reviewed: `d5abc9b`
+(re-reviewed at fix head `1aa961f`, in sync with
+`origin/codex/r3-003-coordination`; fix range `ee4339a..1aa961f`
+touches only `softlab/tu/simulation/object.py` docstrings and
+`tests/test_tu_coordination.py` cosmetics — 12 insertions, 4
+deletions, zero behavior change)
 (in sync with `origin/codex/r3-003-coordination`; code head `8199d2b` —
 commits `b5ce572`/`d5abc9b` touch `log/` only, verified by
 `git diff 8199d2b..d5abc9b --stat -- softlab tests` = empty)
@@ -20,20 +25,36 @@ review: [r3-003-design-review.md](r3-003-design-review.md) (proof
 attacks + 6 rulings) | Convention:
 [r3-002-code-review.md](r3-002-code-review.md)
 
-## Verdict: CHANGES-REQUESTED
+## Verdict: APPROVED
 
-- **Total issues: 3** (critical: 0, high: 0, medium: 1, low: 2)
+- **Total issues: 3** (critical: 0, high: 0, medium: 1, low: 2) —
+  **all 3 CLOSED** at fix head `1aa961f` (re-confirmation below)
 - The implementation is faithful to the approved design
   element-for-element — all twelve design decisions, all five CHK-03-1
   proof mechanisms, and the normative D6-step-5 `_busy` guard are
   present and runtime-verified; all four kill-mutations are killed by
   exactly the designed tests; the `63251c2` greening commit is
-  genuinely fixture-side (full audit below). The three issues are a
-  docstring-convention gap on the two new object guards and two
-  test-file hygiene items; none touches behavior. Per the
-  zero-tolerance rule (all issues must be fixed regardless of
-  severity), the fixes return to sw-tom; re-review is expected to be
-  immediate.
+  genuinely fixture-side (full audit below).
+
+### Re-confirmation note (2026-10-11)
+
+Fix commit `1aa961f` (`fix(tu): address r3-003 code review issues`,
+range `ee4339a..1aa961f`) re-verified by sw-celeste on
+`codex/r3-003-coordination` synced to
+`origin/codex/r3-003-coordination` (head `1aa961f`):
+
+| Check | Result |
+| --- | --- |
+| Fix diff scope (`git diff ee4339a..1aa961f --stat`) | `object.py` +11/−2 (docstrings only), `tests/test_tu_coordination.py` +4/−1 (cosmetics only) — no executable production code touched |
+| Issue 1 — docstrings | **CLOSED** — both Errors sections now carry the `RuntimeError` entry (see per-item confirmation below) |
+| Issue 2 — long line | **CLOSED** — line wrapped; `awk 'length > 80'` over all six touched files reports zero violations |
+| Issue 3 — dead code | **CLOSED** — `if False` conditional removed; mid-run enroll rejection still pinned nearby |
+| `python -m unittest discover -s tests -p 'test_*.py'` | **Ran 206 tests, OK** |
+| `python -m unittest tests.test_tu_coordination` | **Ran 41 tests, OK** |
+| `python -W error::Warning -m unittest discover …` | **Ran 206 tests, OK, zero warnings** |
+| Behavior delta | **none** — assertion semantics, guard raises, and all pinned behaviors unchanged |
+
+All issues resolved; the task proceeds to sw-mike's testing phase.
 
 ## What was executed (commands + results)
 
@@ -302,10 +323,12 @@ genuinely test-side; none masks a production defect:
 ## Conventions (AGENTS.md)
 
 - [x] English docstrings in the repo Args/Returns/Errors/Side-effects
-  style on all new public API — with one gap (Issue 1)
+  style on all new public API — gap found at `d5abc9b` (Issue 1),
+  **fixed at `1aa961f`**
 - [x] Type annotations on all new public API; signatures match the
   design's interface tables verbatim
-- [x] Black line width 80 — one violation (Issue 2)
+- [x] Black line width 80 — one violation at `d5abc9b` (Issue 2),
+  **fixed at `1aa961f`; zero violations re-verified**
 - [x] No new dependencies; no `pyproject.toml`/`setup.py` change;
   stdlib (`numbers`/`math`/`typing`) + already-imported NumPy only,
   pinned by 08e
@@ -352,7 +375,17 @@ genuinely test-side; none masks a production defect:
   coordinated simulation; standalone operation rejected while
   claimed).
 - **Owner**: sw-tom
-- **Status**: OPEN
+- **Status**: CLOSED (2026-10-11, fix `1aa961f`) — confirmed: the
+  `evolve_once` Errors section (object.py:569–577) now lists
+  "RuntimeError --- while enrolled in an active coordinated
+  simulation: standalone ``evolve_once`` is rejected while claimed
+  (withdraw first)", and the `reset` Errors section (object.py:701–708)
+  was restructured into the same bulleted form with the matching
+  ``reset`` entry. Phrasing mirrors the `set_input` convention
+  (enrollment in an active coordinated simulation; standalone
+  operation rejected while claimed); the three guarded methods are now
+  consistent and the docstring matches the actual guard raise at each
+   site. No code line changed.
 
 ### [Low] Issue 2: 82-character line in the test file
 
@@ -365,7 +398,12 @@ genuinely test-side; none masks a production defect:
 - **Recommendation**: wrap the line (e.g. bind
   `expected = 1.0 + objs['A'].get_input('u')` first).
 - **Owner**: sw-tom
-- **Status**: OPEN
+- **Status**: CLOSED (2026-10-11, fix `1aa961f`) — confirmed: the line
+  is wrapped exactly as recommended (`expected = 1.0 +
+  objs['A'].get_input('u')` bound first, then
+  `self.assertEqual(objs['A'].get_state('x'), expected)`); assertion
+  semantics unchanged; `awk 'length > 80'` over all six touched Python
+  files now reports zero violations.
 
 ### [Low] Issue 3: dead-code conditional expression in `test_05f`
 
@@ -381,7 +419,12 @@ genuinely test-side; none masks a production defect:
 - **Recommendation**: replace with the plain
   `coord.withdraw('C')` call.
 - **Owner**: sw-tom
-- **Status**: OPEN
+- **Status**: CLOSED (2026-10-11, fix `1aa961f`) — confirmed: the
+  `if False` conditional is gone; the line is now the plain
+  `coord.withdraw('C')` inside the same `assertRaises(RuntimeError)`
+  block. The mid-run enrollment rejection remains genuinely pinned
+  four lines later via `coord.enroll('E')  # enrollment requires
+  STOPPED too` — no coverage lost.
 
 ## Non-blocking observations (no action required for approval)
 
@@ -438,23 +481,26 @@ genuinely test-side; none masks a production defect:
 
 ## Approval
 
-- [ ] All issues resolved — 3 OPEN (1 Medium, 2 Low), owner sw-tom
+- [x] All issues resolved — 3/3 CLOSED at fix head `1aa961f`
+  (re-confirmed 2026-10-11; fix diff is docstring/test-cosmetic only,
+  suite 206 OK with zero warnings)
 - [x] Design faithfully implemented (element-for-element, including
   the normative D6-step-5 `_busy` guard — code- and probe-verified)
 - [x] Test plan faithfully realized (41/41, no vacuous passes,
   greening commit clean)
 - [x] Code meets quality and simplicity standards
-- [ ] **CHANGES-REQUESTED** — return to sw-tom for Issues 1–3 (all
-  small, zero behavioral risk); re-review expected to approve
-  immediately, after which the task proceeds to sw-mike's testing
-  phase. CHK-03-1 items 1–2 are discharged by this review (scope diff
-  empty; the five design proofs verified realized in code); the
-  docstring citations for CHK-03-1 item 3 are: setter rule +
-  prepared/busy rejection at `softlab/tu/station/station.py`
-  (`sim_dt` setter docstring), clock policy at
+- [x] **APPROVED** — the task proceeds to sw-mike's testing phase.
+  CHK-03-1 items 1–2 are discharged by this review (scope diff empty;
+  the five design proofs verified realized in code); the docstring
+  citations for CHK-03-1 item 3 are: setter rule + prepared/busy
+  rejection at `softlab/tu/station/station.py` (`sim_dt` setter
+  docstring), clock policy at
   `softlab/tu/simulation/coordination.py` (`sim_time`/`step`
   docstrings), binding semantics (`bind_interval` docstring),
   tick-zero measurement initial (`MockMeasurement` class docstring),
   reentrancy rule (`Coordinator` class docstring), safe detach
-  (`withdraw`/`disconnect` docstrings), and the reset
-  external-side-effect limitation (`Coordinator.reset` docstring).
+  (`withdraw`/`disconnect` docstrings), the reset
+  external-side-effect limitation (`Coordinator.reset` docstring),
+  and — added by the fix — the claimed-object standalone-operation
+  rejection at `softlab/tu/simulation/object.py` (`evolve_once` and
+  `reset` Errors sections).
