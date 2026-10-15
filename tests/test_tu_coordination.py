@@ -649,7 +649,8 @@ class OwnershipTests(unittest.TestCase):
         coord.withdraw('A')
         self.assertIsNone(objs['A']._active_coordinator)
         objs['A'].evolve_once()
-        self.assertEqual(objs['A'].get_state('x'), 1.0 + objs['A'].get_input('u'))
+        expected = 1.0 + objs['A'].get_input('u')
+        self.assertEqual(objs['A'].get_state('x'), expected)
 
     def test_r3_tc_04e_reentrancy_guard_mid_operation(self):
         station = Station('reent')
@@ -980,7 +981,7 @@ class ConnectionSafetyTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             coord.add_measurement(new_meas)
         with self.assertRaises(RuntimeError):
-            coord.enroll('nope') if False else coord.withdraw('C')
+            coord.withdraw('C')
         with self.assertRaises(RuntimeError):
             coord.rm_control('k')
         e, _, _ = make_accumulator('E', 0.0)

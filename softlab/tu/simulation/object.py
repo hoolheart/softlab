@@ -569,6 +569,9 @@ class SimulatedObject:
           callback propagates (never caught, wrapped or replaced),
           including ``BaseException`` subclasses; committed state and
           the input store are left untouched
+        - RuntimeError --- while enrolled in an active coordinated
+          simulation: standalone ``evolve_once`` is rejected while
+          claimed (withdraw first)
         - TypeError --- the callback returned a non-mapping
         - ValueError --- the result keys are not exactly the declared
           state names (message names the discrepancy)
@@ -698,8 +701,12 @@ class SimulatedObject:
 
         Returns: None.
 
-        Errors: any factory or validation exception propagates
-        identically (never caught, wrapped or replaced).
+        Errors:
+        - any factory or validation exception propagates identically
+          (never caught, wrapped or replaced)
+        - RuntimeError --- while enrolled in an active coordinated
+          simulation: standalone ``reset`` is rejected while claimed
+          (withdraw first)
 
         Side-effects: on success, rebinds the committed input and
         state stores; at most one factory invocation per
