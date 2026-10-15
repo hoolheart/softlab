@@ -6,8 +6,8 @@ Updated: 2026-10-11 | Integration branch: dev | Execution: **Mode D confirmed by
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | R3-001 | Scoped Release 2 corrections and closure reconciliation | sw-mike (testing) | Done | 2026-10-06 | 2026-10-07 | — | `6dc4d36` |
 | R3-002 | Object builders and station membership | sw-mike (testing) | Done | 2026-10-07 | 2026-10-11 | — | `0bd97d5` |
-| R3-003 | Shared clock, delayed graph, mock signals and atomic coordination | sw-mike (testing) | Testing | 2026-10-11 | 2026-10-16 | — | — |
-| R3-004 | Connected guide/example and final delivery evidence | Unassigned | Backlog | — | — | R3-003 dev integration | — |
+| R3-003 | Shared clock, delayed graph, mock signals and atomic coordination | sw-mike (testing) | Done | 2026-10-11 | 2026-10-15 | — | `2991a63` |
+| R3-004 | Connected guide/example and final delivery evidence | sw-mike (test plan) | Test plan | 2026-10-15 | 2026-10-18 | — | — |
 
 ## Execution authorization
 
@@ -118,7 +118,21 @@ Progress:
   docstring/test-cosmetic), fixed by sw-tom `1aa961f`, re-confirmed
   APPROVED `7a4a30b` (6 kill-mutations verified; greening commit audited
   genuinely fixture-side).
-- ▶ Testing (sw-mike) in progress next.
+- ✅ Testing PASS (41/41 + CHK-03-1 + 04e extension), `5ecebf7`; principle
+  inspection PASS, `ceea4c6`; candidate CI 38819966184 SUCCESS.
+- ✅ Integrated into `dev` as `2991a63`; dev CI 38820136267 SUCCESS; task
+  branch deleted. R3-003 complete.
+
+## Active task: R3-004 (final)
+
+Executed connected example and user guide; final architecture, integration
+and release evidence (remaining R3-AC-08; release-wide acceptance of
+R3-AC-01–08). Task branch `codex/r3-004-delivery` from dev `2991a63`.
+Carry-over scope note from R3-003 design review: the additive
+simulation-description node deferred from R3-002 (snapshot/describe) is to be
+considered in R3-004 planning against the PRD — it is NOT pre-authorized.
+Release acceptance by the Product Owner and any `main` promotion require
+separate user authorization after this task integrates.
 
 R3-001 scope (from tasks.md): correct Release 2 standalone bridge readback,
 malformed callback-key errors and reset claims; reconcile closure records
