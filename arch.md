@@ -5,7 +5,13 @@
 This describes the implemented state at the Release 2 integration point
 (2026-10-05, `dev` tip `470e2c7`; SIM-001 integrated at merge `9408c79`,
 full suite 135 tests green, CI run 37298623628 green on Python 3.9/3.13;
-the Release 1 state was `e2d31ce`, softlab 0.3.0, 99 tests). softlab is a
+the Release 1 state was `e2d31ce`, softlab 0.3.0, 99 tests) and the
+Release 3 candidate point: R3-001/002/003 integrated into `dev` at merges
+`6dc4d36`, `0bd97d5`, `2991a63` (dev CI run 38820136267 green on Python
+3.9/3.13); R3-004 delivery candidate at `f32b796` (candidate CI run
+38826003029 green on Python 3.9/3.13), full suite 210 tests green at the
+candidate head — the cited candidate run certifies an ancestor of this
+fill commit, per the two-stage fill-commit convention. softlab is a
 Python library inspired by QCoDeS,
 not a deployed service. The domain goal is software-defined experimentation
 across laboratories; the current extensible primitives do not establish
@@ -14,7 +20,8 @@ not implemented capability. Workflow policy lives in
 [principles.md](principles.md) and [AGENTS.md](AGENTS.md). The user-facing
 descriptions of the additions are
 [docs/tu_extensions.md](docs/tu_extensions.md) (Release 1) and
-[docs/user-guide/simulation.md](docs/user-guide/simulation.md) (Release 2).
+[docs/user-guide/simulation.md](docs/user-guide/simulation.md)
+(Releases 2–3).
 
 ## Existing module boundaries
 
