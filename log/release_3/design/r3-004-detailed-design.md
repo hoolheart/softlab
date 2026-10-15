@@ -176,8 +176,11 @@ floating-point formatting risk.
 
 1. Construct objects/control/measurement; `add_object` ×4 into the fresh
    station; set `station.sim_dt = 0.5`.
-2. `Coordinator(station)`; `enroll` A, B, C, D; `add_control(drive)`;
-   `add_measurement(probe)`; `connect` edges 1–5 (order above).
+2. `Coordinator(station)`; `enroll` **by station member name**
+   (`'A'`, `'B'`, `'C'`, `'D'` — `Coordinator.enroll(object_name: str)`
+   takes the name string; passing the object raises `KeyError`);
+   `add_control(drive)`; `add_measurement(probe)`; `connect` edges 1–5
+   (order above).
 3. `prepare()`; print the tick-zero block.
 4. `step()`; print the tick-1 block.
 5. `drive.write(3.0)`; print the readback line (pending 3.0, tick still
@@ -447,9 +450,22 @@ through integration.
   parenthetical with the Release 3 candidate facts that *exist at test
   time*: R3-001/002/003 integrated into `dev` at merges `6dc4d36`,
   `0bd97d5`, `2991a63` (dev CI run 38820136267 green); R3-004 candidate
-  head SHA + candidate CI run ID (filled once the run exists — never
-  before, R3-001 REC-1 lesson); full suite **210** tests green at the
-  candidate head. Wording names this the Release 3 candidate point.
+   head SHA + candidate CI run ID (filled once the run exists — never
+   before, R3-001 REC-1 lesson); full suite **210** tests green at the
+   candidate head. Wording names this the Release 3 candidate point.
+   **Fill-commit convention (required):** a commit carrying these facts
+   necessarily post-dates the run that established them, so the cited
+   candidate run certifies an *ancestor* of the fill commit — the same
+   off-by-one the Release 2 precedent `d52217c` already embodies (its
+   header cites `dev` tip `470e2c7`, an ancestor of `d52217c` itself).
+   Stage-1 facts are therefore filled in the final delivery docs commit
+   *after* the content-complete candidate run exists, citing that run's
+   ID and head SHA; the "210 green" clause is filled in the same commit
+   and never before the suite run at that head exists. The fill commit's
+   own push/run is the final candidate evidence that 09m4 records in
+   the results document; Stage 2 reconciles everything at integration.
+   This stated convention is what satisfies 09m3(a)'s "recorded SHAs
+   match the commits they certify" — no self-certification is implied.
 - **Stage 2 (integration step, on `dev` — same pattern as the Release 2
   record `d52217c`, which landed post-integration):** rewrite the
   sentence to the final form — "implemented state at the Release 3
@@ -779,5 +795,21 @@ every design element maps to at least one case.
 ## Design Review
 
 - **Reviewer**: sw-jerry
-- **Review Date**: [to be filled after review]
-- **Status**: PENDING
+- **Review Date**: 2026-10-16
+- **Review**:
+  [r3-004-design-review.md](../reviews/r3-004-design-review.md)
+- **Status**: **APPROVED** (verdict at review head `0cabcb9`)
+- **Rulings on the five open questions**: all five **ACCEPT** (Q2 with
+  the Issue-1 clarification).
+- **Issue closure** (closed by sw-celeste, 2026-10-15 → recorded in the
+  closure commit on `codex/r3-004-delivery`):
+  1. **Issue 1 — A1 Stage-1 fill-commit convention**: RESOLVED. The
+     fill-commit convention is now stated explicitly in §A1 (Stage-1
+     facts filled in the final delivery docs commit after the
+     content-complete candidate run exists; cited run certifies an
+     ancestor of the fill commit, per the `d52217c` precedent; the
+     "210 green" clause is never written before the suite run at that
+     head exists).
+  2. **Issue 2 — E2 `enroll` argument kind**: RESOLVED. §E2 step 2 now
+     states enrollment is by station member name (`'A'`, `'B'`, `'C'`,
+     `'D'`); passing the object raises `KeyError`.

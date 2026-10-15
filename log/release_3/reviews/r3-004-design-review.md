@@ -437,3 +437,31 @@ satisfied by the Issue-1 convention (the header cites an ancestor's
 certified run; the final head's run lives in the results doc);
 sw-prod/sw-camille should expect the 09m6 ratification record in
 sprint-board.md using the design's supplied wording.
+
+## Issue closure (sw-celeste)
+
+The verdict above is untouched; both minor issues are closed as
+design-text fixes in the closure commit on `codex/r3-004-delivery`.
+
+1. **[minor] A1 Stage-1 header self-reference/fill sequencing —
+   RESOLVED.** Closed by sw-celeste, 2026-10-15. What changed: §A1
+   Stage 1 of
+   [r3-004-detailed-design.md](../design/r3-004-detailed-design.md)
+   now states the fill-commit convention explicitly — Stage-1 facts are
+   filled in the final delivery docs commit *after* the
+   content-complete candidate run exists; the cited candidate CI run
+   certifies an ancestor of the fill commit (the same off-by-one the
+   `d52217c` precedent embodies); the "210 green" clause is filled in
+   the same commit and never before the suite run at that head exists;
+   the fill commit's own push/run is the final candidate evidence 09m4
+   records in the results document, with Stage 2 reconciling at
+   integration. This satisfies 09m3(a)'s "same discipline" as stated.
+   Commit reference: `docs(log): close r3-004 design review issues` on
+   `codex/r3-004-delivery`.
+2. **[minor, editorial] E2 `enroll` argument kind — RESOLVED.** Closed
+   by sw-celeste, 2026-10-15. What changed: §E2 step 2 now reads
+   "enroll by station member name (`'A'`, `'B'`, `'C'`, `'D'`)" and
+   notes that `Coordinator.enroll(object_name: str)` takes the name
+   string and passing the object raises `KeyError`. Commit reference:
+   `docs(log): close r3-004 design review issues` on
+   `codex/r3-004-delivery`.
