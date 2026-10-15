@@ -144,6 +144,18 @@ Progress:
   architect review APPROVED `0cabcb9` (5 rulings ACCEPT); 2 minor issues
   closed `4ed0ccc`.
 - ▶ Implementation (sw-tom) in progress next.
+- ✅ Implementation complete (TDD red `0c9bd34` → green `45d4244`, 4 atomic
+  commits): failing delivery cases `0c9bd34` (R3-TC-09a/09b/09h red);
+  guide §12 coordinated simulation + §13 executed connected example
+  (byte-reproduced output verified by live execution against the design
+  golden trace) `baa751f`; arch.md Release 3 records A2–A9 `f32b796`;
+  Stage-1 candidate-point fill per the Issue-1 fill-commit convention
+  `45d4244`. Self-test: 210 tests OK (207 + 3), zero warnings under
+  `-W error::Warning`, compileall + import smoke clean, production diff
+  empty (softlab/ untouched). Candidate CI 38826003029 SUCCESS at
+  `f32b796`; fill-commit CI 38826175913 SUCCESS at `45d4244`.
+  Scope-gate ratification record (R3-TC-09m6) remains with
+  sw-prod/sw-camille.
 
 R3-001 scope (from tasks.md): correct Release 2 standalone bridge readback,
 malformed callback-key errors and reset claims; reconcile closure records
