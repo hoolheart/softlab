@@ -7,7 +7,7 @@ Updated: 2026-10-11 | Integration branch: dev | Execution: **Mode D confirmed by
 | R3-001 | Scoped Release 2 corrections and closure reconciliation | sw-mike (testing) | Done | 2026-10-06 | 2026-10-07 | — | `6dc4d36` |
 | R3-002 | Object builders and station membership | sw-mike (testing) | Done | 2026-10-07 | 2026-10-11 | — | `0bd97d5` |
 | R3-003 | Shared clock, delayed graph, mock signals and atomic coordination | sw-mike (testing) | Done | 2026-10-11 | 2026-10-15 | — | `2991a63` |
-| R3-004 | Connected guide/example and final delivery evidence | sw-celeste (design) | Detailed design | 2026-10-15 | 2026-10-18 | — | — |
+| R3-004 | Connected guide/example and final delivery evidence | sw-tom (implementation) | Implementation | 2026-10-15 | 2026-10-18 | — | — |
 
 ## Execution authorization
 
@@ -139,7 +139,11 @@ Progress:
   snapshot/describe simulation node OUT of scope for Release 3, recorded as
   ratification item R3-TC-09m6); review CHANGES-REQUESTED `df29394` (1 minor);
   closed by sw-mike `5e88dd2`; re-confirmed APPROVED `c17abdd`.
-- ▶ Detailed design (sw-celeste) in progress next.
+- ✅ Detailed design `f24b38f` (783 lines; §13 guide example w/ golden trace
+  verified by live execution; zero production changes planned; arch.md A1–A10);
+  architect review APPROVED `0cabcb9` (5 rulings ACCEPT); 2 minor issues
+  closed `4ed0ccc`.
+- ▶ Implementation (sw-tom) in progress next.
 
 R3-001 scope (from tasks.md): correct Release 2 standalone bridge readback,
 malformed callback-key errors and reset claims; reconcile closure records
