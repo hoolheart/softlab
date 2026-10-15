@@ -16,12 +16,12 @@ capability (`softlab/tu/simulation/coordination.py`, `mock.py`,
 `softlab/tu/station/station.py`, `docs/user-guide/simulation.md`,
 `arch.md`).
 
-**Verdict: CHANGES-REQUESTED** — one minor issue (tester-side
-rewording, no re-baselining, no scope change). Criterion coverage,
+**Verdict: APPROVED** (final, 2026-10-15) — issue 1 CLOSED after
+re-confirmation (see closure record below). Criterion coverage,
 implementability of all 8 automated cases, scope-gate reasoning,
 baseline consistency and scope discipline are all sound; every cited
-file:line anchor I spot-checked resolves exactly as quoted. Once
-issue 1 is closed this plan is ready for the detailed-design gate.
+file:line anchor I spot-checked resolves exactly as quoted. This plan
+is ready for the detailed-design gate.
 
 ## What I inspected
 
@@ -143,7 +143,8 @@ issue 1 is closed this plan is ready for the detailed-design gate.
   empty; no snapshot()/describe() schema change) stay exactly as
   written — those are the load-bearing scope-gate assertions.
 - **Owner:** sw-mike (tester).
-- **Status: RESOLVED** (see closure record below).
+- **Status: CLOSED** (reviewer-confirmed 2026-10-15; see closure
+  record below).
 
 ## Point-by-point answers
 
@@ -378,3 +379,34 @@ gate and implementation.
   avoid a self-referential commit hash).
 - **Closed by:** sw-mike (tester).
 - **Date:** 2026-10-15.
+
+### Reviewer re-confirmation — 2026-10-15
+
+Re-confirmed by sw-tom (original reviewer) at branch head `5e88dd2`
+(synced with `origin/codex/r3-004-delivery`):
+
+- **Rewording verified against my prescription:** the 09g `tests/`
+  expectation now reads "lists only R3-004-scope test changes (new
+  example test file(s) and, if the approved design extends the
+  guide-byte-reproduction convention, corresponding edits to
+  `tests/test_sim_user_guide.py`); no unrelated test edits" — the
+  design-bound extension clause and the negative guard match the
+  required change in substance exactly.
+- **Production-diff pins byte-identical to Revision 1:** the
+  Revision 1→2 diff (`git diff 72fcfbf 5e88dd2` on the plan file)
+  contains exactly two hunks — the revision header and the single
+  09g cell. The `softlab/huo|jin|shui|mu` empty pin, the
+  `softlab/tu` conditional pin, the `pyproject.toml setup.py` pin,
+  and the snapshot()/describe() schema-change prohibition are
+  unchanged character-for-character.
+- **No case weakened:** the change replaces an over-broad exhaustive
+  enumeration with a scope-bounded permission plus an explicit new
+  negative guard ("no unrelated test edits"); the §2 scope-gate
+  decision, R3-TC-09m6 and all other cases/matrix rows are untouched.
+- **Risk-note tension resolved:** risk note 1's rebind allowance now
+  reaches the 09g `tests/` row via the "if the approved design
+  extends the guide-byte-reproduction convention" clause; no
+  risk-note edit was needed, and none was made.
+
+Issue 1 is CLOSED with my confirmation; review verdict finalized as
+APPROVED. Plan is cleared for the detailed-design gate.
