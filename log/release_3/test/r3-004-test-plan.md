@@ -1,6 +1,8 @@
 # R3-004 test plan — executed connected example, user guide, final architecture and release evidence
 
-Tester: sw-mike | Date: 2026-10-16 | Revision: 1 (submitted for developer review, sw-tom)
+Tester: sw-mike | Date: 2026-10-16 | Revision: 2 (developer review issue 1 addressed:
+R3-TC-09g `tests/` expectation reworded to permit design-bound extensions of
+`tests/test_sim_user_guide.py`; no other case, pin or scope item changed)
 Branch: `codex/r3-004-delivery` (baseline head `92e128d`, from dev `2991a63`)
 Requirements: [log/release_3/prd.md](../prd.md) — R3-AC-08 in full (remaining clauses),
 release-wide acceptance evidence of R3-AC-01–08
@@ -103,7 +105,7 @@ un-runnable until the delivery artifacts land (see baseline GAP items).
 | R3-TC-09d | Full regression suite green incl. new cases | Delivery committed on this branch | `.venv/bin/python -m unittest discover -s tests -p 'test_*.py'` | OK, exit 0; count = 207 baseline + new R3-004 automated cases; 0 FAIL/ERROR lines | Clauses 1, 3 |
 | R3-TC-09e | Warning gate | Same | `.venv/bin/python -W error::Warning -m unittest discover -s tests -p 'test_*.py'` | OK, exit 0 — zero emitted warnings (no silent waiver; Release 1 debt OBS-004/005/006, DEFECT-2 must not fire) | Clause 3 |
 | R3-TC-09f | Compile and import evidence | Same | `python -m compileall -q softlab`; `python -c "import softlab; print(softlab.__version__)"`; import the four R3-003 public exports from `softlab.tu.simulation` with identity asserts (convention: r3-003 results §4) | compileall exit 0 no output; import exit 0, version prints; export identity holds | Clauses 1, 3 |
-| R3-TC-09g | Scope guard — production diff and dependencies | Delivery committed | `git diff dev...HEAD --stat -- softlab/huo softlab/jin softlab/shui softlab/mu` (empty); `git diff dev...HEAD --stat -- softlab/tu` (empty unless the approved design documents a `tu` change — none is anticipated); `git diff dev...HEAD --stat -- pyproject.toml setup.py` (empty); `git diff dev...HEAD --stat -- tests/` lists only the new example test file(s); production diff must NOT contain any snapshot()/describe() schema change (scope-gate §2 enforcement) | All diffs as expected; no new dependencies; no UI/hardware content; no silent scope expansion | Clauses 1, 3 + §2 gate |
+| R3-TC-09g | Scope guard — production diff and dependencies | Delivery committed | `git diff dev...HEAD --stat -- softlab/huo softlab/jin softlab/shui softlab/mu` (empty); `git diff dev...HEAD --stat -- softlab/tu` (empty unless the approved design documents a `tu` change — none is anticipated); `git diff dev...HEAD --stat -- pyproject.toml setup.py` (empty); `git diff dev...HEAD --stat -- tests/` lists only R3-004-scope test changes (new example test file(s) and, if the approved design extends the guide-byte-reproduction convention, corresponding edits to `tests/test_sim_user_guide.py`); no unrelated test edits; production diff must NOT contain any snapshot()/describe() schema change (scope-gate §2 enforcement) | All diffs as expected; no new dependencies; no UI/hardware content; no silent scope expansion | Clauses 1, 3 + §2 gate |
 | R3-TC-09h **[PLAN]** | arch.md reference integrity | Final arch.md (updated by R3-004 delivery) | Parse every relative file path / markdown link in arch.md; assert each resolves to an existing repo file | All references resolve; zero dangling links | Clause 4 |
 
 Notes:

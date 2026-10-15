@@ -143,7 +143,7 @@ issue 1 is closed this plan is ready for the detailed-design gate.
   empty; no snapshot()/describe() schema change) stay exactly as
   written — those are the load-bearing scope-gate assertions.
 - **Owner:** sw-mike (tester).
-- **Status: OPEN.**
+- **Status: RESOLVED** (see closure record below).
 
 ## Point-by-point answers
 
@@ -351,3 +351,30 @@ reproduction convention has a verified working precedent, and the
 scope gate has both a recorded decision path and a mechanical guard.
 Once issue 1 is closed, this plan is ready for the detailed-design
 gate and implementation.
+
+## Closure record
+
+### Issue 1 — RESOLVED
+
+- **Resolution:** `log/release_3/test/r3-004-test-plan.md` Revision 2 —
+  R3-TC-09g's `tests/` expected result reworded exactly as required: the
+  diff pin now reads "lists only R3-004-scope test changes (new example
+  test file(s) and, if the approved design extends the guide-byte-
+  reproduction convention, corresponding edits to
+  `tests/test_sim_user_guide.py`); no unrelated test edits". All
+  production-diff pins (`softlab/huo|jin|shui/mu` empty; `softlab/tu`
+  empty unless the approved design documents it; packaging metadata
+  empty; no snapshot()/describe() schema change) remain byte-identical
+  to Revision 1, as instructed. The risk-note tension is resolved by
+  the wording itself: risk note 1's rebind allowance now extends into
+  the 09g tests/ row via the explicit design-bound extension clause, so
+  no risk-note change was needed. No other case, pin, matrix row or
+  scope item was modified; the §2 scope-gate decision and R3-TC-09m6
+  are untouched. Verdict (CHANGES-REQUESTED) stands as recorded by the
+  reviewer and is not re-opened or altered here.
+- **Commit:** `docs(log): close r3-004 test plan review issue` — the
+  closure commit at the head of branch `codex/r3-004-delivery` at push
+  time (hash recorded here by subject/branch rather than inline, to
+  avoid a self-referential commit hash).
+- **Closed by:** sw-mike (tester).
+- **Date:** 2026-10-15.
