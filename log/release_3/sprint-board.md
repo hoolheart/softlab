@@ -7,7 +7,7 @@ Updated: 2026-10-11 | Integration branch: dev | Execution: **Mode D confirmed by
 | R3-001 | Scoped Release 2 corrections and closure reconciliation | sw-mike (testing) | Done | 2026-10-06 | 2026-10-07 | — | `6dc4d36` |
 | R3-002 | Object builders and station membership | sw-mike (testing) | Done | 2026-10-07 | 2026-10-11 | — | `0bd97d5` |
 | R3-003 | Shared clock, delayed graph, mock signals and atomic coordination | sw-mike (testing) | Done | 2026-10-11 | 2026-10-15 | — | `2991a63` |
-| R3-004 | Connected guide/example and final delivery evidence | sw-celeste (review) | Code review | 2026-10-15 | 2026-10-18 | — | — |
+| R3-004 | Connected guide/example and final delivery evidence | sw-mike (testing) | Testing | 2026-10-15 | 2026-10-18 | — | — |
 
 ## Execution authorization
 
@@ -143,7 +143,6 @@ Progress:
   verified by live execution; zero production changes planned; arch.md A1–A10);
   architect review APPROVED `0cabcb9` (5 rulings ACCEPT); 2 minor issues
   closed `4ed0ccc`.
-- ▶ Independent code review (sw-celeste) in progress next.
 - ✅ Implementation complete (TDD red `0c9bd34` → green `45d4244`, 4 atomic
   commits): failing delivery cases `0c9bd34` (R3-TC-09a/09b/09h red);
   guide §12 coordinated simulation + §13 executed connected example
@@ -156,6 +155,11 @@ Progress:
   `f32b796`; fill-commit CI 38826175913 SUCCESS at `45d4244`.
   Scope-gate ratification record (R3-TC-09m6) remains with
   sw-prod/sw-camille.
+- ✅ Independent code review: CHANGES-REQUESTED `940bfd8` (2 low, record
+  hygiene), fixed by sw-tom `3b8e42c`, re-confirmed APPROVED `b82f5ec`
+  (recorded output re-executed byte-identical; fill-commit convention
+  verified; 32 arch.md anchors spot-checked).
+- ▶ Testing (sw-mike) in progress next.
 
 R3-001 scope (from tasks.md): correct Release 2 standalone bridge readback,
 malformed callback-key errors and reset claims; reconcile closure records
