@@ -387,7 +387,8 @@ coordinated-simulation capability and its claim-by-claim traceability:
 - **R3-001 corrections recap.** Malformed callback-key results raise the
   documented `ValueError`/`TypeError` (`object.py:947-`); the reset-claim
   and bridge-readback corrections are recorded in the bridge paragraph
-  above and the Release 2 guide errata.
+  above and in guide §9
+  ([docs/user-guide/simulation.md](docs/user-guide/simulation.md)).
 - **Scope note (deferral record).** `snapshot()`/`describe()` remain
   legacy device-only (`softlab/tu/station/station.py:190-239`); the
   additive, inert simulation-description node was consciously deferred

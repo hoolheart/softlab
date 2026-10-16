@@ -143,11 +143,6 @@ Progress:
   verified by live execution; zero production changes planned; arch.md A1–A10);
   architect review APPROVED `0cabcb9` (5 rulings ACCEPT); 2 minor issues
   closed `4ed0ccc`.
-- ✅ Implementation complete (TDD red `0c9bd34` → green): failing cases
-  `0c9bd34`, guide §12–§13 `baa751f`, arch.md capability record `f32b796`,
-  candidate-point fill `45d4244`, board note `789e9ca`. 210 tests OK (207+3),
-  zero warnings, scope guard EMPTY production diff verified. Candidate CI
-  38826003029 (f32b796) and fill-commit CI 38826175913 (45d4244) both SUCCESS.
 - ▶ Independent code review (sw-celeste) in progress next.
 - ✅ Implementation complete (TDD red `0c9bd34` → green `45d4244`, 4 atomic
   commits): failing delivery cases `0c9bd34` (R3-TC-09a/09b/09h red);
