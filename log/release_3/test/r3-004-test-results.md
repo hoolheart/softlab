@@ -355,17 +355,15 @@ this execution):
 > prd.md:148-154), confirmed by r3-004-detailed-design.md §"Scope
 > guard"/§A4 item 7. Mechanical guard: R3-TC-09g green at test head
 > `01af2dd` — production diff vs `origin/dev` empty. Ratified by
-> sw-prod/sw-camille, 2026-10-__.
+> sw-prod with user confirmation, 2026-10-16.
 
-**Flag for sw-prod (not a test failure):** per sprint-board.md:156-157
-("Scope-gate ratification record (R3-TC-09m6) remains with
-sw-prod/sw-camille"), the ratification **signature** itself is still
-outstanding and is sw-prod/sw-camille's call per the plan §2 ("a
-recommendation for sw-prod/sw-camille to ratify"). Everything testable
-at this phase is green: the decision is explicit, the guard is
-mechanically enforced, and no override decision exists. **PASS with the
-ratification signature explicitly carried to sw-prod/sw-camille before
-integration.**
+**Ratification record (2026-10-16):** the user was presented the scope
+gate and explicitly **ratified the deferral** ("ratify"). The
+snapshot/describe additive simulation-description node is therefore
+consciously excluded from Release 3 and deferred beyond it as a
+separately authorized future change. No test verdict changes: every
+check executable by the tester was already green; this entry closes the
+carried flag.
 
 ## Baseline-vs-regression (R3-TC-09d portion; plan item 6)
 

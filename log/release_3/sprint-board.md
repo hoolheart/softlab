@@ -171,9 +171,10 @@ All four tasks Done on `dev` (`86ba510`). Release-wide matrix: R3-AC-01–08
 all PASS (r3-004 results §09m5). Remaining: release-completion principle
 inspection, sprint summary, Product Owner acceptance (requires user
 authorization), and — only if separately authorized — `main` promotion.
-Open by design: R3-TC-09m6 scope-gate ratification (snapshot/describe
-simulation node deferred beyond Release 3; disposition recorded, awaiting
-sw-prod/sw-camille signature).
+Ratified 2026-10-16: R3-TC-09m6 scope gate — snapshot/describe additive
+simulation-description node consciously excluded from Release 3 and
+deferred beyond it as a separately authorized future change (user
+ratification recorded in r3-004 results §09m6).
 
 R3-001 scope (from tasks.md): correct Release 2 standalone bridge readback,
 malformed callback-key errors and reset claims; reconcile closure records
