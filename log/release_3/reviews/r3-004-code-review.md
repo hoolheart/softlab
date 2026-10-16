@@ -1,9 +1,12 @@
 # Code Review — R3-004: Executed connected example, user guide, final architecture and release evidence
 
 Reviewer: sw-celeste | Date: 2026-10-16
-Branch: `codex/r3-004-delivery` | Head reviewed: `a6bb006`
-(in sync with `origin/codex/r3-004-delivery`; content head `789e9ca` —
-commit `a6bb006` touches `log/release_3/sprint-board.md` only, verified
+Branch: `codex/r3-004-delivery` | Head reviewed: `a6bb006` (original
+round) | Fix re-reviewed: `3b8e42c` (in sync with
+`origin/codex/r3-004-delivery`; `git diff 940bfd8..3b8e42c` touches
+`arch.md` and `log/release_3/sprint-board.md` only)
+(content head `789e9ca` — commit `a6bb006` touches
+`log/release_3/sprint-board.md` only, verified
 by `git diff 789e9ca..a6bb006 --stat` = 1 log file)
 Range reviewed: `0c9bd34` (red tests), `baa751f` (guide §12–§13),
 `f32b796` (arch.md capability record), `45d4244` (candidate-point fill),
@@ -17,10 +20,15 @@ clarification) | Test plan:
 [r3-004-baseline.md](../test/r3-004-baseline.md) | Convention:
 [r3-003-code-review.md](r3-003-code-review.md)
 
-## Verdict: CHANGES-REQUESTED
+## Verdict: APPROVED
 
+- **Re-confirmation (2026-10-16, fix commit `3b8e42c`)**: both Low
+  record-hygiene issues are fixed exactly as recommended; issues 1–2
+  CLOSED (confirmations inline below). The original round verdict was
+  CHANGES-REQUESTED (2 Low, both OPEN); the fix commit
+  `3b8e42c` resolves both with zero behavioral surface.
 - **Total issues: 2** (critical: 0, high: 0, medium: 0, low: 2) — both
-  OPEN, both record-hygiene; zero issues in the deliverable substance
+  CLOSED, both record-hygiene; zero issues in the deliverable substance
   (guide, tests, arch.md content).
 - The implementation is faithful to the approved design
   element-for-element: the §13 example matches §E exactly, the recorded
@@ -231,7 +239,17 @@ system temp dir, removed after use) using the project `.venv` (Python
   disposition), delete the shorter duplicate (lines 146-150), and keep
   "▶ Independent code review …" as the single trailing pointer.
 - **Owner**: sw-tom
-- **Status**: OPEN
+- **Status**: CLOSED — confirmed by sw-celeste at `3b8e42c`
+  (2026-10-16): the shorter duplicate is deleted; exactly one
+  "✅ Implementation complete" entry remains in the R3-004 section
+  (sprint-board.md:147, the fuller `789e9ca` wording), carrying the
+  R3-TC-09m6 scope-gate disposition (line 157); the "▶ Independent code
+  review (sw-celeste) in progress next." line is intact (line 146). The
+  other three "Implementation complete" lines on the board (49, 77, 110)
+  belong to R3-001/R3-002/R3-003 and are untouched. Non-blocking
+  cosmetic note: the review pointer now precedes rather than trails the
+  implementation entry; content and chronology remain unambiguous, no
+   action required.
 
 ### [Low] Issue 2: dangling prose reference "the Release 2 guide errata" in arch.md
 
@@ -259,7 +277,15 @@ system temp dir, removed after use) using the project `.venv` (Python
   (a Markdown link keeps it inside 09h's mechanical net), or cite the
   R3-001 results document if a process record is intended.
 - **Owner**: sw-tom
-- **Status**: OPEN
+- **Status**: CLOSED — confirmed by sw-celeste at `3b8e42c`
+  (2026-10-16): the dangling phrase is replaced by "…recorded in the
+  bridge paragraph above and in guide §9
+  ([docs/user-guide/simulation.md](docs/user-guide/simulation.md))"
+  (arch.md:390-391) — exactly the recommended resolvable form. The
+  token "errata" no longer occurs anywhere in arch.md (grep-verified);
+  the link target exists, and as a Markdown link it is inside 09h's
+  mechanical net — `tests.test_arch_links` passes over the updated
+  arch.md.
 
 ## Non-blocking observations (no action required for approval)
 
@@ -314,16 +340,36 @@ system temp dir, removed after use) using the project `.venv` (Python
 
 ## Approval
 
-- [ ] All issues resolved — **2 OPEN** (both Low, both record-hygiene;
-  owner sw-tom)
+- [x] All issues resolved — **2 CLOSED** (both Low, both record-hygiene;
+  fixed in `3b8e42c`, confirmed by this reviewer 2026-10-16)
 - [x] Design faithfully implemented (element-for-element: §E, G1–G6,
   A1–A10, T1–T3, fill-commit convention)
 - [x] Test plan faithfully realized (09a/09b/09h automated cases
   non-vacuous and live; 09c–09g gates green; manual-check previews
   09m1/09m2/09m3 clean)
 - [x] Code meets quality and simplicity standards
-- [ ] **CHANGES-REQUESTED** — the deliverable substance is approved in
-  substance; the two Low record-hygiene issues must be fixed by sw-tom
-  before this task proceeds to sw-mike's testing phase. Re-review of
-  the fix is expected to be mechanical (both fixes are deletions/
-  one-line edits with zero behavioral surface).
+- [x] **APPROVED** — re-confirmed 2026-10-16 at `3b8e42c` (in sync with
+  `origin/codex/r3-004-delivery`). The original round ended
+  CHANGES-REQUESTED on two Low record-hygiene items; both are fixed
+  exactly as recommended. This task may proceed to sw-mike's testing
+  phase.
+
+## Re-confirmation record (2026-10-16, fix commit `3b8e42c`)
+
+Fix range: `940bfd8..3b8e42c` — touches `arch.md` (+2/−1) and
+`log/release_3/sprint-board.md` (−5) only; no production, test, or
+packaging surface. All commands from the repository root using the
+project `.venv`:
+
+| Command | Result |
+| --- | --- |
+| `git fetch origin`; HEAD check | HEAD `3b8e42c`, in sync with `origin/codex/r3-004-delivery`, working tree clean |
+| `git diff 940bfd8..3b8e42c` | exactly the two recommended fixes, nothing else |
+| Issue 1: board inspection | single R3-004 "Implementation complete" entry (line 147, fuller `789e9ca` wording, 09m6 disposition line 157); review pointer intact (line 146); duplicate gone |
+| Issue 2: `grep -n 'errata' arch.md` | no matches — dangling reference eliminated |
+| Issue 2: link target | `docs/user-guide/simulation.md` exists; arch.md:390-391 carries the Markdown link |
+| `.venv/bin/python -m unittest tests.test_arch_links` | 1 test OK (R3-TC-09h green over the updated arch.md) |
+| `.venv/bin/python -m unittest discover -s tests -p 'test_*.py'` | **Ran 210 tests, OK** |
+| `.venv/bin/python -W error::Warning -m unittest discover -s tests -p 'test_*.py'` | **OK, zero warnings** |
+| `.venv/bin/python -m compileall -q softlab`; import smoke | exit 0; version `0.3.0` |
+| `git diff --check` | clean |
