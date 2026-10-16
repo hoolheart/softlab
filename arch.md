@@ -5,7 +5,13 @@
 This describes the implemented state at the Release 2 integration point
 (2026-10-05, `dev` tip `470e2c7`; SIM-001 integrated at merge `9408c79`,
 full suite 135 tests green, CI run 37298623628 green on Python 3.9/3.13;
-the Release 1 state was `e2d31ce`, softlab 0.3.0, 99 tests). softlab is a
+the Release 1 state was `e2d31ce`, softlab 0.3.0, 99 tests) and the
+Release 3 candidate point: R3-001/002/003 integrated into `dev` at merges
+`6dc4d36`, `0bd97d5`, `2991a63` (dev CI run 38820136267 green on Python
+3.9/3.13); R3-004 delivery candidate at `f32b796` (candidate CI run
+38826003029 green on Python 3.9/3.13), full suite 210 tests green at the
+candidate head — the cited candidate run certifies an ancestor of this
+fill commit, per the two-stage fill-commit convention. softlab is a
 Python library inspired by QCoDeS,
 not a deployed service. The domain goal is software-defined experimentation
 across laboratories; the current extensible primitives do not establish
@@ -14,7 +20,8 @@ not implemented capability. Workflow policy lives in
 [principles.md](principles.md) and [AGENTS.md](AGENTS.md). The user-facing
 descriptions of the additions are
 [docs/tu_extensions.md](docs/tu_extensions.md) (Release 1) and
-[docs/user-guide/simulation.md](docs/user-guide/simulation.md) (Release 2).
+[docs/user-guide/simulation.md](docs/user-guide/simulation.md)
+(Releases 2–3).
 
 ## Existing module boundaries
 
@@ -24,7 +31,7 @@ descriptions of the additions are
 | `mu` (wood) | Applications/services boundary. Current implementations are notebook interaction and file selection; `cli`, `server`, `services` are placeholders. |
 | `shui` (water) | `DatabaseBackend`, data charts/records/groups, HDF5 and SQLite persistence, memory/JSON profiles. |
 | `huo` (fire) | Asyncio scheduler, `Process`, serial/parallel/branch/sweep composition, count/scan/grid scan. |
-| `tu` (earth) | Experimental objects: parameters, devices, stations, VISA access, theoretical models and ndarray mappings; Release 1 adds versioned descriptions, an opt-in device/VISA lifecycle, an explicit VISA operation path, measurement readings and model inspection/configuration (all additive and opt-in); Release 2 adds the `simulation` subpackage with `SimulatedObject` (additive, zero new dependencies). |
+| `tu` (earth) | Experimental objects: parameters, devices, stations, VISA access, theoretical models and ndarray mappings; Release 1 adds versioned descriptions, an opt-in device/VISA lifecycle, an explicit VISA operation path, measurement readings and model inspection/configuration (all additive and opt-in); Release 2 adds the `simulation` subpackage with `SimulatedObject` (additive, zero new dependencies); Release 3 corrects the three Release 2 gaps (bridge readback, malformed callback-key errors, reset claims), adds station object membership and the `ObjectBuilder` registry (`add_object`/`object`/`build_object`; single shared namespace), and adds the opt-in coordinated simulation (`Coordinator`, `Endpoint`, `MockControl`, `MockMeasurement`, `Station.sim_dt`) — additive, zero new dependencies, no changes outside `tu`. |
 
 These are responsibility boundaries, not independently deployed bounded contexts.
 Do not impose repositories, service frameworks or new aggregate layers merely to
@@ -58,7 +65,10 @@ Evidence: [package initialization](softlab/__init__.py),
 [plotting](softlab/jin/vis/plot.py), [data](softlab/shui/data/base.py),
 [notebooks](softlab/mu/notebooks/). The Release 2 `tu.simulation` package
 adds no edge to this view: it imports nothing from `softlab` (NumPy and
-stdlib only) and sits at a leaf of the import graph.
+stdlib only). The direction remains one-way after Release 3: object
+membership makes [station](softlab/tu/station/station.py) a consumer of
+the simulation package
+(`softlab/tu/station/station.py:17-24`), not vice versa.
 
 ## Existing `tu` contracts and extension points
 
@@ -210,16 +220,22 @@ checks as well as direct-module tests.
 ### Simulation
 
 [SimulatedObject](softlab/tu/simulation/object.py) (SIM-001, implemented) is
-the deterministic simulated-object foundation, exported as the only public
-name of the [simulation](softlab/tu/simulation/__init__.py) subpackage and
-reachable as `softlab.tu.simulation.SimulatedObject` (the `tu` initializer
-imports the `simulation` subpackage; no class names are added there). A
+the deterministic simulated-object foundation of the
+[simulation](softlab/tu/simulation/__init__.py) subpackage, which exports
+`SimulatedObject`, `ObjectBuilder`, `register_object_builder`,
+`get_object_builder`, `MockControl`, `MockMeasurement`, `Coordinator`
+and `Endpoint` (each reachable as `softlab.tu.simulation.<name>`; the
+`tu` initializer imports the `simulation` subpackage; no class names are
+added there). A
 simulated object represents *the thing being controlled or observed* —
 distinct from a mock instrument, which represents *how* an experiment
 controls or observes it. One object may be shared by several devices, so
 object state never implicitly belongs to any instrument. The class is a
 plain class (no base classes, no mixins) and imports nothing from
-`softlab`; the dependency direction is strictly one-way.
+`softlab`; the dependency direction is strictly one-way:
+simulation-independent-of-station — [station](softlab/tu/station/station.py)
+itself imports the simulation package for object membership
+(`softlab/tu/station/station.py:17-24`), not vice versa.
 
 **Model and namespaces.** The object owns three declared variable
 namespaces: **inputs** (externally driven, including time/`dt` when a model
@@ -310,7 +326,15 @@ parameter's own validator and the object's per-variable specification are
 two separate gates applied in sequence; the sim specification is
 authoritative, and because the wiring is in `before_set` a sim-spec
 rejection propagates out of `Parameter.set` *before* the parameter store
-changes, keeping parameter and object consistent. Explicit advancement in
+changes, keeping parameter and object consistent. Parameter read-back
+via `get()` returns the object's **authoritative input store**
+(`before_get`'s return replaces the stored value), so control reads
+reflect the object's current input after `reset()`, direct `set_input`
+changes and writes through another controller sharing the same object
+(Release 3 R3-001 correction; guide §9). In the connected mode the
+readback surfaces differ by design: connected endpoints use
+pending-source control readback and delivered-sample measurement reads
+(see the coordinated-simulation record below). Explicit advancement in
 `count()`/`scan()` binds `sim.evolve_once` (a no-arg bound method) to
 `hook_before_get` (count and scan) or `hook_after_set` (scan only) —
 **never `hook_before_set`**, which fires before the point value is
@@ -320,14 +344,75 @@ step. The user guide
 [docs/user-guide/simulation.md](docs/user-guide/simulation.md) documents
 the full contract with an executed deterministic example.
 
-**Deliberate exclusions (remain excluded after Release 2).** Direct
+**Coordinated simulation (Release 3, implemented).** The opt-in
+coordinated-simulation capability and its claim-by-claim traceability:
+
+- **Composition and ownership.** `Coordinator(station)` — one per
+  station, permanent (no retirement API), duck-checked station reference
+  (`softlab/tu/simulation/coordination.py:223-259`); enrollment claims
+  exclusive ownership of each object (`coordination.py:452-507`; the
+  claim slot is `softlab/tu/simulation/object.py:390`), and guards reject
+  standalone `evolve_once`/`reset`/driven-`set_input` while coordinated
+  (`object.py:521-522`, `object.py:586`, `object.py:715`;
+  `coordination.py:1264-1296`). Safe detach is
+  `disconnect`→`withdraw`→`rm_object` (`coordination.py:509-566`,
+  `coordination.py:820-856`; `softlab/tu/station/station.py:324-331`).
+- **Clock.** Station-owned `sim_dt` with the documented validation,
+  coercion (`numbers.Real` via `float()`, `Decimal` rejected) and
+  mid-run-rejection rule (`softlab/tu/station/station.py:105-168`;
+  `coordination.py:58-97`); `tick`/`sim_time` multiplication policy and
+  atomic overflow (`coordination.py:292-330`, `coordination.py:1144-1150`);
+  explicit `bind_interval` model-dt binding (`coordination.py:858-924`).
+- **Connections and the delay rule.** `Endpoint` construction-time
+  validation and resolution (`coordination.py:105-162`,
+  `coordination.py:370-436`); single-driver per destination via the
+  dest-keyed edge map (`coordination.py:750-818`); committed-snapshot
+  `S_k` semantics — every edge delivers the source's previous-boundary
+  value, so no same-tick propagation exists by construction
+  (`coordination.py:12-21`, `coordination.py:1104-1135`); fan-out
+  delivers an independent copy per destination
+  (`coordination.py:1117-1131`); delivery is validated at prepare and at
+  tick time (`coordination.py:1320-1345`); graph edits are STOPPED-only.
+- **Mock endpoints.** `MockControl` pending-source semantics
+  (last-write-wins, busy guard; `softlab/tu/simulation/mock.py:33-139`)
+  and `MockMeasurement` delivered-sample semantics with the constructor
+  initial as the tick-zero sample (`mock.py:142-215`). Endpoints are
+  coordinator-owned ports, not devices.
+- **Lifecycle and atomicity.** Publication-is-the-only-writer two-phase
+  `prepare`/`step`/`reset` (`coordination.py:967-1035`,
+  `coordination.py:1037-1163`, `coordination.py:1165-1258`); a failed
+  tick/reset preserves the committed network with original exception
+  identity; reset lands STOPPED, restores values but not topology; the
+  external-side-effect limit is stated in the `reset` docstring.
+- **R3-001 corrections recap.** Malformed callback-key results raise the
+  documented `ValueError`/`TypeError` (`object.py:947-`); the reset-claim
+  and bridge-readback corrections are recorded in the bridge paragraph
+  above and in guide §9
+  ([docs/user-guide/simulation.md](docs/user-guide/simulation.md)).
+- **Scope note (deferral record).** `snapshot()`/`describe()` remain
+  legacy device-only (`softlab/tu/station/station.py:190-239`); the
+  additive, inert simulation-description node was consciously deferred
+  beyond Release 3
+  ([r3-004 test plan](log/release_3/test/r3-004-test-plan.md) §2) —
+  recorded here so the architecture neither claims it nor silently
+  omits the decision.
+
+**Deliberate exclusions (remain excluded after Releases 2–3).** Direct
 input→output feedthrough (outputs derive from state only; the memoryless
-idiom uses a holding state), ODE/PDE solvers, event simulation, a
-dedicated clock API and automatic wall-clock advancement, background
-workers, stochastic/noise frameworks, calibration/fitting, model
-persistence, thread safety and cross-thread atomicity, multi-object
-scheduling, hardware access and UI. Adding any of these requires a new
-approved change.
+idiom uses a holding state), ODE/PDE solvers, event simulation,
+automatic wall-clock advancement (an explicit station-owned `sim_dt`
+clock is implemented — the coordinated-simulation record above),
+background workers, stochastic/noise frameworks, calibration/fitting,
+model persistence, thread safety and cross-thread atomicity,
+automatic/background multi-object scheduling (explicit coordinated
+stepping is implemented), a concrete `huo` simulation experiment
+process, real-time pacing, instant edges, configurable multi-tick
+delays, connection-graph persistence, hardware access and UI. The
+additive, inert simulation-description node for
+`Station.snapshot()`/`describe()` was consciously deferred beyond
+Release 3 (recorded in
+[r3-004 test plan](log/release_3/test/r3-004-test-plan.md) §2). Adding
+any of these requires a new approved change.
 
 ### TU-001 characterization and Release 1 observation dispositions
 
@@ -449,13 +534,57 @@ plus the user guide
 changes were restricted to `softlab/tu/` per the PRD boundary; the release
 is additive and migration-free.
 
+The [Release 3 requirements](log/release_3/prd.md) (R3-001–R3-004) are
+implemented: R3-001 corrected the Release 2 standalone bridge readback,
+malformed callback-key errors and reset claims; R3-002 added station
+object membership and the `ObjectBuilder` registry; R3-003 added the
+opt-in coordinated simulation (`Coordinator`, `Endpoint`, mock
+endpoints, `Station.sim_dt`); R3-004 delivered the executed connected
+example, the guide coverage and this architecture record. Production
+changes were restricted to `softlab/tu/` with zero new dependencies. The
+added test files are `tests/test_tu_station_objects.py`,
+`tests/test_tu_coordination.py`, `tests/test_sim_connected_guide.py` and
+`tests/test_arch_links.py`; the integrated suite is 210 tests, with the
+candidate-point CI evidence recorded in the status header above.
+
+Claim-by-claim traceability for the Release 3 coordinated-simulation
+claims (anchors verified at the Release 3 candidate test head):
+
+| Architecture claim | File:line evidence |
+| --- | --- |
+| Eight-name public export surface | `softlab/tu/simulation/__init__.py:3-15` |
+| `Coordinator` one-per-station, permanent, duck-checked | `softlab/tu/simulation/coordination.py:171-259` |
+| Lifecycle STOPPED/RUNNING; clock readable after start | `coordination.py:181-186`, `coordination.py:279-330` |
+| `prepare` tick-zero `S_0`, all-or-nothing | `coordination.py:967-1035` |
+| `step` phases: freeze → candidates → publication; `S_k`-only edges | `coordination.py:1037-1163` (esp. `coordination.py:1104-1135`) |
+| Clock multiplication policy; atomic overflow | `coordination.py:196-202`, `coordination.py:1144-1150` |
+| Coordinated reset: staged rebuild, lands STOPPED, side-effect limit | `coordination.py:1165-1258` |
+| `Endpoint` validation and resolution rule | `coordination.py:105-162`, `coordination.py:370-436` |
+| Single-driver per destination; atomic graph edits | `coordination.py:750-856` |
+| `bind_interval` explicit float binding | `coordination.py:858-924` |
+| Safe detach `disconnect`→`withdraw`→`rm_object` | `coordination.py:509-566`, `coordination.py:820-856`; `softlab/tu/station/station.py:324-331` |
+| `MockControl` pending store, last-write-wins, busy guard | `softlab/tu/simulation/mock.py:33-139` |
+| `MockMeasurement` tick-zero initial, delivered-only samples | `mock.py:142-215` |
+| `Station.sim_dt` validation/coercion/mid-run rejection | `softlab/tu/station/station.py:105-168`; `coordination.py:58-97` |
+| Station object membership + ownership removal guard | `station.py:100-102`, `station.py:273-335` |
+| Object builder + model-keyed registry | `softlab/tu/simulation/builder.py:19-101`; `station.py:337-376` |
+| Ownership claim slot + coordinated-operation guards | `softlab/tu/simulation/object.py:390`, `object.py:521-522`, `object.py:586`, `object.py:715` |
+| Malformed callback-key documented errors (R3-001) | `object.py:947-` |
+| `snapshot()`/`describe()` remain legacy device-only (deferral) | `station.py:190-239` |
+
 **[PLANNED — not implemented]** Run services, persistence policy, calibration
 workflows, schedulers and remote applications remain outside this `tu` scope
-and are future work. The Release 2 exclusions remain excluded: direct
-input→output feedthrough, ODE/PDE solvers, event simulation, a dedicated
-clock/automatic wall-clock advancement, background workers, stochastic/noise
-frameworks, model persistence, thread safety and multi-object scheduling.
-The known limitations OBS-004, OBS-005, OBS-006 and
+and are future work. The Release 2 and 3 exclusions remain excluded: direct
+input→output feedthrough, ODE/PDE solvers, event simulation, automatic
+wall-clock advancement (an explicit station-owned `sim_dt` clock is
+implemented), background workers, stochastic/noise frameworks, model
+persistence, thread safety and automatic/background multi-object scheduling
+(explicit coordinated stepping is implemented). Also tracked as future work
+requiring its own approved change: the additive, inert
+simulation-description node for `Station.snapshot()`/`describe()`, deferred
+beyond Release 3
+([r3-004 test plan](log/release_3/test/r3-004-test-plan.md) §2). The known
+limitations OBS-004, OBS-005, OBS-006 and
 DEFECT-2 (table above; full wording and evidence in
 [log/release_1/compatibility.md](log/release_1/compatibility.md)) are still
 tracked as technical debt; correcting them is future

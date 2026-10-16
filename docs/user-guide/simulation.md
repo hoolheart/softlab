@@ -5,11 +5,14 @@ the `tu` layer. This guide covers construction, the evolve/observation
 contract, reset, the error model, ownership/aliasing rules, the
 supported value contract, optional time context, the distinction
 between a simulated object and a mock device, the deterministic-callback
-contract, the `Device`/`Parameter` bridge pattern, known limitations,
-and a fully executed example.
+contract, the `Device`/`Parameter` bridge pattern, known limitations, a
+fully executed example, coordinated multi-participant simulation (shared
+clock, delayed connections and feedback, mock endpoints, coordinated
+reset), and a fully executed connected example.
 
-Public API: `softlab.tu.simulation.SimulatedObject` (the only public
-name of the subpackage).
+Public API: `SimulatedObject`, `ObjectBuilder`, `register_object_builder`,
+`get_object_builder`, `MockControl`, `MockMeasurement`, `Coordinator`,
+`Endpoint` — all exported from `softlab.tu.simulation`.
 
 ## 1. Simulated object vs. mock device
 
@@ -227,6 +230,10 @@ There is no clock API and no wall-clock access anywhere in the object.
 Models that need time declare it as an ordinary input (e.g. `dt`)
 and/or a state (e.g. `t`, advanced by `evolve` as
 `t_next = t + dt`). `reset()` restores the declared initial `t`.
+In a coordinated simulation the shared clock is owned by the station
+(`sim_dt`) and the coordinator (`tick`/`sim_time`), and a model's
+declared interval input can be bound explicitly with
+`Coordinator.bind_interval` — see §12.
 
 ## 9. Bridging to Device and Parameter (mock devices)
 
@@ -255,12 +262,15 @@ the object's current input after direct `set_input` changes, `reset()`
 and writes through another controller sharing the same object.
 
 **Standalone vs connected readback.** This section documents the
-standalone pattern: every control read follows the object's
-authoritative input store. A coordinated multi-participant simulation
-(planned Release 3 work) defines different, pending-source and
-delayed-edge readback semantics for connected participants; those
-semantics are specified by that work and are intentionally not stated
-here.
+**standalone** pattern: every control read follows the object's
+authoritative input store (this is the R3-001 correction; the read
+reflects the object's current input after direct `set_input` changes,
+`reset()` and writes through another controller sharing the same
+object). In a **connected** (coordinated) run the readback surfaces
+differ by design: a `MockControl` read returns the staged **pending**
+source value and a `MockMeasurement` read returns the most recently
+**delivered** sample obeying the edge-delay rule — see §12. Both
+patterns are implemented and both are stated here.
 
 **Two-gate validation asymmetry.** The parameter's own validator and
 the object's per-variable value specification are **two separate,
@@ -320,9 +330,11 @@ callbacks and factories must not re-enter the same object.
 - Direct input→output feedthrough is out of scope (use the memoryless
   holding-state idiom, §3).
 - Out of scope by design: ODE/PDE solvers, event simulation,
-  automatic wall-clock advancement, background workers, multi-object
-  scheduling, stochastic/noise frameworks, calibration/fitting, model
-  persistence, hardware access, UI.
+  automatic wall-clock advancement and automatic/background
+  multi-object scheduling (explicit coordinated stepping with a shared
+  `sim_dt` is covered in §12), background workers,
+  stochastic/noise frameworks, calibration/fitting, model persistence,
+  hardware access, UI.
 
 ## 11. Executed example
 
@@ -398,4 +410,210 @@ vector model, harmonic oscillator, dt=0.1:
   step 3: v = [0.970000, -0.299000]
   step 4: v = [0.940100, -0.396000]
   step 5: v = [0.900500, -0.490010]
+```
+
+## 12. Coordinated simulation
+
+**Composition and ownership.** A coordinated simulation is owned by one
+`Coordinator(station)` — exactly one per station, permanent (no
+retirement API), strictly opt-in; ordinary station or device use never
+constructs one. Simulated objects participate as station members,
+enrolled by member name; mock control/measurement endpoints are
+coordinator-owned ports, **not** devices and not station members, so no
+`Parameter` hook ever fires for them. The lifecycle has two states:
+STOPPED (the connection graph is mutable) and RUNNING (after a
+successful `prepare()`); a coordinated `reset()` lands back in STOPPED.
+
+**Shared explicit clock.** The shared interval is station-owned:
+`station.sim_dt` validates its value (`bool` → `TypeError`, non-real →
+`TypeError`, non-finite or non-positive → `ValueError`), coerces through
+`float()` (`Decimal` is rejected), and a change while a coordinator is
+prepared or mid-operation is rejected with `RuntimeError` until a
+coordinated reset. The coordinator's `tick` is an exact, unbounded
+`int`; `sim_time == float(tick) * sim_dt` is computed at publication,
+never accumulated. The clock is readable only after the first successful
+`prepare()`, and a non-finite candidate time fails the tick atomically
+with `OverflowError`.
+
+**Delayed edges and feedback.** Connections are `Endpoint` pairs
+resolved and validated at `connect` time; each destination has a single
+driver, and graph edits are STOPPED-only, validated fully before one
+mutation. At every transition k→k+1 each destination consumes the
+committed boundary snapshot `S_k` — the source's previous-boundary value
+— so no edge propagates a newly computed same-tick value by construction
+(publication is the only writer). `S_0` is computed from the initial
+states at the explicit `prepare()`; a feedback edge therefore consumes
+its initialized previous value on the first transition. Fan-out
+delivers an independent copy per destination.
+
+**Mock interaction.** `MockControl.write(value)` stages a pending value
+(last write wins); the readback shows the pending value immediately, the
+next transition samples and delivers it, the pending persists across
+ticks and survives failed ticks, and writes issued while a tick or reset
+is in flight are rejected with `RuntimeError`. `MockMeasurement.read()`
+returns the most recently delivered sample obeying the edge-delay rule;
+the tick-zero sample is the constructor initial, because `prepare()`
+delivers nothing to measurements. Reads and writes never tick and never
+fetch around the edge delay.
+
+**Interval binding.** `Coordinator.bind_interval(object_name,
+input_name)` explicitly binds a model's declared float input to the
+shared interval — nothing is inferred from names. Each transition
+overlays `float(sim_dt)`; the single-driver rule extends to bindings;
+reset restores the declared initial.
+
+**Coordinated reset.** One operation rebuilds every participant's
+inputs and states (declared factories re-invoked), republishes `S_0`,
+restores control pendings and measurement samples to constructor
+initials, zeroes the clock and lands STOPPED. Topology (edges, bindings,
+enrollment) is retained; a failure leaves the prior committed network
+fully usable; and a re-run (`prepare()` + `step()`) reproduces the trace
+under deterministic callbacks and factories. Atomicity covers
+library-owned state only — external side effects of user callbacks are
+outside every rollback guarantee — and reset is not claimed to equal
+fresh construction.
+
+**Connected vs standalone.** §9's bridge remains the standalone
+pattern: every control read follows the object's authoritative input
+store. Connected participants use the endpoints above instead; while an
+object is enrolled, direct `evolve_once()`/`reset()` calls and
+`set_input` on driven inputs are rejected until the object is withdrawn.
+
+## 13. Executed connected example
+
+The following program was executed end-to-end with the project
+installed; its printed output is recorded verbatim and is byte-for-byte
+reproducible across runs.
+
+```python
+from softlab.tu.simulation import (
+    Coordinator,
+    Endpoint,
+    MockControl,
+    MockMeasurement,
+    SimulatedObject,
+)
+from softlab.tu.station import Station
+
+
+def make_object(name, initial_x):
+    return SimulatedObject(
+        name,
+        inputs={'u': 0.0},
+        states={'x': initial_x},
+        outputs=['y'],
+        evolve=lambda u, x: {'x': x['x'] + u['u']},
+        observe=lambda x: {'y': x['x']},
+    )
+
+
+station = Station('connected-demo')
+station.add_object(make_object('A', 1.0))
+station.add_object(make_object('B', 10.0))
+station.add_object(make_object('C', 100.0))
+station.add_object(make_object('D', 0.0))
+station.sim_dt = 0.5
+
+drive = MockControl('drive', 2.0)
+probe = MockMeasurement('probe', -1.0)
+
+coordinator = Coordinator(station)
+for name in ['A', 'B', 'C', 'D']:
+    coordinator.enroll(name)
+coordinator.add_control(drive)
+coordinator.add_measurement(probe)
+coordinator.connect(Endpoint('A', 'y'), Endpoint('B', 'u'))
+coordinator.connect(Endpoint('B', 'y'), Endpoint('C', 'u'))
+coordinator.connect(Endpoint('C', 'y'), Endpoint('A', 'u'))
+coordinator.connect(Endpoint('drive'), Endpoint('D', 'u'))
+coordinator.connect(Endpoint('C', 'y'), Endpoint('probe'))
+
+
+def state_line():
+    return (
+        '  states: '
+        f'A.x={station.object("A").get_state("x"):.1f} '
+        f'B.x={station.object("B").get_state("x"):.1f} '
+        f'C.x={station.object("C").get_state("x"):.1f} '
+        f'D.x={station.object("D").get_state("x"):.1f}'
+    )
+
+
+def delivered_line():
+    return (
+        '  delivered: '
+        f'A.u={station.object("A").get_input("u"):.1f} '
+        f'B.u={station.object("B").get_input("u"):.1f} '
+        f'C.u={station.object("C").get_input("u"):.1f} '
+        f'D.u={station.object("D").get_input("u"):.1f}'
+    )
+
+
+print('connected example: chain A -> B -> C, feedback C -> A, '
+      'drive -> D, C.y -> probe')
+print(f'sim_dt = {station.sim_dt:.1f}')
+
+coordinator.prepare()
+print(f'after prepare: tick={coordinator.tick} '
+      f'sim_time={coordinator.sim_time:.1f}')
+print(state_line())
+print(f'  drive pending={drive.read():.1f}  probe={probe.read():.1f}')
+
+coordinator.step()
+print(f'step to tick={coordinator.tick} '
+      f'sim_time={coordinator.sim_time:.1f}')
+print(delivered_line())
+print(state_line())
+print(f'  probe={probe.read():.1f}')
+
+drive.write(3.0)
+print(f'write drive=3.0 between ticks: readback={drive.read():.1f}, '
+      f'tick still {coordinator.tick}, '
+      f'D.x still {station.object("D").get_state("x"):.1f}')
+
+coordinator.step()
+print(f'step to tick={coordinator.tick} '
+      f'sim_time={coordinator.sim_time:.1f}')
+print(delivered_line())
+print(state_line())
+print(f'  probe={probe.read():.1f}')
+
+coordinator.reset()
+print(f'after reset: tick={coordinator.tick} '
+      f'sim_time={coordinator.sim_time:.1f} '
+      f'prepared={coordinator.prepared}')
+print(state_line())
+print(f'  drive pending={drive.read():.1f}  probe={probe.read():.1f}')
+
+coordinator.prepare()
+coordinator.step()
+print(f're-run after prepare + one step: tick={coordinator.tick} '
+      f'sim_time={coordinator.sim_time:.1f}')
+print(state_line())
+print(f'  probe={probe.read():.1f}')
+```
+
+Actual output:
+
+```text
+connected example: chain A -> B -> C, feedback C -> A, drive -> D, C.y -> probe
+sim_dt = 0.5
+after prepare: tick=0 sim_time=0.0
+  states: A.x=1.0 B.x=10.0 C.x=100.0 D.x=0.0
+  drive pending=2.0  probe=-1.0
+step to tick=1 sim_time=0.5
+  delivered: A.u=100.0 B.u=1.0 C.u=10.0 D.u=2.0
+  states: A.x=101.0 B.x=11.0 C.x=110.0 D.x=2.0
+  probe=100.0
+write drive=3.0 between ticks: readback=3.0, tick still 1, D.x still 2.0
+step to tick=2 sim_time=1.0
+  delivered: A.u=110.0 B.u=101.0 C.u=11.0 D.u=3.0
+  states: A.x=211.0 B.x=112.0 C.x=121.0 D.x=5.0
+  probe=110.0
+after reset: tick=0 sim_time=0.0 prepared=False
+  states: A.x=1.0 B.x=10.0 C.x=100.0 D.x=0.0
+  drive pending=2.0  probe=-1.0
+re-run after prepare + one step: tick=1 sim_time=0.5
+  states: A.x=101.0 B.x=11.0 C.x=110.0 D.x=2.0
+  probe=100.0
 ```

@@ -245,3 +245,67 @@ counterweight.
 all eight required verifications pass, zero FAIL items. Integration to `dev`
 remains gated on the merge-candidate CI per principle 11; release acceptance
 before `main` is a separate, later gate.
+
+---
+
+# R3-004 task-completion inspection — executed connected example, user guide, final architecture and release evidence
+
+Owner: coordinator | Inspector: sw-mike (verification duty — no code/test/design
+changes made) | Date: 2026-10-16
+Phase: task completion | Inspected revision: `673a021` on
+`codex/r3-004-delivery` (fetched and synced to `origin/codex/r3-004-delivery`
+via `git fetch origin` + `git reset --hard`; `git status --porcelain` empty;
+`git diff origin/codex/r3-004-delivery --stat` = 0 lines; `git diff --check
+origin/dev...HEAD` exit 0)
+Basis: repository `principles.md` (all 11 principles) and AGENTS.md.
+Self-check limitation: the inspector (sw-mike) authored the R3-004 test plan,
+baseline and test results, so those artifacts are **self-inspected**; the
+test-plan review + re-confirmation (sw-tom), detailed design + architect
+review incl. live golden-trace execution (sw-celeste/sw-jerry) and code review
+incl. byte-identical recorded-output re-execution and failure-sensitivity
+demonstrations (sw-celeste) are independent of the inspector. Where evidence is
+the inspector's own record, independent reviewer re-verification and this
+inspection's own re-executions (below) are cited as the counterweight.
+
+## Per-principle verdicts
+
+| Principle | Evidence / criterion checked | Result | Limits |
+| --- | --- | --- | --- |
+| 1. Five-element architecture | `git diff origin/dev...HEAD --stat -- softlab pyproject.toml setup.py` → **empty** (exit 0): zero production changes across all five elements; whole-tree diff = 12 files (arch.md, docs/user-guide/simulation.md, 9 `log/release_3/` records, 2 new test files) — records/docs/tests scope exactly as the approved design's scope guard specifies | PASS | — |
+| 2. Characterize before changing | `r3-004-baseline.md` (`72fcfbf`) records the six-gap absence inventory (no connected example, §11-only reproduction convention, Release-2-pinned arch.md, bridge-readback gap, no candidate CI, no cross-release matrix) with verbatim probes before any delivery commit; TDD red independently reproduced by this inspection in a detached worktree at `0c9bd34`: `python -m unittest tests.test_sim_connected_guide tests.test_arch_links` → **Ran 3 tests, FAILED (failures=1, errors=2)** — the documented red mode; no public behavior changed at all (production diff empty), so compatibility is preserved by construction | PASS | — |
+| 3. Documented TDD gates | Commit order verified via `git log --oneline origin/dev..HEAD`: plan+baseline `72fcfbf` → plan review `df29394` → issue closed `5e88dd2` → APPROVED `c17abdd` → design `f24b38f` → design review `0cabcb9` → issues closed `4ed0ccc` → **red tests `0c9bd34`** → delivery `baa751f` (guide §12/§13) → `f32b796` (arch.md records) → `45d4244` (candidate-point fill) → code review `940bfd8` → fix `3b8e42c` → APPROVED `b82f5ec` → testing `01af2dd` → results `673a021`. Red precedes every delivery commit; every gate artifact exists, committed, on-branch | PASS | — |
+| 4. One active task | Single task R3-004 in flight on `codex/r3-004-delivery` from dev `2991a63` (R3-003 integration); R3-001/002/003 Done and integrated; no shared-history rewrite (append-only chain, verified in `git log`) | PASS | — |
+| 5. Role and review ownership | Test-plan issue 1 closed by tester sw-mike (`5e88dd2`), **re-confirmed CLOSED and APPROVED by reviewer sw-tom** (`c17abdd`, re-confirmation record in the review doc); design issues 1–2 closed by designer sw-celeste (`4ed0ccc`); architect rulings 1–5 all ACCEPT (`0cabcb9`); code review issues 1–2 (both Low) closed by sw-tom (`3b8e42c`), re-confirmed CLOSED by reviewer sw-celeste (`b82f5ec`); test failures: none, so nothing to close; 09m6 disposition text recorded for sw-prod/sw-camille, not silently closed by the tester | PASS | — |
+| 6. Evidence committed and pushed | Per-commit file listing for all 22 commits on the task branch: every commit touching `log/release_3/` is `docs(log):` (plan/baseline `72fcfbf`, reviews `df29394`/`c17abdd`/`0cabcb9`/`4ed0ccc`/`940bfd8`/`b82f5ec`, design `f24b38f`, board advances `95e1b7a`/`34d4c92`/`789e9ca`/`a6bb006`/`01af2dd`, results `673a021`); non-log commits touch only arch.md (`docs(arch):`), the guide (`docs(guide):`) and the two new test files (`test(tu):`). Working tree clean; local HEAD == `origin/codex/r3-004-delivery` == `673a021`; no circular self-hashes (results cite commits strictly before `673a021`; review docs record hashes by subject/branch where self-reference would otherwise occur) | PASS | — |
+| 7. Environment verified | Inspector independently re-ran on `.venv` Python 3.13.15: `python -m unittest discover -s tests -p 'test_*.py'` → **Ran 210 tests, OK**; `python -W error::Warning -m unittest discover -s tests -p 'test_*.py'` → **Ran 210 tests, OK, exit 0**; `python -m compileall -q softlab` → exit 0 no output; import smoke → `0.3.0`; export identity (`EXPORTS_OK` convention) recorded in results §4. Versions, warnings (none), skips (none), limits (none unverifiable; `conda activate` non-persistent → `.venv/bin/python`, same interpreter) recorded in results §Environment | PASS | Python 3.9 legibility evidenced by CI matrix runs (both jobs success), not local execution, per AGENTS.md |
+| 8. Baseline vs regression | Baseline ledger: six capability gaps (confirmed absent at `72fcfbf`) all closed by the delivery; Release 1 debt OBS-004/005/006 + DEFECT-2 unchanged, tracked, untouched. Zero new warnings: 210-suite green under `-W error::Warning` (independent re-run, exit 0) — proven, not inferred; no debt warning fired. Grep over `log/release_3/` for waiver language returns only "no waiver"/"not waived"/prohibition statements — **no actual waiver anywhere**; the single 09m6 flag is a carried ratification signature, recorded explicitly, not a waiver | PASS | — |
+| 9. Instrument/data safety | No real instruments (N/A per task); the worked example uses only synthetic `SimulatedObject`s/`MockControl`/`MockMeasurement` with exact small floats; data-backend tests write temp sqlite/HDF5 under `$TMPDIR` (observed in suite output); no `default_station()` module-global use in the example (code-review grep-verified) | PASS | — |
+| 10. Minimal compatible extension | `git diff origin/dev...HEAD --stat -- pyproject.toml setup.py` → **untouched**; zero new dependencies (design dependency table empty; test files stdlib + the delivered public API); production diff empty so no API/framework/Python-support change is possible; exactly two new test files map 1:1 to the two acceptance surfaces; guide §1–§11 preserved heading-for-heading (no renumbering; §11 split literal byte-stable, SIM-TC-08b green) | PASS | — |
+| 11. Reproducible completion | Evidence commands re-executed by this inspection with matching results (210 OK, 210 OK under warnings-as-errors, compileall clean, smoke 0.3.0, red-commit FAILED reproduced, all four CI runs re-queried below); integration to `dev` and release acceptance explicitly **not** claimed — task-completion inspection only; merge-candidate CI remains the integration gate | PASS | — |
+
+## Required-verification items (from the inspection brief)
+
+1. **TDD ordering** — PASS. `72fcfbf < df29394 < 5e88dd2 < c17abdd < f24b38f < 0cabcb9 < 4ed0ccc < 0c9bd34 < baa751f < f32b796 < 45d4244 < 940bfd8 < 3b8e42c < b82f5ec < 01af2dd < 673a021`, confirmed by `git log --oneline origin/dev..HEAD`; red commit `0c9bd34` independently reproduced failing (failures=1, errors=2) in a detached worktree.
+2. **Zero unfixed issues** — PASS. Test-plan review: 1 minor issue, CLOSED `5e88dd2`, reviewer re-confirmed APPROVED `c17abdd`. Design review: 2 minor issues, CLOSED `4ed0ccc`. Code review: 2 Low issues, CLOSED `3b8e42c`, re-confirmed `b82f5ec`. Test results: zero failures (14/14 case IDs PASS: 09a–09h + 09m1–09m6; suite 210 OK). Waiver grep: only negative assertions, no waivers.
+3. **Environment completeness; warning gate; compileall** — PASS. Independent re-runs 2026-10-16 on Python 3.13.15: full suite **210 OK**; warning gate **210 OK under `-W error::Warning`** (exit 0 — every warning class is an error under this gate); `compileall -q softlab` exit 0 silent; import smoke `0.3.0`. Environment table complete; "Connected to … backend" lines are informational prints, not warnings.
+4. **Frontend design-first** — **N/A, recorded explicitly**: R3-004 is a Python-library docs/tests/records delivery with zero UI changes; no Figma prototypes or frontend gates apply.
+5. **Zero-warning (independent re-run)** — PASS. `-W error::Warning` full suite → Ran 210 tests, OK, exit 0 (see item 3).
+6. **Log files committed & pushed** — PASS. Per-commit file listing: every `log/release_3/` change traces to a `docs(log):` commit; tree clean (`git status --porcelain` empty); local == origin == `673a021`; R3-004 chain fully traceable: plan/baseline `72fcfbf`, plan review `df29394`/closure `5e88dd2`/approval `c17abdd`, design `f24b38f`/review `0cabcb9`/closure `4ed0ccc`, code review `940bfd8`/fix `3b8e42c`/approval `b82f5ec`, board `789e9ca`/`a6bb006`/`01af2dd`, results `673a021`.
+7. **Scope** — PASS. `git diff origin/dev...HEAD --stat -- softlab pyproject.toml setup.py` → **empty** (zero production changes, zero packaging changes, no snapshot/describe change possible — scope-gate §2 mechanically enforced); `tests/` diff = exactly two new files (`test_sim_connected_guide.py` +202, `test_arch_links.py` +72); mechanical byte-identity loop over every pre-existing test file vs `origin/dev` → no `DIFFERS` line; whole-tree diff confined to arch.md, the guide, `log/release_3/` records and the two new test files.
+8. **No invented evidence** — PASS. `gh run view` re-queried by this inspection: candidate run 38826003029 → `success`, headSha `f32b796…` (both matrix jobs success); fill-commit run 38826175913 → `success`, headSha `45d4244…`; dev run 38820136267 → `success`, headSha `2991a63…`; final-head run 38828471698 → `success`, headSha `01af2dd…` — every SHA/conclusion cited in arch.md and the results doc matches the live runs. "210 green" chronology per the fill-commit convention: `git show f32b796:arch.md` carries **no** Release-3 header and no "210 green" clause; the Stage-1 header first appears at `45d4244` (committed 2026-10-16 07:52 +0800), after candidate run 38826003029 completed (2026-10-15 23:51 UTC), and self-discloses that the cited run "certifies an ancestor of this fill commit"; `git merge-base --is-ancestor f32b796 HEAD` and `45d4244 HEAD` both true. Convention honored exactly; nothing marked green before it exists.
+9. **Principles 7–11** — each inspected with a concrete criterion above (independent environment reruns; baseline ledger vs debt with waiver grep; instrument/data safety; dependency-diff emptiness; CI-honesty with live re-queries); all PASS.
+
+## Observations (not violations)
+
+- **Board lag (same category as R3-001/R3-002/R3-003)**: `sprint-board.md` progress was last advanced at `01af2dd` ("▶ Testing (sw-mike) in progress next"); the test-results verdict (`673a021`) and this inspection are recorded in their own commits. The testing→inspection→integration transition update is part of the handoff following this inspection (per principle 6, this report is committed/pushed before handoff). The status table row already reads Testing; `tasks.md` is the static planning snapshot by design.
+- **09m6 ratification signature outstanding by design**: the scope-gate disposition text is recorded (results §09m6; board line 157; arch.md deferral record) and the mechanical guard is green, but the sw-prod/sw-camille signature is their call per the approved plan — explicitly carried forward, not silently closed.
+- **Post-results commits are log-only**: CI-certified final head is `01af2dd` (run 38828471698); `673a021` adds the results record itself. The integration gate will require merge-candidate CI on the actual merge commit per principle 11.
+- **Self-check**: the test plan, baseline and test results were authored by the inspector; their pass claims rest on (a) verbatim recorded commands re-executable by anyone, (b) independent reviewer re-verification at each gate (plan-review re-confirmation, architect's independent golden-trace re-derivation + live execution, code review's byte-identical output re-execution, failure-sensitivity demonstrations and 32-anchor spot-check) and (c) this inspection's independent reruns (210-suite, warnings-as-errors, compileall, import smoke, red-commit worktree reproduction, all four CI runs re-queried, byte-identity loop). Review reports and the design were produced by other roles and are not self-checked.
+
+## Overall verdict
+
+**PASS** — R3-004 task-completion principle compliance: all 11 principles pass,
+all nine required verifications pass, zero FAIL items. Integration to `dev`
+remains gated on the merge-candidate CI per principle 11; the 09m6
+ratification signature and Product Owner release acceptance before `main` are
+separate, later gates.
