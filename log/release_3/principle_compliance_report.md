@@ -309,3 +309,66 @@ all nine required verifications pass, zero FAIL items. Integration to `dev`
 remains gated on the merge-candidate CI per principle 11; the 09m6
 ratification signature and Product Owner release acceptance before `main` are
 separate, later gates.
+
+---
+
+# Release 3 completion inspection — all-task, release-wide gate (2026-10-16)
+
+Inspector: sw-mike (verification duty only — no code/test/design changes).
+Head inspected: `ed51609` (`dev`, synced to `origin/dev`, working tree clean).
+Environment: `.venv` Python (3.13), repo-local re-execution of every cited
+evidence class; `gh` re-queries for all cited CI runs.
+
+## Per-principle verdicts (release level)
+
+| # | Principle | Concrete release-level criterion | Evidence (re-executed this inspection) | Verdict |
+| --- | --- | --- | --- | --- |
+| 1 | Preserve five-element architecture | Release-3 production changes confined to the five-element layout; arch.md describes implemented capability only | `git diff --name-only 2dee90e..ed51609 -- softlab/ pyproject.toml` → exactly 6 files, all under `softlab/tu/` (simulation package + station/station.py); arch.md Release-3 stage header added only via the post-candidate fill commit `45d4244` (chronology re-verified at line 295 above); no `huo`/`shui`/`jin`/`mu` changes | PASS |
+| 2 | Characterize before changing | Per-task baselines with absence probes and no-regression anchors precede implementation; red states reproducible | Baselines `89d6f62` (r3-002), `6fcdb4e` (r3-003), `72fcfbf` (r3-004) confirmed ancestors of head; red-mode re-verification already independently executed in detached worktrees during each task inspection (§§R3-002/003/004 above); no public behavior changed in r3-004 (empty production diff per §09g) | PASS |
+| 3 | Documented TDD gates | Every task passed test-plan → design → implementation → code review → testing → principle inspection → integration | 4 test plans/baselines, 4 detailed designs, 12 review records (design/test-plan/code × 4), 4 test-results docs, 5 inspection sections in this file; each section PASS and committed (`8ef37df`, `ba61b52`, `a4d3ad1`, `ceea4c6`, `4bcb05f`) | PASS |
+| 4 | One active task | Serial merges in task order; no task branch remains; no overlapping task work | Merge commits chained by parentage: `6dc4d36` (p: 2dee90e, ba61b52) → `0bd97d5` (p: 6dc4d36, a4d3ad1) → `2991a63` (p: 0bd97d5, ceea4c6) → `86ba510` (p: 2991a63, 4bcb05f), dated 10-07/10-11/10-16/10-16; `git branch -a --list '*r3*'` → empty; per-task commits cluster strictly between successive merges | PASS |
+| 5 | Role and review ownership | Review issues closed by reviewers, not implementers; tester closes failures; scope-gate decisions left to their owners | Design-review issue closures `88ca37d`, `fefe992`, `f5d8680`, `4ed0ccc`; test-plan approvals `d657e13`, `c17abdd`; code-review approvals `7a4a30b`, `b82f5ec`; R3-TC-09m6 ratification signature explicitly **not** self-closed — carried to sw-prod/sw-camille (results §09m6, sprint-board.md:156-157) | PASS |
+| 6 | Evidence committed and pushed | All artifact families committed on task branches, merged to dev; dev == origin/dev; clean status | dev = origin/dev = `ed51609`; `git status --short` empty; 16-file sample across prd/design/reviews/test (incl. `9586b2b`, `fefe992`, `d657e13`, `90d5bca`, `79cdec8`, `673a021`) all trace to commits; families: design ×4, reviews ×12 (plus prd.md at release root), test ×12 | PASS |
+| 7 | Environment verified | Full suite under `-W error::Warning`, compileall, import smoke at dev head; CI matrix repeats | Re-ran this inspection: `Ran 210 tests in 1.148s` → OK (zero warnings); `compileall -q softlab` exit 0; smoke `0.3.0`; CI run **38829927217** re-queried via `gh run view` → `success` at headSha `ed51609…`, both matrix jobs (`compatibility (3.9)`, `compatibility (3.13)`) success | PASS |
+| 8 | Baseline vs regression | Zero new warnings at head; pre-existing debt explicitly tracked, not silently waived | 210 OK under warnings-as-errors (above); Release 1 debt (OBS-004/005/006, DEFECT-2) recorded as tracked and out of scope (sprint-board.md:186, arch.md §TU-001 "open items above are technical debt"); no waiver found in sampled artifacts | PASS |
+| 9 | Protect instruments and experimental data | Synthetic data, temp storage, VISA simulation only; no real instrument access | Test output uses temp dirs (`/var/folders/.../tmp.../readings.db`, `readings.hdf5`); visa-sim backed tests; no task in this release authorized or performed real instrument access | PASS |
+| 10 | Minimal compatible extensions | No dependency/framework/Python-support changes; additive within `tu` | `pyproject.toml` unchanged across `2dee90e..ed51609`; production diff confined to `softlab/tu/`; arch.md:34 claims "additive, zero new dependencies, no changes outside `tu`" — matches the measured diff | PASS |
+| 11 | Reproducible completion | CI green at integration candidate **and at actual dev head**; release-completion inspection performed; acceptance matrix fully traced; release acceptance/main not pre-claimed | CI 38829927217 green at head `ed51609` (both jobs); §09m5 matrix re-read this inspection — all 8 criteria (R3-AC-01–08) PASS with task and results-doc anchors, AC-07 flagged single-task reliance and release-level re-verified; acceptance and `main` promotion explicitly deferred (sprint-board.md:134, 184); diff hygiene: records-only pending this commit | PASS |
+
+## No-invented-evidence spot check (6 claims)
+
+1. CI run 38826003029 → `gh run view`: `success`, headSha `f32b796…` — matches results §09m4. ✓
+2. CI run 38820136267 → `gh run view`: `success`, headSha `2991a63…` — matches arch.md:10. ✓
+3. CI run 38828471698 → `gh run view`: `success`, headSha `01af2dd…` — matches results §09m4. ✓
+4. Red-commit `0c9bd34` "test(tu): add failing r3-004 delivery cases" exists and `git merge-base --is-ancestor` true. ✓
+5. arch.md:392-398 carries the snapshot/describe deferral record; sprint-board.md:138-140 records R3-TC-09m6 as a ratification item. ✓
+6. File anchors: `station.py:105-168` = `sim_dt` property/validator (first lines read: "Shared simulation interval of an optional coordinated simulation (R3-003)"); `coordination.py:1144-1150` = tick time computation with finite-overflow atomic-failure guard. ✓
+
+## Outstanding-by-design items (explicitly owned, not failures)
+
+- **R3-TC-09m6 ratification signature** — owned by sw-prod/sw-camille
+  (results §09m6; sprint-board.md:156-157).
+- **Release 1 technical debt** (OBS-004/005/006, DEFECT-2) — tracked,
+  explicitly out of Release 3 scope (sprint-board.md:186; arch.md §TU-001).
+- **`main` promotion and Product Owner release acceptance** — separate
+  authorization (sprint-board.md:134, 184; principles 4 and 11).
+
+## Self-check limitation
+
+This inspector authored the r3-004 test results, the r3-004 task-completion
+inspection section, and portions of the release evidence those sections cite.
+Those findings are therefore **self-review** to that extent. Mitigation
+applied: every quantitative claim was re-derived this inspection by direct
+command re-execution (210-test warnings-as-errors run, compileall, smoke,
+`gh run view` re-queries, `git log`/`merge-base` hash checks, file:line
+anchor reads) rather than trusting the recorded prose; role-attribution
+claims (principle 5) rest on authored process records and could not be
+independently re-observed.
+
+## Overall verdict
+
+**PASS** — Release 3 completion principle compliance: all 11 principles pass
+at release level, all 8 acceptance criteria traced PASS, zero FAIL items,
+zero warnings at head `ed51609` with CI green. Outstanding items are
+explicitly owned and out of this gate's scope. Release acceptance and `main`
+promotion remain separate, later gates per principles 4 and 11.
