@@ -7,7 +7,7 @@ Updated: 2026-10-11 | Integration branch: dev | Execution: **Mode D confirmed by
 | R3-001 | Scoped Release 2 corrections and closure reconciliation | sw-mike (testing) | Done | 2026-10-06 | 2026-10-07 | — | `6dc4d36` |
 | R3-002 | Object builders and station membership | sw-mike (testing) | Done | 2026-10-07 | 2026-10-11 | — | `0bd97d5` |
 | R3-003 | Shared clock, delayed graph, mock signals and atomic coordination | sw-mike (testing) | Done | 2026-10-11 | 2026-10-15 | — | `2991a63` |
-| R3-004 | Connected guide/example and final delivery evidence | sw-mike (testing) | Testing | 2026-10-15 | 2026-10-18 | — | — |
+| R3-004 | Connected guide/example and final delivery evidence | sw-mike (testing) | Done | 2026-10-15 | 2026-10-16 | — | `86ba510` |
 
 ## Execution authorization
 
@@ -159,7 +159,21 @@ Progress:
   hygiene), fixed by sw-tom `3b8e42c`, re-confirmed APPROVED `b82f5ec`
   (recorded output re-executed byte-identical; fill-commit convention
   verified; 32 arch.md anchors spot-checked).
-- ▶ Testing (sw-mike) in progress next.
+- ✅ Testing PASS (14/14 cases incl. 09m1–09m6; 09m5 release-wide matrix
+  R3-AC-01–08 all PASS), `673a021`; principle inspection PASS, `4bcb05f`;
+  candidate CI 38829609033 SUCCESS.
+- ✅ Integrated into `dev` as `86ba510`; dev CI 38829754958 SUCCESS; task
+  branch deleted. R3-004 complete.
+
+## Release status
+
+All four tasks Done on `dev` (`86ba510`). Release-wide matrix: R3-AC-01–08
+all PASS (r3-004 results §09m5). Remaining: release-completion principle
+inspection, sprint summary, Product Owner acceptance (requires user
+authorization), and — only if separately authorized — `main` promotion.
+Open by design: R3-TC-09m6 scope-gate ratification (snapshot/describe
+simulation node deferred beyond Release 3; disposition recorded, awaiting
+sw-prod/sw-camille signature).
 
 R3-001 scope (from tasks.md): correct Release 2 standalone bridge readback,
 malformed callback-key errors and reset claims; reconcile closure records
