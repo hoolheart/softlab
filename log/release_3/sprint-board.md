@@ -1,6 +1,6 @@
 # Sprint board — Release 3 execution
 
-Updated: 2026-10-11 | Integration branch: dev | Execution: **Mode D confirmed by user — all four tasks, strict serial**
+Updated: 2026-10-16 | Integration branch: dev | Execution: **RELEASE 3 COMPLETE — ACCEPTED (ac84cd7), PROMOTED to main (2ca92ed)**
 
 | ID | Scope | Owner | Phase | Started | Expected completion | Blocker | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -168,13 +168,13 @@ Progress:
 ## Release status
 
 All four tasks Done on `dev` (`86ba510`). Release-wide matrix: R3-AC-01–08
-all PASS (r3-004 results §09m5). Remaining: release-completion principle
-inspection, sprint summary, Product Owner acceptance (requires user
-authorization), and — only if separately authorized — `main` promotion.
-Ratified 2026-10-16: R3-TC-09m6 scope gate — snapshot/describe additive
-simulation-description node consciously excluded from Release 3 and
-deferred beyond it as a separately authorized future change (user
-ratification recorded in r3-004 results §09m6).
+all PASS (r3-004 results §09m5). Release close-out: principle inspection PASS `d49947d`; sprint summary
+`631e88a`; PO acceptance **ACCEPTED** `ac84cd7` (user-authorized
+2026-10-16); R3-TC-09m6 ratified by user (recorded `74c99ce`); promoted to
+`main` `2ca92ed` with README note (`2ca92ed`), dev CI 38911531302 and main
+CI 38911702033 green. See [completion report](completion_report.md).
+Unfinished by design: version bump (0.3.0 unchanged), Release 1 debt,
+deferred snapshot/describe node — all owned, separately authorizable.
 
 R3-001 scope (from tasks.md): correct Release 2 standalone bridge readback,
 malformed callback-key errors and reset claims; reconcile closure records
