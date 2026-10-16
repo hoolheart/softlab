@@ -20,3 +20,8 @@ hypothesis:
 The TU-002–TU-007 extension APIs of ``tu`` (descriptions, lifecycle,
 measurement readings, VISA and theory contracts) are documented in
 ``docs/tu_extensions.md``.
+
+The ``tu`` layer also provides deterministic simulated objects and
+coordinated connected simulation (shared discrete clock, delayed
+connections with feedback support, and mock instrument endpoints); see
+``docs/user-guide/simulation.md``.
