@@ -4,7 +4,7 @@ Updated: 2026-10-18. Integration branch: dev.
 
 | ID | Scope | Owner | Phase | Started | Expected completion | Blocker | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| M01-W01-001 | Thermal reference vertical slice, guide and evidence | sw-jerry next (Architect design review) | Design | 2026-10-18 | Evidence-driven; one working-week forecast | Architect design approval and executable red tests required before implementation | Pending |
+| M01-W01-001 | Thermal reference vertical slice, guide and evidence | sw-celeste next (Designer revision) | Design | 2026-10-18 | Evidence-driven; one working-week forecast | DR-01 artifact-preserving HDF5 reload correction; Architect reinspection required | Pending |
 
 Exactly one active task on `codex/m01-w01-thermal-example` from dev `e034825`.
 Branch setup is complete; PO activation `c776fe8` is committed/pushed.
@@ -29,3 +29,11 @@ UI/Figma, hardware and publication are N/A. Release acceptance and any main
 promotion remain later gates. Completed process updates must be committed/pushed
 before each role handoff; commit identifiers are recorded by the next phase to
 avoid circular self-hashes.
+
+Architect review: **CHANGES_REQUESTED** at the current design gate; see
+[review](reviews/m01-w01-001-design-review.md). Public bounded Scheduler adapter
+and disk-derived metadata hydration approved in principle; DR-01 remains OPEN.
+Designer revision then Architect reinspection is next. No executable red tests
+or implementation may start yet. New baseline defects R4-BASE-SCHED-01,
+R4-BASE-META-01 and R4-BASE-HDF5-01 are tracked in that review, unfixed and
+excluded from incidental production repair.
