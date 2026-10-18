@@ -287,9 +287,16 @@ class ThermalAcceptanceTests(unittest.TestCase):
                     with self.assertRaises(RuntimeError):
                         thermal.run(self.config, self.root / stage)
                     reload_group.assert_not_called()
-                expected_tick = {'prepare': 0, 'model': 2, 'sample': 3}[stage]
-                self.assertEqual(coordinator.tick, expected_tick)
-                self.assertEqual(steps, list(range(1, expected_tick + 1)))
+                if stage == 'prepare':
+                    self.assertFalse(coordinator.prepared)
+                    self.assertEqual(steps, [])
+                    with self.assertRaisesRegex(RuntimeError, 'not started'):
+                        _ = coordinator.tick
+                else:
+                    expected_tick = {'model': 2, 'sample': 3}[stage]
+                    self.assertEqual(coordinator.tick, expected_tick)
+                    self.assertEqual(
+                        steps, list(range(1, expected_tick + 1)))
                 self.assertFalse((self.root / stage / 'thermal.h5').exists())
 
     def test_backend_false_none_and_raised_errors_abort_before_plot(self):
