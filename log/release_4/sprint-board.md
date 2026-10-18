@@ -40,3 +40,11 @@ Architect reinspection is next; Designer has not closed DR-01. No executable red
 or implementation may start yet. New baseline defects R4-BASE-SCHED-01,
 R4-BASE-META-01 and R4-BASE-HDF5-01 are tracked in that review, unfixed and
 excluded from incidental production repair.
+
+
+Architect reinspection of revised design `5fdb984` (handoff `2b6fc91`) is
+**APPROVED**; DR-01 is CLOSED by Architect in the design review. Earlier
+CHANGES_REQUESTED text above records historical sequence only. Artifact-preserving
+copy reload, disk metadata hydration and the bounded public Scheduler adapter are
+approved design decisions. Tester executable red tests are next; implementation
+and all downstream gates remain pending. No baseline defect is claimed fixed.

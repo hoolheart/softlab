@@ -3,7 +3,8 @@
 Reviewer: sw-jerry (Architect). Date: 2026-10-18.
 Reviewed design `e0df093`, activated PRD, approved tester plan and actual
 Scheduler/Action, SimpleProcess/run_process, DataGroup and HDF5 callers.
-Verdict: **CHANGES_REQUESTED**. No tests/code executed or reviewed here.
+Initial verdict: **CHANGES_REQUESTED**. Current verdict after reinspection:
+**APPROVED** (2026-10-18; revised design `5fdb984`, handoff `2b6fc91`). No tests/code executed or reviewed here.
 
 ## Explicit architecture decisions
 
@@ -26,7 +27,7 @@ must distinguish this helper from plain backend load_group behavior.
 
 | ID | Severity | Finding | Required correction | State |
 | --- | --- | --- | --- | --- |
-| DR-01 | Blocking | HDF5 load_data_group_from_hdf5_group aliases group.attrs then pops name/id/timestamp/backend (hdf5.py:137–142). The proposed runner's own verification load therefore removes identity from the delivered thermal.h5 before returning success. Limiting later tests to one read or using copies afterward cannot repair that already altered artifact; independent reopened output cannot satisfy AC06/11. | Designer must specify an artifact-preserving verification/reload strategy using example-local glue without changing library source or storage format. For example, perform destructive legacy load on a private temporary copy while capturing metadata from that same copy; preserve completed thermal.h5 and disclose legacy reader limitations. Alternative strategies need equivalent failure/cleanup and identity evidence. Update tests/design to independently reopen completed outputs and assert reserved disk attributes remain intact after run. Do not weaken AC06/11 or claim plain legacy reload is nondestructive. | OPEN |
+| DR-01 | Blocking | HDF5 load_data_group_from_hdf5_group aliases group.attrs then pops name/id/timestamp/backend (hdf5.py:137–142). The proposed runner's own verification load therefore removes identity from the delivered thermal.h5 before returning success. Limiting later tests to one read or using copies afterward cannot repair that already altered artifact; independent reopened output cannot satisfy AC06/11. | Designer must specify an artifact-preserving verification/reload strategy using example-local glue without changing library source or storage format. For example, perform destructive legacy load on a private temporary copy while capturing metadata from that same copy; preserve completed thermal.h5 and disclose legacy reader limitations. Alternative strategies need equivalent failure/cleanup and identity evidence. Update tests/design to independently reopen completed outputs and assert reserved disk attributes remain intact after run. Do not weaken AC06/11 or claim plain legacy reload is nondestructive. | CLOSED by Architect after reinspection of design 5fdb984 |
 
 No PRD expansion is required if the example preserves output and performs
 verified disk-derived loading through existing backend on an owned temporary
@@ -51,3 +52,29 @@ columns, numerical recurrence, previous-boundary timing, final-state inspection,
 owned resource handling and staged failure reporting align with PRD by document
 inspection. Runtime feasibility/cleanup correctness remain tester/code-review
 gates, not claims of this architecture decision.
+
+## DR-01 reinspection and closure — 2026-10-18
+
+Architect independently reinspected the revised HDF5/lifecycle/test sections.
+The writer disconnects before an owned temporary copy is made; the delivered
+thermal.h5 is never passed to destructive load_group. Every reload uses a fresh
+copy/backend; required metadata comes from that same copied disk, never original
+in-memory values. Comparison covers original identity, timestamp, schema and
+values; source digest/reserved attributes must survive two successive reloads.
+Independent backend reads occur on separate copies. Returned backend information
+is reassigned to the real delivered path rather than a deleted scratch path.
+Copy/read/verification/cleanup failures remain visible; temporary resources are
+released without deleting delivered data, and obstructed cleanup prevents success.
+Guide must state legacy destructive-reader limitations and the safe local helper.
+
+These explicit requirements resolve DR-01 without a source/format change or PRD
+relaxation. **DR-01 CLOSED by sw-jerry; design APPROVED.** Scheduler extension
+and disk-derived hydration approvals stand. Baseline defects remain unfixed,
+tracked future candidates; this approval certifies planned compatibility glue,
+not production defect remediation or runtime correctness.
+
+Next serial owner: Tester executable red tests, incorporating the revised
+artifact-integrity, metadata-from-disk, copy failure/cleanup and Scheduler public
+interface assertions. Developer implementation follows the red-test handoff.
+Code review, green tests, warning checks, principles, CI and integration remain
+pending; no runtime gate was executed by this review.
