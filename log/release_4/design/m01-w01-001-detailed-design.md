@@ -2,7 +2,9 @@
 
 Owner: sw-celeste (Designer), 2026-10-18. Inputs: activated PRD,
 architecture plan, approved assertion plan and Developer review at `ed02119`.
-Status: **PROPOSED — Architect review required before executable tests/code**.
+Status: **REVISED PROPOSAL — Architect DR-01 reinspection required before tests/code**.
+Revision responds to Architect review `c5e6700`; DR-01 remains OPEN until the
+Architect closes it. No change to PRD acceptance criteria or production sources.
 This document specifies an opt-in reference example, not a library extension.
 
 ## Files and entry point
@@ -41,7 +43,8 @@ English docstrings; names below fix test seams, not supported library APIs.
 | `_build_simulation(config: ThermalConfig) -> Tuple[Coordinator, MockControl, MockMeasurement]` | Fresh private Station/object/topology; caller owns prepare and lifecycle. Object callbacks close over config, no I/O. Patch this factory or imported classes for failures/spies. |
 | `_make_scheduler() -> _CountScheduler` | Fresh owned scheduler, never get/set module singleton. |
 | `_acquire(config: ThermalConfig, coordinator: Coordinator, heater: MockControl, thermometer: MockMeasurement, scheduler: Scheduler) -> DataGroup` | Prepare; write fixed power once; count/hook; raise on failed run or invalid finite rows/shape; no save on failure. |
-| `_load_group(backend: HDF5DataBackend, group_id: str) -> DataGroup` | One fresh-open load, disk metadata hydration described below; require valid result/status. |
+| `_reload_group(path: Path, group_id: str) -> DataGroup` | Preserve delivered file: copy closed HDF5 to owned TemporaryDirectory, open fresh backend on copy, call _load_group once, close reader, remove temporary copy; fail visibly on any copy/read/cleanup error. |
+| `_load_group(backend: HDF5DataBackend, group_id: str) -> DataGroup` | One fresh-open load on private copy only, disk metadata hydration described below; require valid result/status. |
 | `_verify_round_trip(original: DataGroup, loaded: DataGroup) -> None` | Compare identity/name, metadata, record/schema/order and finite numeric values at absolute tolerance 1e-10, rtol=0. Raise on mismatch. |
 | `_plot_record(record: DataRecord, path: Path) -> None` | Existing plot_record on reopened record; Agg; savefig; no show; owned-figure cleanup even after partial creation. |
 | `run(config: ThermalConfig, output_dir: Path) -> DataGroup` | Synchronous orchestration, returning reopened group only after successful cleanup. On failure raise RuntimeError preserving primary cause plus cleanup diagnostics. Module helpers/classes are patchable via unittest.mock; no dependency-injection framework. |
@@ -49,7 +52,8 @@ English docstrings; names below fix test seams, not supported library APIs.
 `run` rejects invocation from an already running event loop before creation;
 this is a synchronous script/helper, not a Notebook async API. Tests can patch
 Coordinator.step/prepare, MockMeasurement.read, model callbacks, `_make_scheduler`,
-HDF5DataBackend.connect/save_group/load_group/disconnect, `_load_group`,
+HDF5DataBackend.connect/save_group/load_group/disconnect, `_reload_group`, `_load_group`,
+shutil.copy2 and tempfile.TemporaryDirectory cleanup,
 `_verify_round_trip`, imported `plot_record`, Figure.savefig and pyplot.close.
 Retain local coordinator and row count until finally; failures include boundary
 when available. No result-report framework/dataclass is needed.
@@ -165,9 +169,13 @@ No reserved HDF5 attribute names, arbitrary object encoding or W03 manifest.
 
 ## HDF5 verification and failures
 
-Writer and reader are distinct owned HDF5DataBackend instances. Register each
+Writer and private-copy reader are distinct owned HDF5DataBackend instances. Register each
 for cleanup before connect, inspect connect bool/connected/errors, save bool,
-just_succeeded/errors. Disconnect writer and verify release before reader connect.
+just_succeeded/errors. Disconnect writer and verify release before copying or reader connect. The completed
+thermal.h5 must never be passed to legacy load_group. `_reload_group` uses
+TemporaryDirectory and shutil.copy2 to create exactly one owned scratch HDF5;
+reader connects to that copy, never to the delivered file. Each invocation uses
+a new copy and new backend. No generic storage adapter or source repair is added.
 Capture writer file handle before disconnect: public disconnect returns None and
 can mark disconnected despite suppressed close failure. Require no new errors,
 not connected and captured handle invalid/closed; attempt raw owned handle close
@@ -175,7 +183,7 @@ as fallback on failure while preserving diagnostic. Apply same checks to reader.
 
 Existing HDF5 load consumes reserved attributes and constructs a DataGroup whose
 constructor currently drops meta. `_load_group` reads only the three declared
-metadata keys from reader.file[group_id].attrs **before** calling existing
+metadata keys from reader.file[group_id].attrs on that same private copy **before** calling existing
 load_group exactly once. Require each disk value text, then set_meta on returned
 group using those disk values, never original in-memory values. Missing/wrong
 metadata fails verification. This example-local read compatibility glue preserves
@@ -183,13 +191,43 @@ the existing file format/public APIs; it does not claim plain load_group preserv
 metadata. Architect review must explicitly approve it; no incidental backend fix.
 Compare group ID/name, declared metadata and record set, ordered four-part column
 definitions, row count and all numeric values including timestamp. Reader closes
-before plotting; reopened DataRecord stays in memory. Never load twice from the
-same on-disk group; load mutates its reserved attributes, an existing limitation.
-Tests independently reopen each completed file only once per fresh produced file
-when checking identity; use copies for multiple destructive read assertions.
+before plotting; reopened DataRecord stays in memory. The reserved attrs
+name/id/timestamp/backend may be consumed on the scratch copy by legacy load;
+this does not authorize their removal from the delivered thermal.h5. After
+reader disconnect/handle release, remove the owned scratch directory, including
+on copy/connect/load/metadata/verification failures. A copy failure can leave a
+partial scratch file: cleanup still removes it. Cleanup failure prevents success
+and identifies the residual scratch path, preserving any primary error. Do not
+remove the delivered file as cleanup. Backend info on the hydrated loaded group
+is reassigned to the delivered absolute path using its existing backend setter,
+after read, so the returned group never advertises a deleted scratch path.
 
-Any save/reopen/load/verification failure stops plotting and labels HDF5 path
-incomplete/unverified if present. Saving is not atomic; do not delete evidence or
+Independent TC05/11/12 assertions must inspect completed thermal.h5 using h5py
+read-only and retain its original UUID/name/timestamp/backend, metadata, schema
+and numeric values. Record file digest before two successive `_reload_group`
+calls; each uses a different fresh copy/backend. Both loaded groups must retain
+the original UUID/name/timestamp/configuration/timing/schema/trace (numeric
+tolerance 1e-10), returned backend points to delivered path, and source digest
+and all reserved attributes remain identical afterward. Also do an independent
+legacy-backend read on an independently owned copy of completed output to prove
+compatibility without destructively testing the delivered artifact. Repeat for
+both separately produced runs and require distinct UUIDs/equal numeric traces.
+Never weaken identity evidence by accepting a generated replacement UUID or
+asserting only one future read. These assertions replace the earlier unsafe
+once-only reload restriction; AC06/11 are unchanged.
+
+Inject copy failure (including after partial scratch creation), copy-reader
+connect=False/raise, load=None/raise, absent/corrupted reserved attrs and declared
+metadata on scratch copies, mismatch identity/schema/data, reader close/handle
+failure and scratch-directory cleanup failure. All fail visibly without plotting
+or completion; other owned cleanup still runs. A failed scratch read leaves the
+delivered source bytes/attrs unchanged. Corrupted source fixtures must be rejected
+through the copied disk content, never repaired from original in-memory values.
+Check cleanup paths disappear when release is unobstructed; when a mock prevents
+release report failure and the residual path rather than claim it vanished.
+
+Any save/copy/reopen/load/verification failure stops plotting and labels HDF5 path
+incomplete/unverified if present (a successful save alone is not verification). Saving is not atomic; do not delete evidence or
 present partial file as completed. Valid verified data survives plotting failure
 with separately reported `verified data: <path>` and overall failure. PNG may be
 partial on plotting failure, explicitly identified as incomplete.
@@ -206,7 +244,7 @@ current figure where possible. A close failure is recorded, other closes continu
 under an injected obstruction do not claim resource release.
 
 Top-level finally independently attempts scheduler.stop, owned-loop draining/close,
-writer and reader disconnect/handle fallback, and owned figure cleanup; one cleanup
+writer and reader disconnect/handle fallback, scratch-directory cleanup, and owned figure cleanup; one cleanup
 exception cannot skip another resource. Capture final coordinator tick/sim_time
 and row count before discarding graph. No teardown step/reset/fictional stop API.
 Primary errors and cleanup errors are both retained; cleanup-only failure also
@@ -227,8 +265,8 @@ choices above before implementation. No helper oracle computes expected samples.
 Tester records executable red stage after Architect approval, then independent
 green tests and full unittest discovery, compileall softlab/examples/tests,
 import/version and exact CLI; named -W error reruns with writable temporary caches.
-Candidate CI Python 3.9/3.13 remains required. Documentation explains setup, output
-inspection and destructive-load limitation, Euler stability, five layers, source
+Candidate CI Python 3.9/3.13 remains required. Documentation explains setup, artifact-preserving `_reload_group` inspection
+with fresh temporary copies and the destructive plain legacy-reader limitation, Euler stability, five layers, source
 latency, wall time, partial failures, cleanup and W01 exclusions. No new dependency,
 UI/Figma, hardware, publication, public API or production defect fix is justified.
 No test execution or implementation PASS is asserted by this design.
