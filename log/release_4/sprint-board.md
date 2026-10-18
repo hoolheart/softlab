@@ -4,7 +4,7 @@ Updated: 2026-10-18. Integration branch: dev.
 
 | ID | Scope | Owner | Phase | Started | Expected completion | Blocker | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| M01-W01-001 | Thermal reference vertical slice, guide and evidence | sw-tom next (CR-01 correction) | Code Review | 2026-10-18 | Evidence-driven; one working-week forecast | CR-01 cleanup independence OPEN; Reviewer reinspection required | Pending |
+| M01-W01-001 | Thermal reference vertical slice, guide and evidence | sw-celeste next (CR-01 reinspection) | Code Review | 2026-10-18 | Evidence-driven; one working-week forecast | CR-01 cleanup independence OPEN; Reviewer reinspection required | Pending |
 
 Exactly one active task on `codex/m01-w01-thermal-example` from dev `e034825`.
 Branch setup is complete; PO activation `c776fe8` is committed/pushed.
