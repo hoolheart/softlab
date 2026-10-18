@@ -617,3 +617,8 @@ re-run after prepare + one step: tick=1 sim_time=0.5
   states: A.x=101.0 B.x=11.0 C.x=110.0 D.x=2.0
   probe=100.0
 ```
+
+For a complete headless run connecting coordinated simulation, `huo` count hooks,
+HDF5 save/reopen verification and a PNG, follow the
+[simulated thermal experiment](thermal-experiment.md). It documents explicit
+measurement latency, fresh output paths and the legacy HDF5 reader limitations.
