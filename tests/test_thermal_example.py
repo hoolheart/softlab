@@ -246,7 +246,11 @@ class ThermalAcceptanceTests(unittest.TestCase):
 
         with mock.patch.object(thermal, 'plot_record', side_effect=plot):
             group = self.run_fixture()
-        self.assertIs(seen[0], group.record('thermal_trace'))
+        reopened = group.record('thermal_trace')
+        self.assertEqual(schema(seen[0]), schema(reopened))
+        np.testing.assert_allclose(seen[0].table.to_numpy(dtype=float),
+                                   reopened.table.to_numpy(dtype=float),
+                                   rtol=0, atol=1e-10)
         self.assertTrue(plt.fignum_exists(borrowed.number))
         self.assertEqual(set(plt.get_fignums()) - self.figures, {borrowed.number})
 
@@ -326,8 +330,11 @@ class ThermalAcceptanceTests(unittest.TestCase):
                 thermal._verify_round_trip(original, loaded)
             self.assertEqual(digest(copy), before)
         loaded = thermal._reload_group(source, str(original.id))
-        loaded.record('thermal_trace').table = loaded.record('thermal_trace').table.assign(
-            temperature_degc=0.0)
+        altered = loaded.pop_record('thermal_trace')
+        altered.table = altered.table.assign(temperature_degc=0.0)
+        loaded.add_record(altered)
+        self.assertTrue(
+            (loaded.record('thermal_trace').table['temperature_degc'] == 0).all())
         with self.assertRaises((RuntimeError, ValueError, AssertionError)):
             thermal._verify_round_trip(original, loaded)
 
