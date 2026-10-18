@@ -4,7 +4,7 @@ Updated: 2026-10-18. Integration branch: dev.
 
 | ID | Scope | Owner | Phase | Started | Expected completion | Blocker | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| M01-W01-001 | Thermal reference vertical slice, guide and evidence | sw-celeste next (CR-01 reinspection) | Code Review | 2026-10-18 | Evidence-driven; one working-week forecast | CR-01 cleanup independence OPEN; Reviewer reinspection required | Pending |
+| M01-W01-001 | Thermal reference vertical slice, guide and evidence | sw-mike next (Independent testing) | Testing | 2026-10-18 | Evidence-driven; one working-week forecast | Committed-candidate testing, principles and CI pending | Pending |
 
 Exactly one active task on `codex/m01-w01-thermal-example` from dev `e034825`.
 Branch setup is complete; PO activation `c776fe8` is committed/pushed.
@@ -81,3 +81,9 @@ three-subcase cleanup regression and full 229-test -Werror suite pass locally;
 compile/import/diff checks pass. See updated [evidence](implementation.md).
 Current phase **Code Review**, owner sw-celeste for reinspection. CR-01 remains
 OPEN until Reviewer closes it; independent Testing/CI/integration remain pending.
+
+Code review iteration 2 at `c722b9d`: **APPROVED**; CR-01 CLOSED by sw-celeste
+following fix `5c5f6c4` and Tester regression `b147ff0` inspection. Next is
+sw-mike independent committed-candidate tests and documentation walkthrough;
+review approval is not independent runtime/CI evidence. No code/test edits or
+test execution were performed by Reviewer.
