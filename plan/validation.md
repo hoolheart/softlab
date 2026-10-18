@@ -38,3 +38,39 @@ and principle findings belong to the independent [planning review](reviews.md).
 The [overview](README.md) distinguishes historical evidence from new execution
 evidence. No commit, push, remote CI or integration is certified here; those
 remain the coordinator/developer handoff responsibility.
+
+## Hardware planning extension — 2026-10-18
+
+Tester verdict: **PASS for updated documentation only**. The original validation
+above remains historical evidence. No tester failures were found in this update.
+
+Actual checks used Python `pathlib`, `re`, `decimal.Decimal` and `subprocess`,
+plus `git status --short`, `git diff --check` and
+`git diff -- plan/release-01-prd.md plan/milestone-01.md`:
+
+- All **eight Markdown files and 40 local links** resolved; no fragment links
+  were present. Every planning file had a final newline and no trailing
+  whitespace. `git diff --check` exited 0; the separate Python whitespace check
+  also covered the two new untracked hardware documents.
+- Exactly twelve monthly and four weekly rows remain. The first-release PRD
+  and first-milestone file had no diff; FR-01–12, AC-01–12 and NFR-01–05 still
+  match their expected identifier sets. Hardware stage IDs HP-01–05 are complete.
+- Decimal arithmetic over the ten kit rows gives **US$26.85 observed component
+  anchors + US$72.00 allowances = US$98.85**, leaving US$1.15 below US$100.
+  Manual inspection confirmed this is explicitly a conditional target allowance,
+  with shipping/tax contingency, unresolved landed quotation/availability and
+  tools/host assumptions disclosed. It is not presented as an orderable quote
+  or proof that the required protected fixture fits those allowances.
+- Manual cross-document inspection confirmed M04 GO/DEFER/NO-GO and firmware
+  preparation precede the conditional M05 pilot; serial capacity can move scan
+  scope/dates. M10 archived measured data requires provenance and cannot qualify
+  current adapters or stop paths. M12 separately states simulation software,
+  named setup qualification and dataset-specific empirical model validation.
+  M01 remains hardware-free.
+- Status contained only changes within `plan/`; no runtime source, dependency
+  or architecture change was included.
+
+Manufacturer-source verification belongs to the independent planning reviewer
+and was not duplicated by this structural check. No purchase, instrument access,
+electrical design qualification, firmware execution, runtime regression, CI,
+commit/push or release acceptance was performed or certified by this validation.

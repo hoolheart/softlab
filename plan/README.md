@@ -15,6 +15,10 @@ preparation tool; agreement with physical reality requires separate validation.
 - [Roadmap](roadmap.md): twelve month-length milestones and exit gates.
 - [Milestone M01](milestone-01.md): four week-length releases for the first month.
 - [M01-W01 PRD](release-01-prd.md): detailed requirements for the first release.
+- [Hardware decision and pilot](hardware-pilot.md): M04 GO/DEFER/NO-GO and a
+  separately scheduled conditional M05 pilot with distinct qualification claims.
+- [Recommended instruments](recommended-instruments.md): below-US$100 target rig,
+  verified component-price anchors, allowances and optional borrowed bench gear.
 - [Planning reviews](reviews.md): independent feasibility and product review
   records, when prepared. These are planning evidence, not execution evidence.
 - [Planning validation](validation.md): document, link and diff verification
@@ -83,3 +87,10 @@ baseline debt, effort and user feedback. An unmet exit gate rolls the milestone
 forward or triggers an explicitly reviewed scope change; calendar passage is not
 acceptance. Reorder later milestones only after documenting dependencies and
 updating this plan. Review the whole roadmap after M03, M06 and M09.
+
+Hardware is optional for mandatory software gates: M04 records an explicit access,
+equipment, data and budget disposition; M05-HW is conditional on readiness and
+separate operation authorization. Missing access leaves hardware qualification
+pending. M10 may use authorized archived measured data, which cannot qualify
+current adapters. M12 distinguishes simulation-validated software, named
+hardware-qualified setups and dataset-specific model validation.

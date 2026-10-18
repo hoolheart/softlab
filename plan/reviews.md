@@ -89,3 +89,102 @@ and the lifecycle section. All technical planning findings are closed; the
 planning verdict is APPROVED. This does not authorize implementation. Formal
 commit/push and final link/diff evidence remain separate from this technical
 verdict; implementation and release gates remain future work.
+
+## Budget hardware extension review — 2026-10-18
+
+Reviewer: independent Architect (sw-jerry). Verdict: **APPROVED — planning only**, after Product Owner corrections and
+independent Architect reinspection of all four findings below. This review supplements the
+historical planning approval above; no hardware, firmware, serial transport or
+physical model has been tested or qualified.
+
+Reviewed [hardware pilot](hardware-pilot.md), [instrument shortlist](recommended-instruments.md),
+and the README/roadmap changes. Independently opened official price sources and
+checked primary component compatibility and the distinction between mandatory
+software exits and conditional physical evidence.
+
+| ID | Required correction | Status |
+| --- | --- | --- |
+| HW-AR-01 | Access and procurement checklist must accept the primary serial transport without requiring VISA; identify serial backend/protocol and VISA only where used. | CLOSED by Architect after corrected text reinspection |
+| HW-AR-02 | Acknowledge the known below-US$100 target; distinguish observed component list prices from unquoted allowances rather than saying no numerical costs are vendor-derived. | CLOSED by Architect after corrected text reinspection |
+| HW-AR-03 | Explicitly avoid carrying the simulated 10 W command into the proposed 5 V driver rig: the official driver lists 1.5 A continuous. Actual physical limits and model parameters need separate review; its maximum rating is not a recommended operating point. | CLOSED by Architect after corrected text reinspection |
+| HW-AR-04 | The DAQ technical-overview `go.keysight.com/us/` link redirected to the Keysight homepage during independent retrieval. Replace it with a directly retrievable official PDF/product source. | CLOSED by Architect after corrected text reinspection |
+
+### Independently checked evidence and limits
+
+The four Adafruit storefront anchors were directly retrievable:
+[Pico H](https://www.adafruit.com/product/5525) US$5.00 and **out of stock**;
+[DS18B20 probe](https://www.adafruit.com/product/381) US$9.95 with cart button;
+[MOSFET driver](https://www.adafruit.com/product/5648) US$3.95 and in-stock text;
+[5 V/2 A supply](https://www.adafruit.com/product/276) US$7.95 and **out of stock**.
+These are listed prices observed 2026-10-18, not delivered quotations or a
+purchasable complete basket. Price anchors sum to US$26.85; unquoted allowances
+sum to US$72.00, total US$98.85. Supply, check meter, all connector paths,
+protection/fixture and US$30 shipping/tax contingency are included. Existing
+host plus borrowed assembly tools/labor are explicit assumptions; no calibrated
+reference is included. Only US$1.15 remains below US$100, so engineering/local
+quotation is a genuine GO gate, with defer/borrow/replan rather than deletion
+of necessary parts. No sufficiency of individual allowances is certified.
+
+The [driver product](https://www.adafruit.com/product/5648) specifies 3–20 V
+logic, 1.5 A continuous load and a 2 A connector rating. The
+[official Pico documentation](https://www.raspberrypi.com/documentation/microcontrollers/pico-series.html)
+and product documentation support a 3.3 V GPIO domain; that is compatible in
+principle with the proposed command input. The
+[DS18B20 manufacturer datasheet](https://www.analog.com/media/en/technical-documentation/data-sheets/ds18b20.pdf)
+supports 3.0–5.5 V local power and up to 750 ms conversion at 12-bit resolution;
+the assembled probe vendor narrows its documented system supply to 3–5 V.
+The plan correctly powers data/pull-up at 3.3 V and requires validity/CRC and
+sample-time handling. No assertion of calibrated temperature or safe assembled
+wiring follows from individual compatible specifications.
+
+The independent cutoff, current protection, accessible output-disable and
+reviewed fixture are mandatory future engineering inputs, not completed design.
+The enclosed 5 V supply is explicitly not a current-limited lab supply. The
+plan forbids heating until readiness/authorization, keeps the pilot attended,
+and requires physical stop observations beyond coroutine cancellation or
+`*OPC?`. No detailed electrical design was created by this review.
+
+Optional bench-source spot checks confirmed the
+[DP800 datasheet](https://download.rigol.com/en/Manual/DC%20Power%26Loads/DP800/DP800_DataSheet_EN.pdf)
+output/interface distinctions and retrieved the
+[E36312A product](https://www.keysight.com/us/en/product/E36312A/80w-triple-output-power-supply-6v-5a-2x-25v-1a.html)
+and [DMM6500 datasheet](https://download.tek.com/datasheet/1KW-61315-0_DMM6500_Datasheet_031618.pdf).
+The [DAQ970A official product](https://www.keysight.com/us/en/product/DAQ970A/data-acquisition-system-usb-lan.html)
+supports built-in DMM, USB/LAN and sensor-family claims. This is a source spot
+check, not complete revalidation of every bench manual/options/firmware path.
+The replacement [DAQ technical PDF](https://www.keysight.com/content/dam/keysight/en/doc/ungate/technical-overviews/5992-3168.pdf)
+was located in official search and directly opened as a 44-page PDF during
+reinspection; exact unit revision remains a future gate.
+
+### Scope, capacity and principles
+
+M04 makes a real GO/DEFER/NO-GO decision and reserves 1–2 weeks for reviewed
+firmware/protocol/host adapter work; M05-HW reserves another week, serially with
+scans. Mandatory scan scope/dates must move if needed. Startup-off, watchdog,
+sensor faults, stale samples, command acknowledgement and optional serial
+dependency choice are explicit prerequisites; these are meaningful extra work,
+not assumed features of softlab or SCPI compatibility. M01 remains unchanged.
+
+M04 software contracts can pass while physical qualification remains unrun;
+M05 HP-01–05 qualify only the exercised named setup. M10 archived data may
+support model comparison with provenance but cannot qualify current adapters.
+M12 separates simulation software, setup qualification and empirical model
+validation, and explicitly requires scope disposition if physical work is absent.
+
+Principles 1–3: layers, compatibility characterization and future serial TDD gates
+remain preserved; 4–6: one task, independent role closure and future evidence
+commit/push rules remain applicable, with no Git actions certified here;
+7–8: hardware/firmware/runtime checks remain unrun and missing components block
+their gates, without invented passes; 9: conditional authorization, independent
+cutoff, owned resources and immutable measured data are explicit; 10: custom
+serial work is scoped and dependencies optional/proposal-only; 11: future
+candidate CI and release acceptance remain mandatory. All eleven principles
+are addressed at planning applicability; none grants execution approval.
+
+Closure evidence: HW-AR-01 verified in the access row and procurement item 3;
+HW-AR-02 verified in the budget row, allowance explanation and procurement item 4;
+HW-AR-03 verified in pilot scope and driver compatibility prose; HW-AR-04
+verified by directly opening the replacement official PDF. No open technical
+planning findings remain. The US$98.85 figure remains a conditional allowance,
+not a verified achievable landed purchase price. Runtime/firmware/electrical
+qualification, procurement, Git integration and CI are not certified here.
