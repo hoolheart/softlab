@@ -4,7 +4,7 @@ Updated: 2026-10-18. Integration branch: dev.
 
 | ID | Scope | Owner | Phase | Started | Expected completion | Blocker | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| M01-W01-001 | Thermal reference vertical slice, guide and evidence | sw-jerry next (Architect reinspection) | Design | 2026-10-18 | Evidence-driven; one working-week forecast | DR-01 revised in design; Architect reinspection/closure required | Pending |
+| M01-W01-001 | Thermal reference vertical slice, guide and evidence | sw-tom next (executable-test review) | Design | 2026-10-18 | Evidence-driven; one working-week forecast | Executable-test developer review then implementation required | Pending |
 
 Exactly one active task on `codex/m01-w01-thermal-example` from dev `e034825`.
 Branch setup is complete; PO activation `c776fe8` is committed/pushed.
@@ -48,3 +48,12 @@ CHANGES_REQUESTED text above records historical sequence only. Artifact-preservi
 copy reload, disk metadata hydration and the bounded public Scheduler adapter are
 approved design decisions. Tester executable red tests are next; implementation
 and all downstream gates remain pending. No baseline defect is claimed fixed.
+
+
+Tester executable red tests are complete at `840df0e` (18 methods plus
+parameterized subcases). [Red evidence](test/m01-w01-001-red-tests.md) records
+expected loader failure because the approved example module is not implemented;
+syntax and diff checks pass. No test method or green/runtime gate is claimed
+passed. Next is Developer implementability review of committed executable tests,
+then implementation. Prior next-phase text above is historical. Scope remains
+one task; downstream review/testing/principles/candidate CI/integration pending.
