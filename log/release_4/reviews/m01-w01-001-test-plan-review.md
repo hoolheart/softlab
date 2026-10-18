@@ -40,3 +40,15 @@ not checks rerun or independently closed by this review. Detailed design and
 Architect approval, executable red tests, implementation, independent review,
 testing, principle inspection and candidate CI remain pending. No UI/hardware
 or publication gate applies. Next owner: sw-celeste for detailed design.
+
+## Executable-test addendum — 2026-10-18
+
+Verdict: **APPROVED**. Reviewed `tests/test_thermal_example.py` at `840df0e`
+and red evidence `0f6bc68`, handoff `c638cdd`, against approved revised design
+`5fdb984` and Architect closure. The 18 methods cover the independent fixture,
+preflight, artifact integrity across repeated copied reloads, metadata from disk,
+failure propagation, owned resources, CLI repetition and public Action dispatch.
+Mocks target the approved local seams. Exact alphabetical schema and command
+match the design. No blocking implementability issue found; tests/design unchanged.
+This is a source review, not a green execution claim. Developer implementation
+is authorized next; independent code review/testing remain pending.
