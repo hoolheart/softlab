@@ -86,3 +86,30 @@ no full suite was run against the incomplete Developer draft and no future green
 or production correctness claim is made. Existing untracked examples draft is
 preserved and excluded from both test/log commits. Production implementation
 may resume after coordinator formal verification of this correction handoff.
+
+## CR-01 focused cleanup regression — red
+
+Reviewer finding CR-01 at `832e8bb` requires independent owned-loop close after
+an owned-task drain error. Tester added one focused method with three subcases
+in test commit `b147ff0`: drain failure; combined drain/close failure; successful
+drain with close failure. Mocks use existing scheduler factory/backend/acquisition
+seams and loop task/gather calls, without real pending tasks or leaked resources.
+Each asserts pending cancellation and drain attempt, preserved primary error,
+independent writer release, close attempt and all injected cleanup diagnostics.
+
+Executed on current production `6f8b26d` from repository root:
+
+```sh
+MPLCONFIGDIR=/tmp/softlab-w01-mpl XDG_CACHE_HOME=/tmp/softlab-w01-cache MPLBACKEND=Agg \
+  .venv/bin/python -W error -m unittest discover -s tests \
+  -p 'test_thermal_example.py' -k loop_drain_and_close
+git diff --check
+```
+
+Unittest actual exit **1**: one test method in 0.004s, **two failed subcases**.
+Drain-error subcase observes close called zero times. Combined-error subcase
+observes absent close-error diagnostic because close is skipped. Successful-drain/
+close-error subcase passes, including primary error and writer cleanup evidence.
+No warning reported; diff check exit 0. No full suite run, no production edits,
+no green/failure closure, and CR-01 remains Reviewer-owned OPEN. Next Developer
+fixes independent release; Reviewer reinspects before Tester green/full execution.
