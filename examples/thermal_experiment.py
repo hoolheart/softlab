@@ -452,9 +452,12 @@ def run(config: ThermalConfig, output_dir: Path) -> DataGroup:
                 if pending:
                     scheduler._loop.run_until_complete(
                         asyncio.gather(*pending, return_exceptions=True))
+            except Exception as exc:
+                errors.append(f'Owned loop drain: {exc}')
+            try:
                 scheduler._loop.close()
             except Exception as exc:
-                errors.append(f'Owned loop cleanup: {exc}')
+                errors.append(f'Owned loop close: {exc}')
         if writer is not None and (writer.file is not None or writer.connected):
             try:
                 _disconnect(writer)
