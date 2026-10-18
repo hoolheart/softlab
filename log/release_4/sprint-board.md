@@ -4,7 +4,7 @@ Updated: 2026-10-18. Integration branch: dev.
 
 | ID | Scope | Owner | Phase | Started | Expected completion | Blocker | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| M01-W01-001 | Thermal reference vertical slice, guide and evidence | sw-tom (Developer) | Development | 2026-10-18 | Evidence-driven; one working-week forecast | Implementation, independent review and green testing pending | Pending |
+| M01-W01-001 | Thermal reference vertical slice, guide and evidence | sw-celeste next (Reviewer) | Code Review | 2026-10-18 | Evidence-driven; one working-week forecast | Independent code review and committed-candidate testing pending | Pending |
 
 Exactly one active task on `codex/m01-w01-thermal-example` from dev `e034825`.
 Branch setup is complete; PO activation `c776fe8` is committed/pushed.
@@ -62,3 +62,11 @@ Developer executable-test review is **APPROVED**; see the review addendum.
 Current phase is **Development**, owner sw-tom. All earlier next-phase text is
 historical. Approved example/guide implementation now begins; no green tests,
 independent review or integration is claimed.
+
+Developer implementation/self-checks are complete: example `6f8b26d`, guide
+`864891a`; see [implementation evidence](implementation.md). Current phase is
+**Code Review**, owner sw-celeste next. Developer's 18 targeted and 228 full
+warning-as-error tests pass locally; these do not close Tester issues or replace
+independent committed-candidate testing/CI. Tester contract corrections are
+recorded at `2582302`; prior phase text is historical. Independent review/testing,
+completion principles, CI, integration and release acceptance remain pending.
