@@ -4,7 +4,7 @@ Updated: 2026-10-18. Integration branch: dev.
 
 | ID | Scope | Owner | Phase | Started | Expected completion | Blocker | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| M01-W01-001 | Thermal reference vertical slice, guide and evidence | sw-celeste next (Detailed design) | Design | 2026-10-18 | Evidence-driven; one working-week forecast | Detailed design/architect review and executable red tests required before implementation | Pending |
+| M01-W01-001 | Thermal reference vertical slice, guide and evidence | sw-jerry next (Architect design review) | Design | 2026-10-18 | Evidence-driven; one working-week forecast | Architect design approval and executable red tests required before implementation | Pending |
 
 Exactly one active task on `codex/m01-w01-thermal-example` from dev `e034825`.
 Branch setup is complete; PO activation `c776fe8` is committed/pushed.
@@ -17,7 +17,10 @@ tests pass locally on Python 3.13.15, including a named warning-as-error rerun.
 environment resolution. No future example test or CI pass is claimed.
 Developer implementability review is APPROVED; see
 [review](reviews/m01-w01-001-test-plan-review.md). No executable tests or production
-code were changed. Next phase is Designer detailed design.
+code were changed. Detailed design is complete at `fce0957`; see
+[design](design/m01-w01-001-detailed-design.md). Next phase is Architect review,
+including bounded public Scheduler adapter and disk-derived metadata hydration
+decisions. Design is proposed, not approved; no executable code/tests were created.
 Detailed design/architect review, Tester executable red tests,
 implementation, independent
 code review, testing, completion principles, candidate CI and dev integration are
