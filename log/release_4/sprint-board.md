@@ -75,3 +75,9 @@ Code review iteration 1 at `97395f4`: **CHANGES_REQUESTED**; see
 [report](reviews/m01-w01-001-code-review.md). CR-01 requires independent owned-loop
 close attempt after drain failure. Developer correction, Tester focused assertions
 and Reviewer closure precede Testing handoff. No independent tests were run by Reviewer.
+
+CR-01 developer correction `5c5f6c4` is implemented/self-checked: focused
+three-subcase cleanup regression and full 229-test -Werror suite pass locally;
+compile/import/diff checks pass. See updated [evidence](implementation.md).
+Current phase **Code Review**, owner sw-celeste for reinspection. CR-01 remains
+OPEN until Reviewer closes it; independent Testing/CI/integration remain pending.

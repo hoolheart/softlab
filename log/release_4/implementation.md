@@ -63,3 +63,32 @@ Python 3.9 and candidate CI remain unrun by Developer; local 3.13 results do not
 certify them. Independent code review, Tester committed-candidate checks,
 completion principles and candidate CI remain required before dev integration.
 Baseline defects tracked in the Architect review remain unfixed/outside scope.
+
+## CR-01 developer correction — 2026-10-18
+
+Correction commit `5c5f6c4` separates owned-loop draining and close into
+independent attempts, recording `Owned loop drain` and `Owned loop close`
+diagnostics separately. A drain exception no longer suppresses close; either
+failure still permits independently owned writer cleanup and preserves the
+primary failure. No tests, design, library code or dependency changed.
+CR-01 remains OPEN pending sw-celeste reinspection; Developer does not close it.
+
+Reviewed Tester regression `b147ff0` / red evidence `2559279`, then ran with
+MPLCONFIGDIR=/tmp/softlab-w01-mpl, XDG_CACHE_HOME=/tmp/softlab-w01-cache,
+MPLBACKEND=Agg:
+
+- `.venv/bin/python -W error -m unittest discover -s tests -p test_thermal_example.py -k test_loop_drain_and_close_failures_preserve_other_cleanup`:
+  exit 0, 1 test / 3 subcases, 0.003s, OK.
+- `.venv/bin/python -W error -m unittest discover -s tests -p 'test_*.py'`:
+  exit 0, 229 tests, 4.802s, OK, no skips/warning/error diagnostics.
+- `.venv/bin/python -W error -m compileall -q softlab examples tests`:
+  exit 0, no output.
+- `.venv/bin/python -W error -c 'import softlab; print(softlab.__version__)'`:
+  exit 0, 0.3.0, no warnings.
+- `git diff --check`: pass; diff is only the independent close/diagnostic change
+  plus these process records. Prior CLI is unchanged; full suite includes its
+  subprocess/repetition assertions. No unnecessary separate CLI rerun.
+
+Next serial owner is sw-celeste for code-review reinspection and closure only
+if approved, followed by Tester independent committed-candidate verification.
+No CI/integration/release gate is claimed passed by these self-checks.
