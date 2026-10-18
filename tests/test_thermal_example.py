@@ -468,6 +468,54 @@ class ThermalAcceptanceTests(unittest.TestCase):
         # stop obstruction must not prevent the separately owned loop close.
         self.assertTrue(scheduler._loop.is_closed())
 
+    def test_loop_drain_and_close_failures_preserve_other_cleanup(self):
+        """CR-01: drain failure cannot suppress independent loop/writer release."""
+        for drain_fails, close_fails in ((True, False), (True, True),
+                                         (False, True)):
+            with self.subTest(drain=drain_fails, close=close_fails):
+                scheduler = mock.Mock(spec=Scheduler)
+                owned_loop = mock.Mock()
+                scheduler._loop = owned_loop
+                if drain_fails:
+                    owned_loop.run_until_complete.side_effect = OSError(
+                        'drain marker')
+                if close_fails:
+                    owned_loop.close.side_effect = OSError('close marker')
+                pending = mock.Mock()
+                drain = object()
+                writer = mock.Mock(spec=HDF5DataBackend())
+                writer.connect.return_value = True
+                writer.connected = True
+                writer.errors = []
+                writer.save_group.side_effect = ValueError('primary marker')
+                original = mock.Mock()
+                original.record.return_value = []
+                with mock.patch.object(thermal, '_make_scheduler',
+                                       return_value=scheduler), \
+                        mock.patch.object(thermal, '_acquire',
+                                          return_value=original), \
+                        mock.patch.object(thermal, 'HDF5DataBackend',
+                                          return_value=writer), \
+                        mock.patch.object(thermal, '_disconnect') as disconnect, \
+                        mock.patch.object(thermal.asyncio, 'all_tasks',
+                                          return_value={pending}), \
+                        mock.patch.object(thermal.asyncio, 'gather',
+                                          return_value=drain) as gather:
+                    with self.assertRaises(RuntimeError) as caught:
+                        thermal.run(self.config, self.root /
+                                    f'loop-{drain_fails}-{close_fails}')
+                message = str(caught.exception)
+                self.assertIn('primary marker', message)
+                if drain_fails:
+                    self.assertIn('drain marker', message)
+                if close_fails:
+                    self.assertIn('close marker', message)
+                pending.cancel.assert_called_once_with()
+                gather.assert_called_once_with(pending, return_exceptions=True)
+                owned_loop.run_until_complete.assert_called_once_with(drain)
+                disconnect.assert_called_once_with(writer)
+                owned_loop.close.assert_called_once_with()
+
     def test_owned_scheduler_loop_global_and_running_loop_rejection(self):
         import softlab.huo.scheduler.impl_scheduler as implementation
         singleton = implementation._scheduler
