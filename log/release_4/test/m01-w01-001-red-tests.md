@@ -58,3 +58,31 @@ Next: Developer implementability review of these committed assertions, then
 production implementation. Independent green execution, remaining static guide/
 diff checks, full regression, named warning checks and configured candidate CI
 remain required. Tester alone closes observed runtime failures after execution.
+
+## Tester correction closure — existing public contracts
+
+During paused development, Developer reported three assertion defects. Tester
+independently read Coordinator.tick/prepared and DataGroup.record/pop_record/
+add_record plus DataRecord.table. Confirmed and corrected test-only defects:
+
+- **TEST-01 CLOSED (Tester):** before first successful prepare, tick is undefined
+  and raises RuntimeError, rather than reading zero. Failed preparation now
+  asserts prepared=False, zero step calls and the unreadable-tick contract.
+  Correction committed/pushed at `64e72f3`.
+- **TEST-02 CLOSED (Tester):** DataGroup.record returns a fresh DataRecord copy.
+  Plot data is compared by ordered schema and numeric table, rather than requiring
+  identity with a newly requested copy. This preserves plot-line/axes assertions.
+- **TEST-03 CLOSED (Tester):** modifying a record returned by record() does not
+  modify its group. The corruption fixture now pop_record/change/add_record and
+  asserts the group actually holds zeroed temperatures before verification must
+  reject it. Previously this fixture failed to inject the intended corruption.
+
+Focused independent scripts ran with Python 3.13.15, `-W error`, Agg and writable
+temporary cache variables from the baseline: failed-prepare lifecycle assertions
+PASS; independent record-copy values/identity, detached modification isolation
+and pop/change/add group mutation assertions PASS. Py_compile for the test file
+and git diff --check PASS. These scripts use existing library contracts only;
+no full suite was run against the incomplete Developer draft and no future green
+or production correctness claim is made. Existing untracked examples draft is
+preserved and excluded from both test/log commits. Production implementation
+may resume after coordinator formal verification of this correction handoff.
