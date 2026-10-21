@@ -90,3 +90,47 @@ or issue closure. Explicit baseline debt disposition/bounded W01 measures remain
 open; UI is not applicable. Exact candidate CI on Python3.9/3.13 remains the
 integration gate. Actual architecture/release principles and PO acceptance remain
 release closure gates; no task/release completion or main promotion is inferred.
+
+## Release completion readiness inspection — 2026-10-22
+
+Delegated inspector: sw-jerry (Architect); coordinator retains formal authority.
+Subject integrated task10b2d7d and closure baseline9efd0af; actual architecture
+update3ad83ed. Verdict: **PASS — release readiness principles; PO acceptance and
+closure document review/validation/CI/integration remain pending**. No technical
+or test issue closure is invented here; earlier pending task/CI wording is
+historical and superseded only by the completed actions cited below.
+
+| Principle | Release evidence / disposition | Verdict |
+| --- | --- | --- |
+| 1 Architecture | Actual arch.md3ad83ed documents local execution helpers and existing element ownership; no library change; W03/W04 remain future | PASS |
+| 2 Characterize first | Characterizationd7b73a6 and seven legacy assertions preceded design/code; W01 successful-return/hooks/schema/delay preserved in full257 tests | PASS |
+| 3 TDD gates | Plan84597bb → Developerd7036c4 → design2bec5a3/Architectbe26e7e → redb331c13 → implementation/review/repair → Designer2095c08 → independent Tester36f4549 → coordinator principle verdict → exact candidate CI/dev integration | PASS |
+| 4 Serial work | Setup integrated before implementation; implementation8a0cf54/reconciled10b2d7d completed before sole active codex/m01-w02-release-closure; no main promotion yet | PASS |
+| 5 Ownership | Designer closed CR-W02-01; Tester closed own feature/regression failures; Architect owns actual architecture/this inspection only; PO acceptance pending, UI N/A | PASS |
+| 6 Evidence | Task records committed/pushed with docs(log); actual architecture3ad83ed pushed; this completed inspection and related logs require immediate commit/push formal verification | PASS readiness; final transport check required |
+| 7 Environment | Tester actual macOS Python3.13.15 versions,257 full/21 feature -W error, compile/import and guide walkthrough; exact candidate/dev CI both3.9/3.13 green; no unconfigured lint/platform/hardware claim | PASS named checks |
+| 8 Debt | R4-BASE-SCHED/META/HDF5 remain explicitly unfixed with tested local measures; historical OBS/DEFECT unchanged; scoped new review/test failures closed by owners; CI platform notices disclosed | PASS bounded disposition |
+| 9 Instruments/data | Synthetic temporary outputs, fresh path refusals, partial in-memory only, copy-only reads, independent owned cleanup; no hardware/physical stop/resume; reset explicit after drain/close | PASS |
+| 10 Minimality | Source scope example/tests/guide/logs/architecture only; no softlab source/dependency/Python/storage/version change; no public run framework | PASS |
+| 11 Reproducibility | AC01–12 map to owned results, actual guide commands, exact candidate/dev CI and merge evidence; start/task/release inspections present; independent closure checks, PO acceptance and closure CI/integration still required | PASS readiness; release not accepted |
+
+Evidence: Designer review2095c08, Tester results/eleven-principle assessment36f4549,
+coordinator task verdict recorded in this file and integration.md. Exact candidate
+fa553f2 CI39693855365 succeeded before merge8a0cf54. Task-record reconciliation
+dev10b2d7d CI39694251153 explicitly passed both versions. The coordinator supplied
+these exact-state CI checks; inspector read the committed reports/board and
+source ownership/interfaces, not reran CI/runtime. Named zero-warning evidence
+belongs to Tester's executed -W error checks; existing CI Node20/forced24 and
+Ubuntu26 platform notices are baseline annotations, not silently waived new
+Python/compiler warnings. No whole-system zero-warning claim.
+
+Method: inspect current principles, actual helper lifecycle boundaries, guide,
+review/test/integration records, git scope and committed subjects. Comparison
+2095c08..closure subject over examples/softlab/tests/docs/pyproject.toml is empty;
+only closure documentation differs from integrated10b2d7d. No code review, tests,
+compile/import or instrument operations executed by Architect. New content is
+actual architecture/process evidence only. Independent Designer document review,
+Tester closure document validation, coordinator formal gate, PO AC acceptance,
+exact closure candidate CI/dev reconciliation and authorized main promotion
+remain pending. No unresolved scoped technical defect is identified; historical
+debt remains separately authorized future work. Reinspect if code/scope changes.

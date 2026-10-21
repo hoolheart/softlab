@@ -69,3 +69,12 @@ No current scope blocker is established by source inspection. Runtime test
 prerequisites, exact loop/status behavior and cleanup obstructions remain Tester
 work, not certified here. W03 manifest/versioning, W04 adaptation, retry/resume,
 real instruments, dependencies, Python support, package tags and UI are excluded.
+
+## Delivered disposition — 2026-10-22
+
+The [actual W02 architecture](../../arch.md#m01-w02-controlled-reference-execution--implemented)
+now describes the delivered example-local behavior at architecture commit3ad83ed,
+following implementation integration dev8a0cf54 and reconciliation10b2d7d.
+The original [PLANNED] envelope above remains historical design evidence; it is
+not a claim of additional pending library work. No library change was required.
+See release-architecture.md for evidence/limits. Release PO acceptance is pending.
