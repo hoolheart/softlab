@@ -21,8 +21,8 @@ limits. It does not claim physical calibration or universal thermal accuracy.
 
 M01-W01 is [accepted](../log/release_4/acceptance.md) and promoted to main
 at b03092e. M01-W02 is [product accepted](../log/release_5/acceptance.md)
-on 2026-10-22, with controlled interruption/repetition verified; its final
-closure CI/dev reconciliation/main promotion are pending at this planning update.
+on 2026-10-22, with controlled interruption/repetition verified; its accepted closure is integrated to devbfcdc9f. Final completion-record checks
+and authorized main promotion are integrator operations at this planning update.
 Actual final hashes and CI are supplied by the release integration handoff.
 This does not accept W03/W04 or the complete M01 milestone.
 
