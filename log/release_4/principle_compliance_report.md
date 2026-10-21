@@ -96,3 +96,44 @@ not performed by this inspection. UI/Figma, hardware, package publication and
 W02–W04 are N/A. Reinspect release state if scope/code/evidence changes or gates
 fail; this preacceptance inspection is applicable only to the unchanged bounded
 candidate and does not invent future completion.
+
+
+## Final release-state inspection — 2026-10-21
+
+Inspector: sw-jerry (Architect), delegated by coordinator. **PASS — accepted
+M01-W01 release state**, with closure-document transport/CI still pending.
+Inputs: PO acceptance `e7a9bfe`, dev integration `c89ffe6`, unchanged tested
+implementation, actual architecture `af1dc74`, and all linked owned gate records.
+This supersedes earlier pending acceptance/integration statements only for actions
+actually completed below; it does not claim a future closure merge/main promotion.
+
+| Principle | Final actual evidence / disposition | Verdict |
+| --- | --- | --- |
+| 1 Architecture | Actual bounded composition documented at af1dc74; no library framework/public run API | PASS |
+| 2 Compatibility | git diff a7953e3..HEAD over softlab/examples/tests/docs/pyproject.toml/setup.py is empty; independent legacy plus new assertions retained | PASS |
+| 3 TDD sequence | Previously inspected serial test/design/implementation/review/testing/principle gates now followed by actual dev integration and PO acceptance | PASS |
+| 4 Serial branches | One task integrated c89ffe6; current branch records closure only; no next task, main unchanged, no history rewrite | PASS |
+| 5 Ownership | DR-01 Architect-closed; CR-01 Reviewer-closed; TEST-01/02/03 and runtime regression Tester-closed; PO alone issues acceptance PASS at e7a9bfe | PASS |
+| 6 Evidence | All earlier handoffs committed/pushed; completed closure artifacts require docs(log) commit/push and coordinator formal verification before handoff; no circular self-hash | PASS release evidence; closure transport pending |
+| 7 Environment | Tester 229 local -W error tests/CLI/compile/import and named limits remain valid for unchanged code; exact dev CI explicitly succeeds both3.9/3.13 | PASS |
+| 8 Debt | Three R4-BASE defects remain tracked/unfixed future candidates; approved tested local measures and PO disposition explicit; prior OBS/DEFECT debt unchanged, no warning waived | PASS bounded disposition |
+| 9 Data/instruments | Synthetic temporary data, collision/source integrity and owned-resource failure evidence; no hardware or physical qualification | PASS |
+| 10 Minimality | No source/dependency/format/Python/version/export change; local adapter and copy/hydration remain example-only | PASS |
+| 11 Reproducibility | Task integrated, exact dev CI green, PO acceptance covers every AC/NFR, start/task/final inspection present, diff hygiene passes; closure candidate CI/dev reconciliation precede any main promotion | PASS accepted release; future promotion pending |
+
+First-hand final verification: read acceptance/sprint summary/integration/board;
+git status clean at e7a9bfe; local dev=origin/dev=c89ffe6689484f1ea1eaf7088e8e2592fa21908d,
+main=origin/main=82883ad2d6183fa4c9813d124ed9726d6b8f4303; code/test/guide/config
+comparison to tested a7953e3 empty; git diff --check passes. Re-queried
+[39617920072](https://github.com/hoolheart/softlab/actions/runs/39617920072):
+exact c89ffe6 completed/success, both3.9/3.13 jobs explicitly completed/success.
+Candidate API inconsistency in integration.md remains disclosed; PO accepts the
+stronger exact integrated-head evidence, not an invented candidate job verdict.
+No fresh tests/code review were performed by this inspector.
+
+All eleven principles support the accepted bounded release. Future work:
+exact closure candidate CI → follow-up dev reconciliation → any authorized main
+promotion with its exact-state verification. No new technical task, package
+publication, M01-wide acceptance or W02–W04 execution is granted. Reconciliation
+hashes belong to the next handoff; this document does not invent its own commit
+or future merge identifiers. See [completion report](completion_report.md).
