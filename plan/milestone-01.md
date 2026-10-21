@@ -1,6 +1,7 @@
 # M01 — Proposed reference experiment milestone
 
-Status: **PROPOSED**. Start TBD; four working-week increments including review
+Status: **IN PROGRESS**. M01-W01 and M01-W02 product accepted; W03/W04 remain
+proposed. Four working-week increments including review
 and integration. Purpose: prove the complete simulation → procedure → record →
 persistence → plot path before extracting a framework. No hardware is needed.
 
@@ -15,6 +16,15 @@ limits. It does not claim physical calibration or universal thermal accuracy.
 | M01-W02 — Controlled interruption and repetition | Turn the demonstration into a trustworthy execution example. | Characterize existing Process/Scheduler cancel/reset semantics; cooperative stop at documented boundaries; explicit acquisition/persistence outcomes; retain completed partial rows; reset and repeated-run examples; targeted minimal compatible `huo` extension only if evidence requires it. | Inject a model failure, sample failure and cancellation after a known point; assert no fabricated rows, no extra post-acknowledgment ticks, visible outcomes and cleanup; two fresh repeats match. Depends on W01 acceptance; cancellation is software-only. |
 | M01-W03 — Explainable stored result | Preserve enough context to understand and repeat the reference run. | Bounded reference manifest: model/procedure configuration, units, source/software identity, clock/delay interpretation, outcome and run ID. Choose an explicit JSON-text metadata envelope or separate artifact after backend review; no arbitrary object serializer. Document missing/version mismatch behavior. | Fresh-process reload recovers every required field with types restored through the chosen explicit envelope; changed configuration is distinguishable; unsupported metadata rejected visibly; old data round trips remain unchanged. Depends on W02 outcome semantics. |
 | M01-W04 — Adaptation rehearsal and acceptance | Prove a credible adapter boundary and finish M01. | Run the same reference procedure with alternate model-backed control/measurement adapters; document a physical-instrument mapping and separate settling policy; contract test doubles, walkthrough, month acceptance and follow-on backlog. A VISA simulation spike is included only if it fits the reviewed weekly scope. | Procedure acquisition/order/record shape stays the same while adapter/timing policy changes; describe measurement-delay differences honestly; one documented command reproduces the complete reference result; independent review and month acceptance pass. Depends on W03; no real-device or simulated-VISA claim without executed evidence. |
+
+## Accepted progress
+
+M01-W01 is [accepted](../log/release_4/acceptance.md) and promoted to main
+at b03092e. M01-W02 is [product accepted](../log/release_5/acceptance.md)
+on 2026-10-22, with controlled interruption/repetition verified; its accepted closure is integrated to devbfcdc9f. Final completion-record checks
+and authorized main promotion are integrator operations at this planning update.
+Actual final hashes and CI are supplied by the release integration handoff.
+This does not accept W03/W04 or the complete M01 milestone.
 
 ## Weekly execution discipline
 

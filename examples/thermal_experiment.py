@@ -2,7 +2,7 @@
 
 import argparse
 import asyncio
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 import inspect
 import json
 import math
@@ -12,7 +12,7 @@ from pathlib import Path
 import shutil
 import sys
 import tempfile
-from typing import Any, Dict, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 import uuid
 
 os.environ.setdefault('MPLBACKEND', 'Agg')
@@ -23,7 +23,7 @@ if __name__ == '__main__':
 import matplotlib.pyplot as plt
 import numpy as np
 
-from softlab.huo.process import count, run_process
+from softlab.huo.process import count
 from softlab.huo.scheduler import Action, Scheduler
 from softlab.jin.vis import plot_record
 from softlab.shui.data import DataGroup, DataRecord, HDF5DataBackend
@@ -46,6 +46,94 @@ class ThermalConfig:
     points: int = 8
 
 
+@dataclass
+class StopRequest:
+    """Cooperative software request; acknowledgment belongs to the executor."""
+
+    requested: bool = False
+    acknowledged: bool = False
+
+    def request(self) -> None:
+        """Request termination at the next acquisition boundary."""
+        self.requested = True
+
+
+@dataclass
+class RunResult:
+    """Example-local terminal evidence; reset never rewrites these snapshots."""
+
+    requested_rows: int
+    data_path: Path
+    plot_path: Path
+    stop: StopRequest
+    completed_rows: int = 0
+    final_tick: Optional[int] = None
+    final_sim_time: Optional[float] = None
+    acquisition: str = 'not_started'
+    persistence: str = 'not_attempted'
+    plotting: str = 'not_attempted'
+    cleanup_errors: List[str] = field(default_factory=list)
+    cause: Optional[BaseException] = None
+    stage: str = 'setup'
+    group: Optional[DataGroup] = None
+    loaded: Optional[DataGroup] = None
+    terminal: bool = False
+    work_drained: bool = False
+    loop_closed: bool = False
+    _coordinator: Optional[Coordinator] = field(default=None, repr=False)
+
+    @property
+    def overall_success(self) -> bool:
+        """Require acquisition, verified storage, plot and owned cleanup."""
+        return (self.acquisition == 'completed'
+                and self.persistence == 'verified'
+                and self.plotting == 'completed' and not self.cleanup_errors
+                and self.work_drained and self.loop_closed and self.terminal)
+
+
+def _diagnostic(result: RunResult) -> str:
+    """Describe independent acquisition, storage and cleanup outcomes."""
+    storage = (f'verified data: {result.data_path}'
+               if result.persistence == 'verified' else
+               f'incomplete/unverified artifact (if present): {result.data_path}')
+    return (f'{result.stage}: acquisition={result.acquisition}; '
+            f'rows={result.completed_rows}; tick={result.final_tick}; '
+            f'sim_time={result.final_sim_time}; '
+            f'requested={result.stop.requested}; '
+            f'acknowledged={result.stop.acknowledged}; '
+            f'persistence={result.persistence}; plotting={result.plotting}; '
+            f'{storage}; cause={result.cause}; '
+            + '; '.join(result.cleanup_errors))
+
+
+class RunFailure(RuntimeError):
+    """Unsuccessful compatibility call retaining inspectable execution evidence."""
+
+    def __init__(self, result: RunResult) -> None:
+        self.result = result
+        super().__init__(_diagnostic(result))
+
+
+class _HelperFailure(RuntimeError):
+    """Retain helper operation cause and ordered owned-cleanup diagnostics."""
+
+    def __init__(self, primary: Optional[Exception],
+                 cleanup_errors: List[str]) -> None:
+        self.primary = primary
+        self.cleanup_errors = list(cleanup_errors)
+        super().__init__('; '.join(
+            ([str(primary)] if primary is not None else [])
+            + self.cleanup_errors))
+
+
+class _AcquisitionEnd(Exception):
+    """Carry incomplete acquisition to the owning execute call."""
+
+    def __init__(self, result: RunResult) -> None:
+        self.result = result
+        super().__init__(_diagnostic(result))
+
+
 class _CountScheduler(Scheduler):
     """Owned serial Action executor for this count; no chains or threads."""
 
@@ -55,6 +143,7 @@ class _CountScheduler(Scheduler):
         self._points: Dict[str, Optional[Action]] = {}
         self._done: Dict[str, Optional[bool]] = {}
         self.last_error = ''
+        self.last_exception: Optional[Exception] = None
 
     def start(self) -> bool:
         """Enable commits without changing the thread's event loop."""
@@ -109,9 +198,11 @@ class _CountScheduler(Scheduler):
             self._loop.run_until_complete(coroutine)
             result = True
         except asyncio.TimeoutError as exc:
+            self.last_exception = exc
             self.last_error = str(exc) or 'Action timed out'
             result = None
         except Exception as exc:
+            self.last_exception = exc
             self.last_error = f'{type(exc).__name__}: {exc}'
             result = False
         self._done[point] = result
@@ -214,8 +305,13 @@ _META_KEYS = ('example', 'configuration', 'timing')
 
 def _acquire(config: ThermalConfig, coordinator: Coordinator,
              heater: MockControl, thermometer: MockMeasurement,
-             scheduler: Scheduler) -> DataGroup:
+             scheduler: Scheduler, *, stop: Optional[StopRequest] = None,
+             after_row: Optional[Callable[[RunResult], None]] = None,
+             result: Optional[RunResult] = None) -> DataGroup:
     """Prepare and execute exactly one step per count getter row."""
+    stop = stop if stop is not None else StopRequest()
+    if result is None:
+        result = RunResult(config.points, Path('thermal.h5'), Path('thermal.png'), stop)
     group = DataGroup('thermal_experiment')
     group.set_meta('example', 'thermal_experiment')
     group.set_meta('configuration', json.dumps(
@@ -228,6 +324,7 @@ def _acquire(config: ThermalConfig, coordinator: Coordinator,
         ('name', 'label', 'unit', 'dependent'), definition))
         for definition in _SCHEMA])
     group.add_record(record)
+    result.group = group
     readers = {
         'commanded_power_w': heater.read,
         'measurement_source_tick': lambda: coordinator.tick - 1,
@@ -246,17 +343,37 @@ def _acquire(config: ThermalConfig, coordinator: Coordinator,
                         hook_before_get=coordinator.step)
         if not scheduler.start():
             raise RuntimeError('Scheduler did not start')
-        succeeded, _ = run_process(process, scheduler, verbose=False)
-        if not succeeded:
-            raise RuntimeError(getattr(scheduler, 'last_error', '') or
-                               'Count execution failed')
-        if coordinator.tick != config.points or len(record) != config.points:
-            raise RuntimeError('Acquisition boundary/row count mismatch')
-        if not np.isfinite(record.table.to_numpy(dtype=float)).all():
-            raise RuntimeError('Acquired nonfinite numeric values')
+        process.reset()
+        while True:
+            result.completed_rows = len(record)
+            result.final_tick = coordinator.tick
+            result.final_sim_time = coordinator.sim_time
+            if len(record) == config.points:
+                if coordinator.tick != config.points:
+                    raise RuntimeError('Acquisition boundary/row count mismatch')
+                result.acquisition = 'completed'
+                break
+            if stop.requested:
+                stop.acknowledged = True
+                result.acquisition = 'cancelled'
+                raise _AcquisitionEnd(result)
+            if not process.commit(scheduler) or process.join(scheduler) is not True:
+                raise (getattr(scheduler, 'last_exception', None) or
+                       RuntimeError(getattr(scheduler, 'last_error', '') or
+                                    'Count execution failed'))
+            result.completed_rows = len(record)
+            result.final_tick = coordinator.tick
+            result.final_sim_time = coordinator.sim_time
+            if not np.isfinite(record.table.to_numpy(dtype=float)).all():
+                raise RuntimeError('Acquired nonfinite numeric values')
+            if after_row is not None:
+                after_row(result)
+    except _AcquisitionEnd:
+        raise
     except Exception as exc:
-        raise RuntimeError(
-            f'Acquisition failed with {len(record)} rows: {exc}') from exc
+        result.acquisition = 'failed'
+        result.cause = exc
+        raise _AcquisitionEnd(result) from exc
     return group
 
 
@@ -336,8 +453,7 @@ def _reload_group(path: Path, group_id: str) -> DataGroup:
             for error in errors:
                 print(error, file=sys.stderr)
             raise primary
-        message = '; '.join(([str(primary)] if primary else []) + errors)
-        raise RuntimeError(message) from primary
+        raise _HelperFailure(primary, errors) from primary
     return loaded
 
 
@@ -384,12 +500,18 @@ def _plot_record(record: DataRecord, path: Path) -> None:
             for error in errors:
                 print(error, file=sys.stderr)
             raise primary
-        message = '; '.join(([str(primary)] if primary else []) + errors)
-        raise RuntimeError(message) from primary
+        raise _HelperFailure(primary, errors) from primary
 
 
-def run(config: ThermalConfig, output_dir: Path) -> DataGroup:
-    """Return verified reopened data only after owned cleanup succeeds."""
+def execute(config: ThermalConfig, output_dir: Path, *,
+            stop: Optional[StopRequest] = None,
+            after_row: Optional[Callable[[RunResult], None]] = None) -> RunResult:
+    """Execute once, retaining partial rows and operational failure evidence.
+
+    Validation and output-collision errors raise before acquisition. Operational
+    exceptions return a terminal result; BaseException is reraised after cleanup.
+    The synchronous after_row callback must not mutate execution state.
+    """
     _validate_config(config)
     try:
         asyncio.get_running_loop()
@@ -399,6 +521,8 @@ def run(config: ThermalConfig, output_dir: Path) -> DataGroup:
         raise RuntimeError(
             'The synchronous thermal example cannot run inside an event loop')
     data_path, plot_path = _prepare_output(output_dir)
+    stop = stop if stop is not None else StopRequest()
+    result = RunResult(config.points, data_path, plot_path, stop)
     scheduler = None
     coordinator = None
     writer = None
@@ -406,13 +530,17 @@ def run(config: ThermalConfig, output_dir: Path) -> DataGroup:
     loaded = None
     primary = None
     errors = []
-    verified = False
     stage = 'setup'
     try:
         scheduler = _make_scheduler()
         coordinator, heater, thermometer = _build_simulation(config)
+        result._coordinator = coordinator
         stage = 'acquisition'
-        original = _acquire(config, coordinator, heater, thermometer, scheduler)
+        original = _acquire(config, coordinator, heater, thermometer, scheduler,
+                            stop=stop, after_row=after_row, result=result)
+        result.group = original
+        result.acquisition = 'completed'
+        result.persistence = 'failed'
         stage = 'persistence'
         writer = HDF5DataBackend()
         if (not writer.connect({'path': str(data_path)})
@@ -427,19 +555,30 @@ def run(config: ThermalConfig, output_dir: Path) -> DataGroup:
         stage = 'reopen verification'
         loaded = _reload_group(data_path, str(original.id))
         _verify_round_trip(original, loaded)
-        verified = True
+        result.loaded = loaded
+        result.persistence = 'verified'
+        result.plotting = 'failed'
         stage = 'plotting'
         _plot_record(loaded.record('thermal_trace'), plot_path)
+        result.plotting = 'completed'
+    except _AcquisitionEnd:
+        primary = result.cause
+    except _HelperFailure as exc:
+        errors.extend(exc.cleanup_errors)
+        primary = exc.primary
+        result.cause = exc.primary
     except BaseException as exc:
         primary = exc
+        result.cause = exc
+        if stage == 'acquisition':
+            result.acquisition = 'failed'
     finally:
         # Inspection only: teardown never advances or resets the graph.
-        boundary = 'unprepared'
         if coordinator is not None and coordinator.prepared:
-            boundary = (f'tick={coordinator.tick}, '
-                        f'sim_time={coordinator.sim_time}')
-        rows = (len(original.record('thermal_trace'))
-                if original is not None else 'see acquisition error')
+            result.final_tick = coordinator.tick
+            result.final_sim_time = coordinator.sim_time
+        if result.group is not None:
+            result.completed_rows = len(result.group.record('thermal_trace'))
         if scheduler is not None:
             try:
                 scheduler.stop()
@@ -452,10 +591,12 @@ def run(config: ThermalConfig, output_dir: Path) -> DataGroup:
                 if pending:
                     scheduler._loop.run_until_complete(
                         asyncio.gather(*pending, return_exceptions=True))
+                result.work_drained = True
             except Exception as exc:
                 errors.append(f'Owned loop drain: {exc}')
             try:
                 scheduler._loop.close()
+                result.loop_closed = scheduler._loop.is_closed()
             except Exception as exc:
                 errors.append(f'Owned loop close: {exc}')
         if writer is not None and (writer.file is not None or writer.connected):
@@ -463,20 +604,34 @@ def run(config: ThermalConfig, output_dir: Path) -> DataGroup:
                 _disconnect(writer)
             except Exception as exc:
                 errors.append(f'Writer cleanup: {exc}')
-    if primary is not None or errors:
-        if verified:
-            storage = (f'verified data: {data_path}; '
-                       f'incomplete PNG: {plot_path}')
-        else:
-            storage = (
-                f'incomplete/unverified artifact (if present): {data_path}')
-        message = f'{stage} failed; {boundary}; rows={rows}; {storage}; '
-        message += '; '.join(([str(primary)] if primary else []) + errors)
-        if primary is not None and not isinstance(primary, Exception):
-            print(message, file=sys.stderr)
-            raise primary
-        raise RuntimeError(message) from primary
-    return loaded
+    result.cleanup_errors = errors
+    result.stage = stage
+    result.terminal = True
+    if primary is not None and not isinstance(primary, Exception):
+        print(_diagnostic(result), file=sys.stderr)
+        raise primary
+    return result
+
+
+def run(config: ThermalConfig, output_dir: Path) -> DataGroup:
+    """Return verified reopened data, raising RunFailure on operational failure."""
+    result = execute(config, output_dir)
+    if not result.overall_success:
+        raise RunFailure(result) from result.cause
+    return result.loaded
+
+
+def reset_after_run(result: RunResult) -> None:
+    """Reset retained model only after terminal, drained and closed execution.
+
+    Raises RuntimeError when lifecycle prerequisites are unmet. Coordinator reset
+    failures propagate without rewriting the terminal execution snapshot.
+    """
+    if (not result.terminal or not result.work_drained or not result.loop_closed
+            or result._coordinator is None
+            or result.acquisition not in ('completed', 'cancelled', 'failed')):
+        raise RuntimeError('Reset requires terminal, drained and closed execution')
+    result._coordinator.reset()
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
@@ -486,10 +641,26 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     for key, value in asdict(ThermalConfig()).items():
         parser.add_argument('--' + key.replace('_', '-'), default=value,
                             type=int if key == 'points' else float)
+    parser.add_argument('--stop-after', type=int)
     arguments = vars(parser.parse_args(argv))
+    stop_after = arguments.pop('stop_after')
     output_dir = arguments.pop('output_dir')
     try:
-        group = run(ThermalConfig(**arguments), output_dir)
+        config = ThermalConfig(**arguments)
+        if stop_after is not None and not 0 <= stop_after <= config.points:
+            raise ValueError('--stop-after must be between zero and points')
+        stop = StopRequest()
+        if stop_after == 0:
+            stop.request()
+
+        def after_row(result: RunResult) -> None:
+            if result.completed_rows == stop_after:
+                stop.request()
+
+        result = execute(config, output_dir, stop=stop, after_row=after_row)
+        if not result.overall_success:
+            raise RunFailure(result) from result.cause
+        group = result.loaded
     except Exception as exc:
         print(f'Thermal experiment failed: {exc}', file=sys.stderr)
         return 1
