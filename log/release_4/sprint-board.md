@@ -1,89 +1,53 @@
 # Sprint board — M01-W01 (process release_4)
 
-Updated: 2026-10-18. Integration branch: dev.
+Updated: 2026-10-21. Integration branch: dev.
 
-| ID | Scope | Owner | Phase | Started | Expected completion | Blocker | Merge commit |
+| ID | Scope | Owner / next handoff | Phase | Started | Expected completion | Remaining gates | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| M01-W01-001 | Thermal reference vertical slice, guide and evidence | sw-mike next (Independent testing) | Testing | 2026-10-18 | Evidence-driven; one working-week forecast | Committed-candidate testing, principles and CI pending | Pending |
+| M01-W01-001 | Thermal reference vertical slice, guide and evidence | sw-jerry (actual architecture), then principle inspection | Testing complete; preintegration checks pending | 2026-10-18 | Evidence-driven; one working-week capacity forecast | Architecture/principles, exact final-candidate CI, dev integration, release acceptance | Pending |
 
-Exactly one active task on `codex/m01-w01-thermal-example` from dev `e034825`.
-Branch setup is complete; PO activation `c776fe8` is committed/pushed.
-[Architecture plan](architecture-plan.md), [task sequence](tasks.md), and
-[start principle inspection](principle_compliance_report.md) accompany this setup.
-Tester baseline/independent oracle and assertion test plan are complete: 210 baseline
-tests pass locally on Python 3.13.15, including a named warning-as-error rerun.
-[Test plan](test/m01-w01-001-test-plan.md) at `3590c0a` is Developer-approved;
-[baseline evidence](test/baseline.md) records cache diagnostics and their temporary
-environment resolution. No future example test or CI pass is claimed.
-Developer implementability review is APPROVED; see
-[review](reviews/m01-w01-001-test-plan-review.md). No executable tests or production
-code were changed. Detailed design is complete at `fce0957`; see
-[design](design/m01-w01-001-detailed-design.md). Next phase is Architect review,
-including bounded public Scheduler adapter and disk-derived metadata hydration
-decisions. Design is proposed, not approved; no executable code/tests were created.
-Detailed design/architect review, Tester executable red tests,
-implementation, independent
-code review, testing, completion principles, candidate CI and dev integration are
-pending. Done requires gates and merge evidence; no runtime pass is claimed.
-UI/Figma, hardware and publication are N/A. Release acceptance and any main
-promotion remain later gates. Completed process updates must be committed/pushed
-before each role handoff; commit identifiers are recorded by the next phase to
-avoid circular self-hashes.
+Exactly one active task on `codex/m01-w01-thermal-example`, created from dev
+`e034825`. Nothing is marked Done or integrated. No new task has started.
+User resumed execution on 2026-10-21; prior evidence dates remain historical.
 
-Architect review: **CHANGES_REQUESTED** at the current design gate; see
-[review](reviews/m01-w01-001-design-review.md). Public bounded Scheduler adapter
-and disk-derived metadata hydration approved in principle; DR-01 remains OPEN.
-Designer revision is committed at `5fdb984`: verified reload uses a fresh owned
-temporary HDF5 copy, leaving delivered artifact intact; successive independent
-reload/identity/integrity and failure-cleanup assertions are specified.
-Architect reinspection is next; Designer has not closed DR-01. No executable red tests
-or implementation may start yet. New baseline defects R4-BASE-SCHED-01,
-R4-BASE-META-01 and R4-BASE-HDF5-01 are tracked in that review, unfixed and
-excluded from incidental production repair.
+## Completed gates and evidence
 
+- Requirements activated at `c776fe8`; see [PRD](prd.md),
+  [architecture plan](architecture-plan.md), [tasks](tasks.md) and
+  [start principle inspection](principle_compliance_report.md).
+- Tester baseline and assertion plan approved by Developer; see
+  [baseline](test/baseline.md), [plan](test/m01-w01-001-test-plan.md) and
+  [review](reviews/m01-w01-001-test-plan-review.md).
+- [Detailed design](design/m01-w01-001-detailed-design.md) revised at `5fdb984`;
+  Architect closed DR-01 and approved artifact-preserving reload, metadata glue
+  and bounded scheduler in [design review](reviews/m01-w01-001-design-review.md).
+- Executable red tests and Tester contract corrections are recorded in
+  [red evidence](test/m01-w01-001-red-tests.md). Implementation `6f8b26d`, guide
+  `864891a` and cleanup fix `5c5f6c4` are committed; see
+  [implementation evidence](implementation.md).
+- Independent code review **APPROVED** at `c722b9d`, CR-01 closed by Reviewer;
+  see [code review](reviews/m01-w01-001-code-review.md).
+- Independent Testing **PASS** on `a7953e3`: 229 tests under -W error, compile/
+  import, two documented CLI runs, HDF5/PNG/failure/ownership assertions and guide
+  walkthrough. [Results](test/m01-w01-001-test-results.md) committed at `23ae605`;
+  AC01–12/NFR01–05 traceability and baseline-debt disposition are recorded there.
+  Candidate a7953e3 CI passes both Python 3.9/3.13 jobs. On 2026-10-21 Tester
+  also verified exact evidence candidate `23ae6056ee0d37f4afeea3f35bdc99b80b940aba`
+  [CI run 39142118165](https://github.com/hoolheart/softlab/actions/runs/39142118165):
+  completed/success for both compatibility (3.9) and compatibility (3.13).
+  No source changed since runtime testing; full suite was not repeated.
 
-Architect reinspection of revised design `5fdb984` (handoff `2b6fc91`) is
-**APPROVED**; DR-01 is CLOSED by Architect in the design review. Earlier
-CHANGES_REQUESTED text above records historical sequence only. Artifact-preserving
-copy reload, disk metadata hydration and the bounded public Scheduler adapter are
-approved design decisions. Tester executable red tests are next; implementation
-and all downstream gates remain pending. No baseline defect is claimed fixed.
+## Current handoff and limits
 
+Next: Architect updates actual architecture, then principle inspection and
+exact-final-SHA CI before dev integration. Release acceptance remains required
+before any main promotion. Every later commit creates a new candidate requiring
+its own CI check; earlier green CI does not certify future hashes.
 
-Tester executable red tests are complete at `840df0e` (18 methods plus
-parameterized subcases). [Red evidence](test/m01-w01-001-red-tests.md) records
-expected loader failure because the approved example module is not implemented;
-syntax and diff checks pass. No test method or green/runtime gate is claimed
-passed. Next is Developer implementability review of committed executable tests,
-then implementation. Prior next-phase text above is historical. Scope remains
-one task; downstream review/testing/principles/candidate CI/integration pending.
-
-Developer executable-test review is **APPROVED**; see the review addendum.
-Current phase is **Development**, owner sw-tom. All earlier next-phase text is
-historical. Approved example/guide implementation now begins; no green tests,
-independent review or integration is claimed.
-
-Developer implementation/self-checks are complete: example `6f8b26d`, guide
-`864891a`; see [implementation evidence](implementation.md). Current phase is
-**Code Review**, owner sw-celeste next. Developer's 18 targeted and 228 full
-warning-as-error tests pass locally; these do not close Tester issues or replace
-independent committed-candidate testing/CI. Tester contract corrections are
-recorded at `2582302`; prior phase text is historical. Independent review/testing,
-completion principles, CI, integration and release acceptance remain pending.
-
-Code review iteration 1 at `97395f4`: **CHANGES_REQUESTED**; see
-[report](reviews/m01-w01-001-code-review.md). CR-01 requires independent owned-loop
-close attempt after drain failure. Developer correction, Tester focused assertions
-and Reviewer closure precede Testing handoff. No independent tests were run by Reviewer.
-
-CR-01 developer correction `5c5f6c4` is implemented/self-checked: focused
-three-subcase cleanup regression and full 229-test -Werror suite pass locally;
-compile/import/diff checks pass. See updated [evidence](implementation.md).
-Current phase **Code Review**, owner sw-celeste for reinspection. CR-01 remains
-OPEN until Reviewer closes it; independent Testing/CI/integration remain pending.
-
-Code review iteration 2 at `c722b9d`: **APPROVED**; CR-01 CLOSED by sw-celeste
-following fix `5c5f6c4` and Tester regression `b147ff0` inspection. Next is
-sw-mike independent committed-candidate tests and documentation walkthrough;
-review approval is not independent runtime/CI evidence. No code/test edits or
-test execution were performed by Reviewer.
+Existing R4-BASE-SCHED-01/META-01/HDF5-01 and OBS-004/005/006/DEFECT-2 remain
+tracked unfixed debt, with approved bounded compatibility measures tested for this
+example. No new runtime failure or required dependency is open in the tested
+scope. No library source/dependency/storage-format/Python-range change, hardware,
+UI/Figma or publication is part of this task. Process artifacts are committed and
+pushed before role handoff; historical phase detail remains in linked reports
+and Git history rather than contradictory current-state statements.
