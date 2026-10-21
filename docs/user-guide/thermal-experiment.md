@@ -162,8 +162,8 @@ private graph without `Coordinator.reset()`. It independently attempts scheduler
 stop, owned task draining/loop close, backend disconnect/raw-handle fallback,
 scratch removal and figure closure, preserving preexisting figures. Interruption
 gets best-effort cleanup when control returns to Python; process death and
-synchronous work cannot be preempted reliably. This example adds no cancellation,
-resume, partial-run recovery, hardware adapter or physical-stop guarantee.
+synchronous work cannot be preempted reliably. The cooperative controls below stop acquisition at software boundaries. There is
+no durable resume, automatic retry, hardware adapter or physical-stop guarantee.
 
 ## Verification
 
@@ -180,3 +180,84 @@ python -c "import softlab; print(softlab.__version__)"
 
 Local execution evidence and configured candidate CI are separate release gates;
 a configured Python matrix does not by itself certify either version.
+
+## Controlled interruption and explicit inspection
+
+From the repository root, a stop after three complete rows exits 1 and creates
+no HDF5 or PNG. Choose a fresh output directory each time:
+
+```sh
+python examples/thermal_experiment.py --output-dir /tmp/thermal-stop-03 --stop-after 3
+```
+
+`--stop-after 0` stops before any tick; `--stop-after 8` is a late request for
+the default eight-point run and completes normally. A request is distinct from
+acknowledgment: synchronous evolution/getters finish their current cycle, then
+acknowledgment prevents another cycle. Failure in that cycle takes precedence.
+This is cooperative software cancellation and cannot interrupt blocking work.
+
+For in-memory partial inspection, reset and two fresh repeats, run this from the
+repository root (all files remain in an automatically removed temporary folder):
+
+```sh
+python - <<'PYTHON'
+import importlib.util
+from pathlib import Path
+import sys
+import tempfile
+
+spec = importlib.util.spec_from_file_location(
+    'thermal_controlled', 'examples/thermal_experiment.py')
+example = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = example
+spec.loader.exec_module(example)
+with tempfile.TemporaryDirectory() as directory:
+    root = Path(directory)
+    stop = example.StopRequest()
+    def after_row(result):
+        if result.completed_rows == 3:
+            stop.request()
+    partial = example.execute(example.ThermalConfig(), root / 'partial',
+                              stop=stop, after_row=after_row)
+    assert partial.acquisition == 'cancelled'
+    assert partial.completed_rows == partial.final_tick == 3
+    assert partial.stop.acknowledged and partial.work_drained and partial.loop_closed
+    assert partial.persistence == 'not_attempted'
+    print(partial.group.record('thermal_trace').table)
+    example.reset_after_run(partial)
+    assert partial.final_tick == 3  # terminal snapshot is preserved
+    runs = [example.execute(example.ThermalConfig(), root / str(i)) for i in (1, 2)]
+    assert all(result.overall_success for result in runs)
+    assert runs[0].group.id != runs[1].group.id
+    columns = [c for c in runs[0].group.record('thermal_trace').table
+               if c != 'timestamp']
+    assert runs[0].group.record('thermal_trace').table[columns].equals(
+        runs[1].group.record('thermal_trace').table[columns])
+PYTHON
+```
+
+These helpers belong to this example, not the supported library API. `execute`
+returns a terminal `RunResult` for operational exceptions, with original `cause`,
+complete original `group`, optional verified `loaded`, actual final tick/time,
+separate acquisition/persistence/plotting statuses and ordered cleanup errors.
+Validation/output collisions still raise before acquisition. `run` preserves its
+successful reopened-DataGroup return and raises `RunFailure` with `.result` and
+original exception chaining on operational failure. BaseException interruption
+is reraised after best-effort cleanup. Callbacks inspect live evidence and must
+not mutate group/configuration/lifecycle.
+
+A model failure after row three retains three rows/tick three; a sampling failure
+after the next successful step retains three rows/tick four. Neither fabricates a
+row, retries, persists partial data nor resets during cleanup. Save/reload failure
+leaves acquisition completed and persistence failed. Plot failure leaves storage
+verified while the overall result fails. Cleanup obstruction also prevents overall
+success and remains visible alongside the original cause.
+
+`reset_after_run` requires terminal acquisition, drained work and a closed owned
+loop. It explicitly resets the retained model and starts no acquisition; reset
+factory failure propagates with the previous committed model state preserved.
+Prior terminal evidence remains available. Repetition uses a fresh execute call,
+process, stop request, record and resources; legacy Process.reset is not a promise
+that a cancelled process can be reused or that its record is cleared. Successful
+repeats have equal numeric traces, distinct UUIDs and fresh files. No result or
+partial outcome manifest is added to the on-disk format in this release.
