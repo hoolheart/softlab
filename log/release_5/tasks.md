@@ -1,5 +1,8 @@
 # M01-W02 serial tasks
 
+Current summary: setup/implementation Done; closure PO accepted ff3b65af,
+final candidate CI/dev/main promotion pending. Historical phase notes follow.
+
 Owner: sw-jerry (Architect). Date: 2026-10-21 Asia/Shanghai.
 Inputs: [PRD](prd.md), [milestone](../../plan/milestone-01.md),
 [planned architecture](architecture-plan.md). Baseline dev `815c282`.
