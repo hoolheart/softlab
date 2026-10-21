@@ -114,6 +114,18 @@ class RunFailure(RuntimeError):
         super().__init__(_diagnostic(result))
 
 
+class _HelperFailure(RuntimeError):
+    """Retain helper operation cause and ordered owned-cleanup diagnostics."""
+
+    def __init__(self, primary: Optional[Exception],
+                 cleanup_errors: List[str]) -> None:
+        self.primary = primary
+        self.cleanup_errors = list(cleanup_errors)
+        super().__init__('; '.join(
+            ([str(primary)] if primary is not None else [])
+            + self.cleanup_errors))
+
+
 class _AcquisitionEnd(Exception):
     """Carry incomplete acquisition to the owning execute call."""
 
@@ -441,8 +453,7 @@ def _reload_group(path: Path, group_id: str) -> DataGroup:
             for error in errors:
                 print(error, file=sys.stderr)
             raise primary
-        message = '; '.join(([str(primary)] if primary else []) + errors)
-        raise RuntimeError(message) from primary
+        raise _HelperFailure(primary, errors) from primary
     return loaded
 
 
@@ -489,8 +500,7 @@ def _plot_record(record: DataRecord, path: Path) -> None:
             for error in errors:
                 print(error, file=sys.stderr)
             raise primary
-        message = '; '.join(([str(primary)] if primary else []) + errors)
-        raise RuntimeError(message) from primary
+        raise _HelperFailure(primary, errors) from primary
 
 
 def execute(config: ThermalConfig, output_dir: Path, *,
@@ -553,6 +563,10 @@ def execute(config: ThermalConfig, output_dir: Path, *,
         result.plotting = 'completed'
     except _AcquisitionEnd:
         primary = result.cause
+    except _HelperFailure as exc:
+        errors.extend(exc.cleanup_errors)
+        primary = exc.primary
+        result.cause = exc.primary
     except BaseException as exc:
         primary = exc
         result.cause = exc
