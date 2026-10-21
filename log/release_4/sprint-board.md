@@ -4,7 +4,7 @@ Updated: 2026-10-21. Integration branch: dev.
 
 | ID | Scope | Owner / next handoff | Phase | Started | Expected completion | Remaining gates | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| M01-W01-001 | Thermal reference vertical slice, guide and evidence | sw-camille next (release acceptance) | Done: integrated into dev | 2026-10-18 | Completed task integration 2026-10-21 | PO release acceptance; closure-document integration; no main promotion | c89ffe6689484f1ea1eaf7088e8e2592fa21908d |
+| M01-W01-001 | Thermal reference vertical slice, guide and evidence | Coordinator / final closure | Done: integrated into dev | 2026-10-18 | Completed task integration 2026-10-21 | PO PASS; closure principle/CI/docs integration pending; no main promotion | c89ffe6689484f1ea1eaf7088e8e2592fa21908d |
 
 Exactly one active task on `codex/m01-w01-thermal-example`, created from dev
 `e034825`. The task is Done after the dev integration recorded below. No new task has started.
@@ -42,10 +42,12 @@ User resumed execution on 2026-10-21; prior evidence dates remain historical.
 Actual architecture updated at `af1dc74`; architecture plan reconciled.
 Architect task-completion/release-preacceptance principle inspection passes
 readiness for all eleven principles; see [inspection](principle_compliance_report.md).
-Next: coordinator verifies committed/pushed handoff and exact-final-SHA CI
-before Developer dev integration. Release acceptance remains required
-before any main promotion. Every later commit creates a new candidate requiring
-its own CI check; earlier green CI does not certify future hashes.
+Current release acceptance is **PASS** by sw-camille on 2026-10-21;
+see [acceptance](acceptance.md) and [product summary](sprint_summary.md).
+Task implementation is already integrated as recorded below. Remaining work is
+final closure principle reconciliation, exact closure-document candidate CI and
+follow-up dev integration before any main promotion. Earlier phase verdicts are
+historical evidence; this board does not certify future commit CI.
 
 Existing R4-BASE-SCHED-01/META-01/HDF5-01 and OBS-004/005/006/DEFECT-2 remain
 tracked unfixed debt, with approved bounded compatibility measures tested for this
@@ -66,8 +68,8 @@ candidate per-job API inconsistency. Dev merge-head CI explicitly confirms both
 Python 3.9/3.13 success. Review/testing/principle task gates are complete;
 no task issue remains open. Earlier phase text is historical.
 
-Task integration is Done; release acceptance is pending sw-camille. This
+Task integration is Done; release acceptance is PASS by sw-camille on 2026-10-21. This
 reconciliation record is committed on the preserved task branch; it is not yet
-in dev. PO may review integrated dev code and record acceptance on this branch,
-then final closure evidence/CI can be integrated in one documented follow-up.
+in dev. PO reviewed integrated dev scope and recorded acceptance on this branch;
+final closure evidence/CI must be integrated in one documented follow-up.
 No main promotion, package publication or next task is authorized here.
