@@ -4,10 +4,10 @@ Updated: 2026-10-21. Integration branch: dev.
 
 | ID | Scope | Owner / next handoff | Phase | Started | Expected completion | Remaining gates | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| M01-W01-001 | Thermal reference vertical slice, guide and evidence | Coordinator final-candidate CI, then sw-tom integration | Principles ready; final-candidate CI pending | 2026-10-18 | Evidence-driven; one working-week capacity forecast | Exact final-candidate CI, dev integration, PO release acceptance | Pending |
+| M01-W01-001 | Thermal reference vertical slice, guide and evidence | sw-camille next (release acceptance) | Done: integrated into dev | 2026-10-18 | Completed task integration 2026-10-21 | PO release acceptance; closure-document integration; no main promotion | c89ffe6689484f1ea1eaf7088e8e2592fa21908d |
 
 Exactly one active task on `codex/m01-w01-thermal-example`, created from dev
-`e034825`. Nothing is marked Done or integrated. No new task has started.
+`e034825`. The task is Done after the dev integration recorded below. No new task has started.
 User resumed execution on 2026-10-21; prior evidence dates remain historical.
 
 ## Completed gates and evidence
@@ -54,3 +54,20 @@ scope. No library source/dependency/storage-format/Python-range change, hardware
 UI/Figma or publication is part of this task. Process artifacts are committed and
 pushed before role handoff; historical phase detail remains in linked reports
 and Git history rather than contradictory current-state statements.
+
+
+## Actual dev integration — 2026-10-21
+
+Approved task candidate `6bdff20e99f79cb24e150393225c72a34dd3860c` was merged
+with --no-ff into freshly fetched dev `e034825b637910f353a4a3f5929d1993fe617457`,
+producing/pushing `c89ffe6689484f1ea1eaf7088e8e2592fa21908d`.
+[Integration evidence](integration.md) records exact run/commit checks and the
+candidate per-job API inconsistency. Dev merge-head CI explicitly confirms both
+Python 3.9/3.13 success. Review/testing/principle task gates are complete;
+no task issue remains open. Earlier phase text is historical.
+
+Task integration is Done; release acceptance is pending sw-camille. This
+reconciliation record is committed on the preserved task branch; it is not yet
+in dev. PO may review integrated dev code and record acceptance on this branch,
+then final closure evidence/CI can be integrated in one documented follow-up.
+No main promotion, package publication or next task is authorized here.
