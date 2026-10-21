@@ -6,8 +6,8 @@ Inputs: [PRD](prd.md), [milestone](../../plan/milestone-01.md),
 
 | Order / ID | Deliverable | Branch / dependency | State |
 | --- | --- | --- | --- |
-| 0 / M01-W02-SETUP | Activated PRD, feasibility, architecture envelope, serial backlog, start principle inspection; independent document review, Tester document validation, candidate CI | codex/m01-w02-setup from dev 815c282 | Done; dev caaa57c; closure-record reconciliation pending |
-| 1 / M01-W02-001 | Characterize legacy cancellation/reset; bounded example stop/outcomes/partial retention/reset/repeat; tests, guide and actual architecture | codex/m01-w02-controlled-execution from integrated setup dev; not created yet | Backlog |
+| 0 / M01-W02-SETUP | Activated PRD, feasibility, architecture envelope, serial backlog, start principle inspection; independent document review, Tester document validation, candidate CI | codex/m01-w02-setup from dev 815c282 | Done; final dev e0b5a135; both configured CI jobs PASS |
+| 1 / M01-W02-001 | Characterize legacy cancellation/reset; bounded example stop/outcomes/partial retention/reset/repeat; tests, guide and actual architecture | codex/m01-w02-controlled-execution from integrated setup dev e0b5a135; created/pushed | Design; sw-mike characterization and test plan pending |
 
 The implementation is one coherent vertical task covering AC-01–12: boundary
 accounting, outcome reporting and cleanup must agree before a user can trust a
