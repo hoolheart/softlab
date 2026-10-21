@@ -660,3 +660,70 @@ OBS-004/005/006 and DEFECT-2 remain unchanged under their existing dispositions.
 Actual architecture/principle completion records precede final-candidate CI and
 dev integration. Product Owner release acceptance and any main promotion remain
 pending, as recorded in [the board](log/release_4/sprint-board.md).
+
+## M01-W02 controlled reference execution — implemented
+
+Updated 2026-10-22. Supersedes the W01 section's future-W02 statements for the
+bounded behavior below. W01 was accepted and promoted (dev815c282/mainb03092e);
+W02 implementation1ba603d, guide6a0e6d3 and cleanup repair27d8a17 are integrated
+at dev8a0cf54 with task-record reconciliation10b2d7d. W02 PO acceptance and
+release promotion remain separate pending gates. No softlab library source,
+exports, dependency, storage format, Python support or version changed.
+
+The same [thermal example](examples/thermal_experiment.py) and
+[guide](docs/user-guide/thermal-experiment.md) now provide example-local
+StopRequest, execute, RunResult, RunFailure and reset_after_run. These helpers
+are not supported softlab APIs. run(config, output_dir) still returns the verified
+reopened DataGroup on success; operational failure raises a RuntimeError subclass
+carrying retained result/original cause. Validation/output collision refusals
+still precede acquisition. execute returns terminal evidence for operational
+Exception failures; BaseException is reraised after best-effort cleanup.
+
+A fresh count process, numeric record and private serial scheduler are composed
+through an example-owned commit/join loop. The existing before-get hook advances
+Coordinator before getters append a complete row. At each boundary, N complete
+rows establish completion before stop acceptance; a pending request before the
+next cycle sets acknowledgment and cancels acquisition. In-flight synchronous
+work may finish before acknowledgment; a failure in that cycle takes precedence.
+CLI --stop-after 0/3/8 demonstrates early/mid/late requests for the default eight
+points; only overall success exits zero and announces completed files.
+
+RunResult retains complete original rows (including empty partials), requested/
+completed counts, actual final tick/time, original cause, ordered cleanup errors,
+separate acquisition/persistence/plot statuses, optional verified reopened data,
+and actual terminal/drain/closed-loop facts. Failed evolution after K rows leaves
+K committed ticks; sampling failure after the next tick can leave K rows with
+K+1 ticks. Cancelled/failed acquisition saves/plots no partial data. Completed
+acquisition remains completed if later persistence fails; plot failure preserves
+separately verified storage. No zero-byte/atomic-save promise is made. Existing
+text metadata/schema, delay oracle, fresh UUID, copy-only HDF5 verification and
+headless plot behavior remain intact; no stored outcome manifest is added.
+
+Scheduler stop, owned task cancellation/drain and loop close have independent
+attempts; backend/scratch/figure helpers retain original primary cause and ordered
+cleanup evidence through a local helper carrier. An obstruction prevents overall
+success and cannot silently skip remaining independent cleanup. Borrowed/default
+resources stay outside ownership. Teardown never steps or resets the model.
+Explicit reset_after_run requires terminal acquisition, drained work and closed
+owned loop, calls Coordinator.reset and preserves the pre-reset terminal snapshot.
+Reset failure retains Coordinator's previous committed network under its existing
+staged-publication contract; external callback side effects are outside that
+atomicity. Reset starts no acquisition. Repeats create fresh topology, process,
+stop state, record, UUID and owned resources; cancelled legacy-process reuse,
+concurrent reset, retry, durable resume and synchronous preemption are not promised.
+No real instrument or physical stop is implied. W03 manifest and W04 adaptation
+remain future scope; educational model validity limits remain unchanged.
+
+[Independent testing](log/release_5/test/M01-W02-001-results.md) on2095c08 records
+257 full/21 feature tests under local Python3.13.15 -W error, compile/import and
+executed guide journeys. [Integration evidence](log/release_5/integration.md)
+records exact candidatefa553f2
+[CI39693855365](https://github.com/hoolheart/softlab/actions/runs/39693855365);
+final task-record dev10b2d7d has
+[CI39694251153](https://github.com/hoolheart/softlab/actions/runs/39694251153),
+both configured Python3.9/3.13 jobs successful. These are historical named checks,
+not a claim that this documentation SHA or all platforms/linters have run.
+Designer closed CR-W02-01; Tester closed scoped failures. R4-BASE-SCHED-01,
+R4-BASE-META-01 and R4-BASE-HDF5-01 remain unfixed with the regressed private
+executor/text hydration/copy-only-reader measures above. OBS-004/005/006 and
+DEFECT-2 retain existing dispositions. No broader library repair is claimed.
