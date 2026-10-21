@@ -2,8 +2,8 @@
 
 Delegated inspector: sw-jerry (Architect); coordinator owns formal gate review.
 Date: 2026-10-21. Subject PRD 0691bfc, baseline dev815c282 and local setup
-artifacts. **Start readiness assessment complete; FORMAL GATE BLOCKED on
-artifact commit/push and independent setup checks.** Task/release completion
+artifacts. **Start readiness assessment complete; transport resolved 2026-10-22; formal
+setup gate awaits independent document review, Tester validation and CI.** Task/release completion
 remain pending. No executed test, CI or acceptance verdict is asserted here.
 
 | Principle | Start evidence / disposition | Assessment |
@@ -13,7 +13,7 @@ remain pending. No executed test, CI or acceptance verdict is asserted here.
 | 3 TDD gates | tasks.md separates document-only setup validation from serial implementation test/design/review/testing gates | Ready |
 | 4 One task | Current branch codex/m01-w02-setup from dev815c282; only setup active, implementation backlog | Ready |
 | 5 Ownership | PO PRD, Architect decomposition/feasibility only; Designer review, Tester tests and closures preserved; UI N/A | Ready |
-| 6 Evidence transport | PRD0691bfc committed; new completed artifacts local only. Normal staging denied index.lock; escalated commit/push rejected because external origin trust not established | BLOCKED; no push claim |
+| 6 Evidence transport | PRD0691bfc and architecture records08d1299 committed/pushed to origin/codex/m01-w02-setup; user explicitly confirmed the exact origin trusted on 2026-10-22; this update requires immediate commit/push verification | Transport resolved; update verification pending |
 | 7 Environment | No runtime execution here; Tester owns actual versions, dependencies, warnings/skips and local/matrix evidence; missing requirements block affected gates | Pending relevant execution |
 | 8 Baseline debt | Three R4-BASE issues and OBS-004/005/006/DEFECT-2 explicitly retained; bounded local measures regress; no automatic closure or broad repair | Ready; regression pending |
 | 9 Data/instruments | Synthetic fresh temporary outputs, explicit private resources; physical stop/resume excluded; reset separate after terminal drainage | Ready; failure checks pending |
@@ -28,3 +28,17 @@ Coordinator must verify actual commits/pushes, independent setup gates and CI
 before integration. No source-inspection prerequisite currently forces a library
 change; runtime findings may change that assessment. Setup completion cannot
 certify W02 release acceptance.
+
+## Transport resolution — 2026-10-22 Asia/Shanghai
+
+The user explicitly confirmed git@github.com:hoolheart/softlab.git trusted in
+direct response to the destination question ("I confirm it’s trustable"). The
+previous automatic approval rejection is resolved for this authorized push.
+A narrow git push origin HEAD succeeded, advancing codex/m01-w02-setup from
+0691bfc to08d1299. Clean worktree and correct branch/remote were observed before
+that push. All four architecture/process files exist in08d1299. This status
+update is committed/pushed immediately; coordinator verifies its resulting SHA
+and upstream equality without circular self-hashes. No implementation or tests
+were performed. Independent documentation review, Tester document validation,
+exact candidate CI and dev integration remain pending; no technical gate is
+certified by transport resolution.

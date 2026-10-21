@@ -1,11 +1,11 @@
 # M01-W02 sprint board
 
-Owner: sw-jerry (Architect). 2026-10-21 Asia/Shanghai.
+Owner: sw-jerry (Architect). 2026-10-22 Asia/Shanghai.
 Baseline dev 815c282; requirements 0691bfc. Exactly one active task.
 
 | Task | Description | Assigned phase owner | State | Start | Forecast | Merge | Blockers |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| M01-W02-SETUP | Requirements/architecture/decomposition/start inspection | Architect; Designer document review next | Design | 2026-10-21 | No fixed date | Pending | Commit/push transport blocked by automatic approval review; independent document review, Tester validation, exact candidate CI pending |
+| M01-W02-SETUP | Requirements/architecture/decomposition/start inspection | Architect; Designer document review next | Design | 2026-10-21 | No fixed date | Pending | Transport resolved: 08d1299 pushed after explicit user destination confirmation; independent document review, Tester validation, exact candidate CI pending |
 | M01-W02-001 | Controlled thermal execution and repetition | Unassigned; serial roles in tasks.md | Backlog | Not started | After integrated setup | Pending | Setup must integrate first; branch not created |
 
 Active branch codex/m01-w02-setup. No implementation/test execution/design gate
