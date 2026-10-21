@@ -4,7 +4,7 @@ Updated: 2026-10-21. Integration branch: dev.
 
 | ID | Scope | Owner / next handoff | Phase | Started | Expected completion | Remaining gates | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| M01-W01-001 | Thermal reference vertical slice, guide and evidence | sw-jerry (actual architecture), then principle inspection | Testing complete; preintegration checks pending | 2026-10-18 | Evidence-driven; one working-week capacity forecast | Architecture/principles, exact final-candidate CI, dev integration, release acceptance | Pending |
+| M01-W01-001 | Thermal reference vertical slice, guide and evidence | Coordinator final-candidate CI, then sw-tom integration | Principles ready; final-candidate CI pending | 2026-10-18 | Evidence-driven; one working-week capacity forecast | Exact final-candidate CI, dev integration, PO release acceptance | Pending |
 
 Exactly one active task on `codex/m01-w01-thermal-example`, created from dev
 `e034825`. Nothing is marked Done or integrated. No new task has started.
@@ -39,8 +39,11 @@ User resumed execution on 2026-10-21; prior evidence dates remain historical.
 
 ## Current handoff and limits
 
-Next: Architect updates actual architecture, then principle inspection and
-exact-final-SHA CI before dev integration. Release acceptance remains required
+Actual architecture updated at `af1dc74`; architecture plan reconciled.
+Architect task-completion/release-preacceptance principle inspection passes
+readiness for all eleven principles; see [inspection](principle_compliance_report.md).
+Next: coordinator verifies committed/pushed handoff and exact-final-SHA CI
+before Developer dev integration. Release acceptance remains required
 before any main promotion. Every later commit creates a new candidate requiring
 its own CI check; earlier green CI does not certify future hashes.
 

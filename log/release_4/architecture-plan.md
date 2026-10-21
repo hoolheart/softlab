@@ -1,4 +1,4 @@
-# M01-W01 architecture plan — planned
+# M01-W01 architecture plan and implementation disposition
 
 Owner: sw-jerry (Architect). Date: 2026-10-18.
 Baseline: `dev` `e034825`; activated [PRD](prd.md) at `c776fe8`.
@@ -54,3 +54,22 @@ No runtime evidence is asserted here. UI/Figma, real hardware and publication ar
 N/A. W02 cancellation, W03 manifest and W04 adapters remain excluded. Release-end
 architecture update describes actual results only; PO acceptance precedes main
 promotion. Start inspection is [recorded separately](principle_compliance_report.md).
+
+
+## Actual implementation disposition — 2026-10-21
+
+The planned bounded composition is implemented in example `6f8b26d`, cleanup fix
+`5c5f6c4`, guide `864891a`; [actual architecture](../../arch.md) updated at
+`af1dc74`. Detailed design/Architect approval, DR-01 closure, red tests,
+independent Reviewer CR-01 closure and Tester results are linked from the board.
+No plan proposal above is a new supported API: the public Scheduler extension
+is used only by the local serial adapter; HDF5 reload uses temporary copies and
+disk-derived metadata. No library source/export/dependency/format change occurred.
+R4-BASE-SCHED-01/META-01/HDF5-01 are explicitly tracked, unfixed future candidates;
+local tested compatibility measures do not close them. Prior debt is untouched.
+
+Task runtime acceptance evidence is complete per independent Tester on a7953e3
+(229 local -W error tests, CLI/compile/import and AC/NFR traceability); exact
+candidate CI and 23ae605 evidence CI are green. This actual-architecture record
+is not a dev/main merge or PO release acceptance. Final documentation-candidate
+CI, dev integration and PO release acceptance remain pending.
