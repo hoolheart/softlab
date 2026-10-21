@@ -42,3 +42,17 @@ and upstream equality without circular self-hashes. No implementation or tests
 were performed. Independent documentation review, Tester document validation,
 exact candidate CI and dev integration remain pending; no technical gate is
 certified by transport resolution.
+
+## Setup document validation — 2026-10-22 Asia/Shanghai
+
+Tester sw-mike validated committed e5d87dd with **PASS for setup documents**.
+All eleven principles have explicit applicability/evidence in
+[test/M01-W02-SETUP-validation.md](test/M01-W02-SETUP-validation.md).
+Six Markdown files, 18 local links, AC-01–12, whitespace, scope, dev base and
+subject/upstream equality passed actual checks. Independent Designer approval
+is recorded in reviews/M01-W02-SETUP-review.md. No runtime checks or release
+acceptance were performed. This supersedes pending independent document review
+and Tester validation in the historical start assessment; coordinator formal
+gate, exact candidate CI and dev integration remain pending. Setup is still the
+only active task. This update requires immediate docs(log) commit/push and
+coordinator verification before handoff; it does not mark setup Done.
