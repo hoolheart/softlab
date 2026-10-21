@@ -5,7 +5,7 @@ Baseline dev 815c282; requirements 0691bfc. Exactly one active task.
 
 | Task | Description | Assigned phase owner | State | Start | Forecast | Merge | Blockers |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| M01-W02-SETUP | Requirements/architecture/decomposition/start inspection | Architect; Designer document review next | Design | 2026-10-21 | No fixed date | Pending | Transport resolved: 08d1299 pushed after explicit user destination confirmation; independent document review, Tester validation, exact candidate CI pending |
+| M01-W02-SETUP | Requirements/architecture/decomposition/start inspection | Tester document validation next | Review | 2026-10-21 | No fixed date | Pending | Transport resolved: 08d1299 pushed after explicit user destination confirmation; Designer document review APPROVED on f83375f (reviews/M01-W02-SETUP-review.md); Tester validation and exact candidate CI pending |
 | M01-W02-001 | Controlled thermal execution and repetition | Unassigned; serial roles in tasks.md | Backlog | Not started | After integrated setup | Pending | Setup must integrate first; branch not created |
 
 Active branch codex/m01-w02-setup. No implementation/test execution/design gate
