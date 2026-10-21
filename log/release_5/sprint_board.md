@@ -1,8 +1,10 @@
 # M01-W02 sprint board
 
-Current summary: setup and implementation Done; release PO acceptance PASS
-ff3b65af. Closure is sole active task, CI/integration pending. This summary
-supersedes historical pending wording below.
+Current summary: all three tasks Done; PO acceptance PASS ff3b65af and closure
+integrated dev bfcdc9f after both-version candidate CI. Final completion-record
+CI/dev reconciliation and authorized promotion are integrator operations; actual
+final hashes/CI are reported in the release handoff. Historical phase notes below
+are superseded by this summary.
 
 Owner: sw-jerry (Architect). 2026-10-22 Asia/Shanghai.
 Setup baseline dev 815c282; implementation baseline dev e0b5a135; requirements 0691bfc. Exactly one active task.
@@ -11,10 +13,10 @@ Setup baseline dev 815c282; implementation baseline dev e0b5a135; requirements 0
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | M01-W02-SETUP | Requirements/architecture/decomposition/start inspection | Completed setup | Done | 2026-10-21 | No fixed date | caaa57c03007bdad44be2c8eb2dd921bf33c8a70 | Transport resolved: 08d1299 pushed after explicit user destination confirmation; Designer document review APPROVED on f83375f (reviews/M01-W02-SETUP-review.md); Tester document validation PASS on e5d87dd (test/M01-W02-SETUP-validation.md); coordinator formal gate PASS on 0255e485; candidate da6e4d7 CI39690046771 both jobs PASS; integrated caaa57c; closure b3d5872 CI39690251172 both jobs PASS; final dev e0b5a135 CI39690409633 both jobs PASS; coordinator completion gate PASS |
 | M01-W02-001 | Controlled thermal execution and repetition | Completed task | Done | 2026-10-22 | No fixed date | 8a0cf546254a302eb50d752190af2c02c99502ff | Characterization d7b73a6: 7 focused and 236 baseline tests PASS; Developer plan review APPROVED on 84597bb; detailed design saved (design/M01-W02-001-design.md); Architect review APPROVED on 2bec5a3 (reviews/M01-W02-001-design-review.md); expected red b331c13: 19 methods (3 CLI failures/24 missing-feature errors); unchanged W01 19 and characterization 7 PASS; Tester red report saved; implementation1ba603d and guide6a0e6d3 pushed; Developer255 full tests/compile/import PASS; independent review CHANGES_REQUESTED on 639860f: CR-W02-01 structured nested cleanup evidence (reviews/M01-W02-001-code-review.md); Tester regression6061ebe reproduces six expected failures, prior19 feature/7 characterization green; Developer fix27d8a17 pushed; 40 focused/257 full self-checks PASS; Reviewer iteration2 APPROVED on 8af418d; CR-W02-01 closed by sw-celeste; independent Tester257 full/21 feature PASS on2095c08, guide walkthrough PASS; Coordinator all11 principles/formal readiness PASS on c04194e; candidate fa553f2 CI39693855365 both versions PASS; dev8a0cf54 pushed; completion-record reconciliation integrated dev10b2d7d, both CI versions PASS; Developer plan approval d7036c4 (reviews/M01-W02-001-test-plan-review.md) |
-| M01-W02-CLOSURE | Actual architecture/release principles/final acceptance/integration | Developer / final candidate CI and integration | Product accepted; CI pending | 2026-10-22 | No fixed date | Pending | Task dev10b2d7d and both CI jobs PASS; actual architecture3ad83ed and release principles readiness PASS; Designer closure-document review APPROVED on 5bc1514 (reviews/M01-W02-CLOSURE-review.md); Tester final257 -W error/compile/import and closure-document validation PASS on e1c0c63; PO acceptance ff3b65af PASS; coordinator all11 formal readiness PASS; exact closure CI pending |
+| M01-W02-CLOSURE | Actual architecture/release principles/final acceptance/integration | Completed closure | Done | 2026-10-22 | No fixed date | bfcdc9fce2df99cab82662bf5e4ee0ad9dcb1be9 | Task dev10b2d7d and both CI jobs PASS; actual architecture3ad83ed and release principles readiness PASS; Designer closure-document review APPROVED on 5bc1514 (reviews/M01-W02-CLOSURE-review.md); Tester final257 -W error/compile/import and closure-document validation PASS on e1c0c63; PO acceptance ff3b65af PASS; coordinator all11 formal readiness PASS; closure candidate169f38d CI39695321332 both PASS; devbfcdc9f pushed |
 
 Active branch codex/m01-w02-release-closure. Setup is fully integrated;
-M01-W02-CLOSURE is the sole active task; implementation task is Done. Legacy characterization/baseline tests
+All scoped tasks are Done; only final integration/promotion operations remain. Legacy characterization/baseline tests
 have executed; detailed design is Architect-approved; W02 implementation and Developer self-checks are recorded in implementation.md; Designer review APPROVED and independent Tester257/21 plus guide PASS; coordinator principle gate/exact candidate CI remain pending. Setup artifacts are documents only; UI/Figma and production TDD are
 not applicable to setup. See tasks.md and architecture-plan.md for subsequent
 test/developer-review → design/Architect-review → implementation → independent
