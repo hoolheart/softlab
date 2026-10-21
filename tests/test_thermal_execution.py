@@ -7,10 +7,12 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import warnings
 from unittest import mock
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.figure import Figure
 
 from softlab.huo.scheduler import impl_scheduler
 from softlab.tu.simulation import Coordinator
@@ -388,10 +390,12 @@ class ThermalExecutionTests(unittest.TestCase):
 
     def test_borrowed_scheduler_loop_and_figure_unchanged(self):
         borrowed_scheduler = impl_scheduler._scheduler
-        try:
-            original_loop = asyncio.get_event_loop()
-        except RuntimeError:
-            original_loop = None
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", DeprecationWarning)
+            try:
+                original_loop = asyncio.get_event_loop()
+            except (RuntimeError, DeprecationWarning):
+                original_loop = None
         borrowed_loop = asyncio.new_event_loop()
         borrowed_figure = plt.figure()
         try:
@@ -415,6 +419,126 @@ class ThermalExecutionTests(unittest.TestCase):
         self.assertIs(caught.exception.result.cause, cause)
         self.assertIs(caught.exception.__cause__, cause)
         self.assertFalse(caught.exception.result.overall_success)
+
+    def test_figure_cleanup_fault_is_structured_with_original_save_cause(self):
+        original_close = plt.close
+        borrowed = plt.figure()
+        original_figures = set(plt.get_fignums())
+        for primary_failure in (False, True):
+            with self.subTest(primary=primary_failure):
+                primary = ValueError("save operation marker")
+                close_attempts = []
+
+                def close(number):
+                    close_attempts.append(number)
+                    if number not in original_figures:
+                        raise OSError("figure cleanup marker")
+                    original_close(number)
+
+                save_context = (mock.patch.object(Figure, "savefig", side_effect=primary)
+                                if primary_failure else mock.patch.object(
+                                    Figure, "savefig", autospec=True,
+                                    side_effect=Figure.savefig))
+                try:
+                    with save_context, mock.patch.object(plt, "close", side_effect=close):
+                        result = thermal.execute(self.config, self.root / (
+                            "nested-figure-" + str(primary_failure)))
+                    self.assertEqual(result.acquisition, "completed")
+                    self.assertEqual(result.completed_rows, 8)
+                    self.assertEqual(result.final_tick, 8)
+                    self.assertEqual(result.persistence, "verified")
+                    self.assertIsNotNone(result.loaded)
+                    self.assertEqual(result.plotting, "failed")
+                    self.assertFalse(result.overall_success)
+                    self.assertTrue(close_attempts)
+                    self.assertTrue(result.work_drained and result.loop_closed)
+                    self.assertTrue(plt.fignum_exists(borrowed.number))
+                    for scheduler in self.schedulers:
+                        self.assertFalse(scheduler.is_running())
+                        self.assertTrue(scheduler._loop.is_closed())
+                    self.assertTrue(any("figure cleanup marker" in error
+                                        for error in result.cleanup_errors))
+                    if primary_failure:
+                        self.assertIs(result.cause, primary)
+                finally:
+                    for number in set(plt.get_fignums()) - original_figures:
+                        original_close(number)
+
+    def test_reader_and_scratch_cleanup_preserve_primary_and_independent_release(self):
+        original_directory = tempfile.TemporaryDirectory
+        original_connect = thermal.HDF5DataBackend.connect
+        original_disconnect = thermal.HDF5DataBackend.disconnect_impl
+        original_load = thermal._load_group
+        for obstruction in ("reader", "scratch"):
+            for primary_failure in (False, True):
+                with self.subTest(cleanup=obstruction, primary=primary_failure):
+                    primary = ValueError("reader operation marker")
+                    directories, handles, attempts = [], [], []
+
+                    class Directory:
+                        def __init__(inner, *args, **kwargs):
+                            inner.real = original_directory(*args, **kwargs)
+                            inner.name = inner.real.name
+                            directories.append(inner)
+
+                        def cleanup(inner):
+                            attempts.append("scratch")
+                            if obstruction == "scratch":
+                                raise OSError("scratch cleanup marker")
+                            inner.real.cleanup()
+
+                    def connect(backend, arguments=None):
+                        connected = original_connect(backend, arguments)
+                        if backend.file is not None:
+                            handles.append(backend.file)
+                        return connected
+
+                    def disconnect(backend):
+                        filename = str(backend.file.filename)
+                        is_reader = any(filename.startswith(d.name) for d in directories)
+                        attempts.append("reader" if is_reader else "writer")
+                        if is_reader and obstruction == "reader":
+                            backend.record_error("reader cleanup marker")
+                            return False
+                        return original_disconnect(backend)
+
+                    def load(backend, group_id):
+                        if primary_failure:
+                            raise primary
+                        return original_load(backend, group_id)
+
+                    try:
+                        with mock.patch.object(thermal.tempfile, "TemporaryDirectory", Directory), \
+                                mock.patch.object(thermal.HDF5DataBackend, "connect",
+                                    autospec=True, side_effect=connect), \
+                                mock.patch.object(thermal.HDF5DataBackend, "disconnect_impl",
+                                    autospec=True, side_effect=disconnect), \
+                                mock.patch.object(thermal, "_load_group", side_effect=load):
+                            result = thermal.execute(self.config, self.root / (
+                                "nested-" + obstruction + str(primary_failure)))
+                        self.assertEqual(result.acquisition, "completed")
+                        self.assertEqual(result.completed_rows, 8)
+                        self.assertEqual(result.final_tick, 8)
+                        self.assertEqual(result.persistence, "failed")
+                        self.assertEqual(result.plotting, "not_attempted")
+                        self.assertIsNone(result.loaded)
+                        self.assertFalse(result.overall_success)
+                        self.assertEqual(attempts, ["writer", "reader", "scratch"])
+                        self.assertTrue(handles)
+                        self.assertTrue(all(not handle.id.valid for handle in handles))
+                        self.assertTrue(result.work_drained and result.loop_closed)
+                        for scheduler in self.schedulers:
+                            self.assertFalse(scheduler.is_running())
+                            self.assertTrue(scheduler._loop.is_closed())
+                        if obstruction == "reader":
+                            self.assertTrue(all(not Path(d.name).exists() for d in directories))
+                        self.assertTrue(any(obstruction + " cleanup marker" in error
+                                            for error in result.cleanup_errors))
+                        if primary_failure:
+                            self.assertIs(result.cause, primary)
+                    finally:
+                        for directory in directories:
+                            directory.real.cleanup()
 
     def test_cli_stop_and_late_stop_have_truthful_exit_and_artifacts(self):
         for points, status in ((0, 1), (3, 1), (8, 0)):
