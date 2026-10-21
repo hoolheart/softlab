@@ -456,10 +456,10 @@ class ThermalExecutionTests(unittest.TestCase):
                     for scheduler in self.schedulers:
                         self.assertFalse(scheduler.is_running())
                         self.assertTrue(scheduler._loop.is_closed())
-                    self.assertTrue(any("figure cleanup marker" in error
-                                        for error in result.cleanup_errors))
                     if primary_failure:
                         self.assertIs(result.cause, primary)
+                    self.assertTrue(any("figure cleanup marker" in error
+                                        for error in result.cleanup_errors))
                 finally:
                     for number in set(plt.get_fignums()) - original_figures:
                         original_close(number)
@@ -532,10 +532,10 @@ class ThermalExecutionTests(unittest.TestCase):
                             self.assertTrue(scheduler._loop.is_closed())
                         if obstruction == "reader":
                             self.assertTrue(all(not Path(d.name).exists() for d in directories))
-                        self.assertTrue(any(obstruction + " cleanup marker" in error
-                                            for error in result.cleanup_errors))
                         if primary_failure:
                             self.assertIs(result.cause, primary)
+                        self.assertTrue(any(obstruction + " cleanup marker" in error
+                                            for error in result.cleanup_errors))
                     finally:
                         for directory in directories:
                             directory.real.cleanup()
