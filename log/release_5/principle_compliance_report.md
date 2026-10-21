@@ -56,3 +56,37 @@ and Tester validation in the historical start assessment; coordinator formal
 gate, exact candidate CI and dev integration remain pending. Setup is still the
 only active task. This update requires immediate docs(log) commit/push and
 coordinator verification before handoff; it does not mark setup Done.
+
+## M01-W02-001 independent testing evidence — 2026-10-22
+
+Tester sw-mike validated committed2095c08 (Designer-approved repair27d8a17) with
+**PASS for local task testing**. The complete eleven-principle task evidence and
+limits are recorded in [test/M01-W02-001-results.md](test/M01-W02-001-results.md).
+Actual -W error full257/focused21 tests, compile softlab/examples/tests, import,
+root CLI normal/early/mid/late, documented stored inspection and verbatim
+partial/reset/two-repeat journey pass. All Tester-owned feature/regression red
+failures are closed by green execution. Designer CR-W02-01 closure is separately
+recorded in the code-review report; Tester does not close review findings.
+
+Principles1–10 have scoped task evidence in that report, with actual arch.md
+release-end update still assigned to Architect and historical debt explicitly
+open. Principle11 remains pending the coordinator principle/formal verdict,
+exact candidate CI on both configured versions and dev integration. No local
+3.9/Ubuntu, UI/hardware or unconfigured lint evidence is claimed. Baseline bounded
+scheduler/metadata/HDF5 measures pass regression; OBS/DEFECT debt remains under
+its existing disposition. No production changes by Tester. These records require
+immediate docs(log) commit/push before handoff. Setup historical pending wording
+above is superseded by its integrated closure on the board; W02 task/release
+completion and PO acceptance are not inferred from this local testing PASS.
+
+## Coordinator task verdict — delegated recording
+
+2026-10-22 Asia/Shanghai. Coordinator inspected c04194e with clean HEAD/upstream
+and issues **PASS FOR CI/INTEGRATION READINESS** for all eleven task principles,
+using Tester36f4549 evidence, Designer2095c08 APPROVED/CR-W02-01 closure and
+independent257 full/21 focused warning-as-error plus guide checks. This paragraph
+records the Coordinator verdict; Developer performs no new principle inspection
+or issue closure. Explicit baseline debt disposition/bounded W01 measures remain
+open; UI is not applicable. Exact candidate CI on Python3.9/3.13 remains the
+integration gate. Actual architecture/release principles and PO acceptance remain
+release closure gates; no task/release completion or main promotion is inferred.
