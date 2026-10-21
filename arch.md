@@ -589,3 +589,74 @@ DEFECT-2 (table above; full wording and evidence in
 [log/release_1/compatibility.md](log/release_1/compatibility.md)) are still
 tracked as technical debt; correcting them is future
 work requiring its own approved change, not a silent follow-up.
+
+
+## M01-W01 thermal reference example — implemented candidate
+
+Updated 2026-10-21. This describes the task-branch candidate, not dev integration,
+main promotion or release acceptance. Implementation `6f8b26d`, cleanup correction
+`5c5f6c4` and guide `864891a` deliver the activated
+[M01-W01 scope](log/release_4/prd.md). No library source/export, dependency,
+storage format, Python support or package version changed.
+
+[examples/thermal_experiment.py](examples/thermal_experiment.py) composes existing
+public primitives into an opt-in, synchronous headless reference command:
+
+```sh
+MPLBACKEND=Agg python examples/thermal_experiment.py --output-dir /tmp/thermal-run-01
+```
+
+The selected directory must be new/empty. The
+[guide](docs/user-guide/thermal-experiment.md) documents setup and inspection.
+`tu` owns a fresh Station, scalar thermal SimulatedObject and MockControl/
+MockMeasurement; `huo.count` uses its before-get hook to step Coordinator once
+before each complete row; `shui` supplies DataRecord/DataGroup and HDF5;
+`jin.plot_record` plots the reopened temperature against simulation time.
+Default eight readings retain previous-boundary latency:
+20, 21, 21.9, 22.71, 23.439, 24.0951, 24.68559, 25.217031 degC.
+Acquisition/source ticks and wall timestamp are distinct recorded fields.
+
+Example-local `_CountScheduler(Scheduler)` dispatches only serial unchained,
+nonthreaded public Action bodies on an owned loop. It neither replaces the
+singleton nor provides a general scheduler implementation. Configuration/output
+preflight precedes acquisition. Fresh resources/UUIDs isolate invocations.
+The owned writer disconnects before `_reload_group` copies thermal.h5 into an
+owned temporary directory; legacy loading/hydration operates on that disposable
+copy. Disk-derived metadata, UUID/name/timestamp, schema and numeric values are
+verified; returned backend information points to the delivered path. Repeated
+safe reloads preserve source bytes/reserved attributes. Plotting consumes the
+reopened record and writes thermal.png. Completion follows verified persistence,
+plot and cleanup; failures retain primary/cleanup diagnostics and distinguish
+unverified files from verified data remaining after plotting failure.
+No implicit coordinator reset/stop is invented. Owned loop drain and close are
+attempted independently; owned backends/scratch/new figures are released without
+changing borrowed global resources. This is a bounded educational example, not a
+supported public run API, experiment service/framework, cancellation/resume
+contract or physical-model qualification. W02/W03/W04 remain future scope.
+
+### Reference-example evidence and baseline limitations
+
+Independent Reviewer approved the cleanup fix and closed CR-01 at `c722b9d`;
+Tester [results](log/release_4/test/m01-w01-001-test-results.md) cover all
+AC01–12/NFR01–05 on `a7953e3`: 229 tests under local -W error, compile/import,
+two documented CLI runs and fresh-file/PNG/failure/ownership assertions.
+[CI 39141867382](https://github.com/hoolheart/softlab/actions/runs/39141867382)
+certifies exact a7953e3; evidence-only candidate `23ae605` has
+[CI 39142118165](https://github.com/hoolheart/softlab/actions/runs/39142118165),
+both Python 3.9/3.13 jobs green. Architect re-queried both runs on 2026-10-21.
+Later documentation hashes need their own final-candidate CI before dev merge;
+these results do not certify this later architecture commit.
+
+| Baseline debt (unfixed) | Bounded disposition in this example |
+| --- | --- |
+| R4-BASE-SCHED-01: concrete scheduler completion callback uses module singleton | Local public-interface serial adapter; no singleton mutation or scheduler source repair. |
+| R4-BASE-META-01: DataGroup constructor drops supplied metadata | set_meta at creation and hydration exclusively from copied disk metadata; no constructor repair. |
+| R4-BASE-HDF5-01: legacy reader pops reserved file attributes | Read only owned copies; preserve delivered thermal.h5; guide discloses unsafe plain-reader limitation. |
+
+These are tracked separately authorized future remediation candidates, not fixed
+or silently waived. Approved/tested local measures satisfy this example's bounded
+acceptance; they make no broader claim about existing library defects. Prior
+OBS-004/005/006 and DEFECT-2 remain unchanged under their existing dispositions.
+Actual architecture/principle completion records precede final-candidate CI and
+dev integration. Product Owner release acceptance and any main promotion remain
+pending, as recorded in [the board](log/release_4/sprint-board.md).
