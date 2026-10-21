@@ -68,3 +68,27 @@ Developer does not approve own code or close Tester/reviewer findings.
 Handoff: Designer independent review on committed implementation/guide; board
 moves to Code Review. This evidence/board update commits and pushes immediately
 with docs(log), with final hash/upstream cleanliness reported separately.
+
+## CR-W02-01 repair — review iteration 2 handoff
+
+Review subject 6ca80ab requested structured nested cleanup evidence. Tester
+regressions 9cfd570/6061ebe and red record1828aa4 exposed six failing subcases.
+Fix commit `27d8a17` is pushed. Developer added only an example-local RuntimeError carrier with explicit primary
+Exception and copied ordered cleanup diagnostics. Reader/scratch/figure helpers
+retain combined direct-helper exception text and original cause chaining; execute
+consumes those fields without parsing text. Cleanup-only obstruction has no
+fabricated operation cause, populates cleanup_errors and remains unsuccessful.
+Actual primary save/load Exception identity is retained when cleanup also fails.
+Existing persistence/plot states and independent cleanup attempts are unchanged.
+No test, guide, library, configuration or dependency changes were needed.
+
+Executed against final fix bytes in the same Python3.13.15/writable-cache/Agg
+environment as above: `-W error -m unittest discover -s tests -p
+ 'test_thermal*.py'` 40 PASS (13.778s), covering all new nested fault subcases and
+W01 contracts; `-W error -m unittest discover -s tests -p 'test_*.py'` 257 PASS
+(15.587s), including seven characterization cases; no skips/Python warnings.
+Warning-as-error compileall softlab/examples and import/version smoke both exit0
+(version0.3.0); git diff --check exit0. Normal backend connection prints remain.
+No new broader verification claim. CR-W02-01 remains Reviewer-owned OPEN pending
+committed-fix review; Tester owns independent regression verification/closure.
+Designer review iteration2 is next; Developer does not approve or close issues.
