@@ -51,7 +51,8 @@ class ThermalManifestTests(unittest.TestCase):
         return path
 
     def inspect_cli(self, path):
-        return subprocess.run([sys.executable, "-W", "error", str(EXAMPLE),
+        return subprocess.run([sys.executable, "-W", "error",
+                               str(ROOT / "tests" / "thermal_cli_bootstrap.py"), str(EXAMPLE),
                                "--inspect-file", str(path)], cwd=ROOT,
                               text=True, capture_output=True, timeout=60)
 
