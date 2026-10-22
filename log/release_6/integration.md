@@ -1,7 +1,7 @@
 # M01-W03-001 task integration
 
 Integrator: sw-tom. 2026-10-22 Asia/Shanghai.
-State: **BLOCKED: exact candidate Python3.9 CI failure; no dev merge**.
+State: **updated all11 formal readiness PASS at48e69835; replacement candidate CI pending**.
 
 Coordinator all11 readiness PASS atffbf85c follows Reviewer69045ec approval and
 CR-W03-01 closure plus independent Tester273 full/13 focused warning-as-error,
@@ -34,3 +34,14 @@ scope disposition. No production/test/dependency/config repair or failure closur
 is performed here. Local273 green results remain actual local3.13 evidence and
 cannot replace failed3.9 CI. Candidate integration stays blocked pending reviewed
 resolution and successful exact replacement-candidate CI on both versions.
+
+## Remote failure closure and renewed integration readiness
+
+Coordinator all11 principle/formal readiness PASS at48e69835 follows Tester-owned
+explicit both-job/check-run success for447ad095 CI39792211097. Tester closed scoped
+CI gate failures after actual remote verification; initial failed runs remain
+historical evidence above. Architect/PO accepted bounded visible parser/pandas
+warning dispositions with debt open, not warning suppression or production repair.
+No review/Test issue closure is performed by this integrator. Exact replacement
+candidate both-version CI precedes dev merge; actual architecture and release PO
+acceptance remain later closure gates. No source/test/config/main changes.

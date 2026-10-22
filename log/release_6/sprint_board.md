@@ -58,3 +58,7 @@ underlying parser/pandas warning debt remains open/visible. Earlier OPEN/pending
 CI paragraphs are historical. New evidence-record candidate needs its own exact
 both-version CI/coordinator reconciliation; dev still6d332ce before integration.
 No task Done/release acceptance/main promotion yet.
+
+Current state supersedes historical CI blocker: Tester explicit both-job success
+on447ad095/39792211097 closed scoped failures; Coordinator all11 readiness PASS
+at48e69835. Exact replacement candidate CI/dev integration remain pending.
