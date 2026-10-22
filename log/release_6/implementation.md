@@ -77,3 +77,20 @@ claim. Exact configured3.9/3.13 CI remains an integration gate. Independent Desi
 review and Tester verification/owned closure remain pending. Developer does not
 approve own code or close reviewer/Tester findings. Board handoff is Code Review;
 this evidence/board commits and pushes immediately as docs(log).
+
+## CR-W03-01 repair and review iteration 2 handoff
+
+Review081ce4b and Testerbc21224/evidencede48c45 require exact logical boundary
+validation. Fix341c55b is pushed: tick/measurement_source_tick now use exact array
+equality against integer sequences; no rounding/coercion repairs stored values.
+Existing finite-sample checks and absolute1e-10 thermal/time comparisons remain.
+No test, guide, library/config/dependency changes. Review issue remains OPEN for
+Designer closure; Tester owns independent regression verification/failure closure.
+
+Final fix bytes self-checked in the same Python3.13.15/Agg/writable-cache environment:
+`-W error -m unittest discover -s tests -p test_thermal_manifest.py` **13 PASS**,
+11.100s; full `-W error -m unittest discover -s tests -p 'test_*.py'` **273 PASS**,
+31.751s, no skips/Python warnings. Warning-as-error compileall softlab/examples/
+tests and import/version0.3.0 exit0; git diff --check exit0. Informational backend
+prints remain. No broader platform/lint/CI claim. Independent Designer iteration2
+is next; Developer does not approve own repair or close findings.
