@@ -4,8 +4,8 @@ Architect: sw-jerry. 2026-10-22 Asia/Shanghai. PRD affe67b; dev410bc16.
 
 | Order / ID | Deliverable | Branch/dependency | State |
 | --- | --- | --- | --- |
-| 0 / M01-W03-SETUP | Activated requirements, backend-reviewed envelope, tasks/start principles; independent document review/validation/CI | codex/m01-w03-setup from dev410bc16 | Done; dev9091bef; completion reconciliation pending |
-| 1 / M01-W03-001 | Strict stored manifest and independent typed inspection; corruption/version/source/outcome/compatibility tests and guide | codex/m01-w03-stored-context after setup dev integration | Backlog; branch not created |
+| 0 / M01-W03-SETUP | Activated requirements, backend-reviewed envelope, tasks/start principles; independent document review/validation/CI | codex/m01-w03-setup from dev410bc16 | Done; final dev6d332ce; completion records/CI both versions PASS |
+| 1 / M01-W03-001 | Strict stored manifest and independent typed inspection; corruption/version/source/outcome/compatibility tests and guide | codex/m01-w03-stored-context from integrated setup dev6d332ce; created/pushed | Design; sw-mike characterization and test plan pending |
 | 2 / M01-W03-CLOSURE | Actual architecture, release principles, document checks and PO acceptance/reconciliation | Fresh codex closure branch after implementation integration | Backlog |
 
 One implementation slice keeps encoding, actual stored evidence validation and
