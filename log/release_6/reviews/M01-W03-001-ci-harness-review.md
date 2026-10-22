@@ -28,3 +28,30 @@ inspection. Baseline debt/platform notices retain recorded dispositions.
 Report and board are committed/pushed immediately with docs(log); resulting hash
 and upstream equality supplied separately. No acceptance or dev merge authorized
 by this report alone.
+
+## Authorized pandas baseline extension — APPROVED
+
+Reviewer: sw-celeste. Date: 2026-10-22 Asia/Shanghai.
+Subject9070423, repairc8574bf. Verdict: **APPROVED for the expanded approved
+child-only harness scope**. Architect91f024e/PO1fcc7371 and coordinator authorized
+the exact reproduced pandas warning after the preceding CI attempt. This section
+supersedes the earlier four-parser-only scope; it does not retroactively alter
+that initial review's subject or disposition.
+
+Inspected the added full pandas concatenation warning text, re.escape plus
+start/end anchors, FutureWarning category and exact escaped module expression
+^softlab\\.shui\\.data\\.base$. It uses default, preserving stderr visibility;
+there is no generic pandas/FutureWarning/project ignore rule. The existing four
+parser rules, error general policy, -W error subprocess invocation and real
+runpy CLI dispatch remain intact. No production/dependency/configuration changes.
+
+Selectivity source now asserts all five approved cases visible and rejects
+changed pandas message/category/module and unrelated project origin, alongside
+existing parser/project negatives. Parent policy restoration remains protected by
+catch_warnings. Standard Python warning-filter semantics apply. No additional
+review issues raised; original product CR-W03-01 closure remains unchanged.
+Tester-reported275 full/13 manifest/2 selectivity local green checks are not
+Reviewer execution or matrix evidence. Both CI issues remain OPEN until actual
+successful configured Python3.9/3.13 results and Tester-owned closure. Exact
+candidate CI is next; no dev integration or acceptance certified. This review and
+board handoff are immediately committed/pushed with docs(log).

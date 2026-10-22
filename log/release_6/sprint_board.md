@@ -46,3 +46,7 @@ rule, retaining four parser rules and all other warnings fatal. Local full275,
 manifest13/selectivity2 -W error plus compile/import PASS. No product/dependency/
 configuration change. Designer review then exact candidate CI both versions still
 required; both CI issues OPEN, no dev integration or baseline debt closure.
+
+Designer pandas child-harness extension review APPROVED on9070423/repairc8574bf.
+Exact candidate CI is next. Both CI issues remain OPEN pending actual configured
+Python3.9/3.13 success and Tester-owned closure. No Reviewer runtime execution.
