@@ -1,11 +1,11 @@
 # M01-W03 sprint board
 
 Architect: sw-jerry. 2026-10-22 Asia/Shanghai. Baseline dev410bc16;
-requirements affe67b. Exactly one active task, codex/m01-w03-setup.
+requirements affe67b. Setup Done; no implementation task started.
 
 | Task | Deliverable | Owner/phase | State | Start | Merge | Blockers |
 | --- | --- | --- | --- | --- | --- | --- |
-| M01-W03-SETUP | Requirements/backend decision/tasks/start principles | sw-tom / exact candidate CI | CI pending | 2026-10-22 | Pending | Designer document review APPROVED on2ccd22d (reviews/M01-W03-SETUP-review.md); Tester document validation PASS on a6f1348 (test/M01-W03-SETUP-validation.md); Coordinator all11 setup readiness PASS at28c5a8c; targeted English amendment review5eb3c87 APPROVED/validation28c5a8c PASS; exact CI pending |
+| M01-W03-SETUP | Requirements/backend decision/tasks/start principles | Completed setup | Done | 2026-10-22 | 9091bef70e26587d7c21f2ac93027027c6d12593 | Designer document review APPROVED on2ccd22d (reviews/M01-W03-SETUP-review.md); Tester document validation PASS on a6f1348 (test/M01-W03-SETUP-validation.md); Coordinator all11 setup readiness PASS at28c5a8c; targeted English amendment review5eb3c87 APPROVED/validation28c5a8c PASS; candidate355da8a CI39778422269 both PASS; dev9091bef pushed; completion reconciliation pending |
 | M01-W03-001 | Explainable stored context/typed inspection | Unassigned | Backlog | Not started | Pending | Setup integration; branch not created |
 | M01-W03-CLOSURE | Actual architecture/principles/acceptance/reconciliation | Unassigned | Backlog | Not started | Pending | Implementation integration |
 
