@@ -3,7 +3,7 @@
 Reviewer: sw-celeste (Designer). Date: 2026-10-22 Asia/Shanghai.
 Subject: committed1ddf625, implementationd48e925, guide1ab392a and Tester fixture
 correction9f956e7 on codex/m01-w03-stored-context.
-Verdict: **CHANGES_REQUESTED**.
+Initial verdict: **CHANGES_REQUESTED**, superseded by iteration2 below.
 
 Reviewed the example/guide, W01/W02/metadata callers and new manifest assertions
 against [PRD](../prd.md), [approved design](../design/M01-W03-001-design.md),
@@ -13,7 +13,7 @@ self-checks are historical reported evidence, not this independent Tester gate.
 
 ## CR-W03-01 — P2 — Validate logical boundaries exactly
 
-Status: **OPEN**. Location: examples/thermal_experiment.py,
+Status: **CLOSED by sw-celeste in iteration2**. Original location: examples/thermal_experiment.py,
 _validate_manifest_data, expected_columns and common np.allclose comparison.
 The code compares tick and measurement_source_tick with absolute tolerance1e-10,
 just like physical temperature/time values. Both are logical integer identities:
@@ -60,3 +60,35 @@ open under bounded measures. Remain Code Review until repair/Reviewer closure;
 then independent Tester verification, principles and exact candidate CI remain
 required. Guide and scope do not certify hardware, whole-M01 or acceptance.
 Report/board commit and push immediately with docs(log) before handoff.
+
+
+## Iteration 2 — APPROVED
+
+Reviewer: sw-celeste. Date: 2026-10-22 Asia/Shanghai.
+Subject: committedb1d6616, including Developer repair341c55b and Tester regression
+bc21224. Verdict: **APPROVED**.
+
+CR-W03-01 is **CLOSED by this Reviewer** after inspecting the committed source.
+_validate_manifest_data now uses np.array_equal for tick and
+measurement_source_tick, accepting integer-valued numeric storage without
+rounding or tolerating fractional logical identities. Existing whole-table finite
+checks remain before comparisons; physical time/temperature/power comparisons
+retain documented absolute tolerance1e-10. The correction does not alter schema,
+provenance, loading, cleanup or acquisition behavior.
+
+Inspected Tester regression source: both logical columns are stored as integral
+float fixtures and accepted first, then independently corrupted by an observed
+positive delta below1e-10 and required to fail inspection. Source-file SHA256 is
+checked unchanged after rejected copy-only inspection. Tester-owned red/green
+closure is separate from this source review. Developer's reported13 focused/273
+full warning-as-error green checks are self-check evidence, not Reviewer test
+execution or independent Tester certification.
+
+Rechecked scoped implementation against initial review and approved design:
+closed manifest semantics, optional legacy hydration, source identity scope,
+required fresh-delivery detection, typed fresh-process inspection, outcome timing
+and W02 primary/structured cleanup remain unchanged. No additional actionable
+issues found. All scoped review issues are closed; board advances to independent
+Testing. Principles, exact candidate CI/dev integration and PO acceptance remain
+pending. No source/test edits or runtime checks performed by Reviewer. This
+closure/board update commits and pushes immediately as docs(log).
