@@ -30,3 +30,16 @@ evidence, not current runtime evidence; prior promotion-pending text in earlier
 records predates actual dev410bc16/main9656b27 reported by activated PRD.
 No source identity is captured or fabricated by this setup; detailed design must
 specify producer identity scope and unknown/dirty handling before implementation.
+
+## Independent setup document validation — 2026-10-22
+
+Tester sw-mike validated committeda6f1348 with **PASS for setup documents only**.
+Six Markdown files/15 explicit local links, AC01–12, all11 applicability,
+whitespace/diff/scope and subject/upstream equality pass actual structural checks.
+See [test/M01-W03-SETUP-validation.md](test/M01-W03-SETUP-validation.md) for
+commands, static schema-envelope consistency, interpreter and limits. Designer
+setup review is APPROVED; Tester closes no review finding. No runtime/production
+checks or acceptance are inferred. This supersedes pending independent setup
+validation in the historical start entry; coordinator formal/start-principle
+check, exact candidate CI/dev integration remain pending. These updates require
+immediate docs(log) commit/push and formal transport verification before handoff.
