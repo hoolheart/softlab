@@ -194,7 +194,9 @@ class ThermalManifestTests(unittest.TestCase):
                 path = self.copied_file(column)
                 with h5py.File(path, "a") as disk:
                     values = disk[str(self.default.group.id)]["thermal_trace"]["columns"][column]
-                    values[2, 0] += 0.25
+                    before = values[2, 0].item()
+                    values[2, 0] = before + 1
+                    self.assertNotEqual(values[2, 0].item(), before)
                 with self.assertRaises((RuntimeError, ValueError)):
                     thermal.inspect_stored(path)
 
