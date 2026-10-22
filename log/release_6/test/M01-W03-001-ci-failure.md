@@ -185,3 +185,49 @@ explicit Architect/PO/coordinator disposition before implementation. This
 conditional option supplements, rather than silently overrides, the preceding
 no-suppression/default-blocking position. Both CI failure and disposition issues
 remain OPEN; no tests have been edited.
+
+## Approved four-rule child harness implementation and local checks
+
+Tester: sw-mike. 2026-10-22 Asia/Shanghai. Architect08e7e49,
+PO338a9bf and coordinator approved exactly the four parser rules. Implemented
+committed24e9f6b in tests/thermal_cli_bootstrap.py and
+ tests/test_thermal_cli_warnings.py; only the manifest test's inspect_cli launch
+now includes that bootstrap. No product/dependency/CI configuration change.
+The helper retains -W error, installs error as baseline plus only four escaped,
+anchored message/module and PyparsingDeprecationWarning action-default rules,
+then preserves real example CLI argv under runpy.run_path in a fresh interpreter.
+Known warnings remain visible on stderr; stdout JSON/typed/numeric/corrupt/version
+assertions are unchanged. Importing the helper alone does not change parent policy.
+No pandas rule or broad category/module allowance exists.
+
+Selectivity assertions independently exercise all four permitted visible stderr
+warnings and reject changed message/category/module, same-category project warning,
+ordinary project warning and project-attributed pandas-category FutureWarning.
+No synthetic warning injection is used as a replacement for real CLI assertions.
+
+Actual repository-root commands, .venv/bin/python3.13.15 and prior unchanged
+version inventory; MPLBACKEND=Agg, MPLCONFIGDIR=/tmp/softlab-w03-mpl,
+XDG_CACHE_HOME=/tmp/softlab-w03-cache, each with -W error:
+
+| Command after runtime prefix | Result |
+| --- | --- |
+| `-m unittest discover -s tests -p test_thermal_cli_warnings.py -v` | Two methods,0.001s,OK; repeated on committed24e9f6b with same result. |
+| `-m unittest discover -s tests -p test_thermal_manifest.py -v` | Thirteen methods,11.518s,OK; actual fresh children and all present-invalid/legacy/version assertions pass locally. |
+| `-m unittest discover -s tests -p 'test_*.py'` | 275 tests,32.680s,OK, no skips; same source bytes committed24e9f6b. |
+| `-m compileall -q softlab examples tests` | Exit0; no diagnostics. |
+| `-c 'import softlab; print(softlab.__version__)'` | Exit0;0.3.0. |
+| `git diff --check` | Exit0, no whitespace diagnostics. |
+
+No Python warnings or unexpected diagnostics in these named local3.13 checks;
+permitted-warning selectivity probes deliberately capture their visible stderr.
+This is neither zero-warning certification for3.9 nor dependency-debt closure.
+Only three test/harness paths changed in source commit24e9f6b; no manifest
+assertion was weakened and all preexisting contracts remain covered.
+
+**W03-CI-01 and W03-CI-WARN-02 remain OPEN; integration remains BLOCKED.**
+Designer must review this committed harness before exact candidate3.9/3.13 CI.
+No local3.9 execution or corrected remote run is inferred. The known pandas child
+risk has not been reproduced after these parser rules and no exception is added.
+If it occurs, save actual trace and stop for separate disposition as required.
+Prior local273 PASS remains historical; this275 includes two new policy tests.
+Completed record/board update commit/push immediately as docs(log) before handoff.
