@@ -1,5 +1,11 @@
 # 工程协作指南
 
+## Project language
+
+Use English for all communication and newly created or updated project
+deliverables in this and future softlab sessions. Preserve existing Chinese
+instructions unless a task explicitly requires their translation.
+
 本文件适用于整个仓库。修改前先阅读相关模块及其调用方，以现有实现和
 `pyproject.toml` 为准；以下内容描述当前工程，不代表尚未实现的能力。
 
