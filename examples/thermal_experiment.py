@@ -715,9 +715,12 @@ def _validate_manifest_data(manifest: dict, group: DataGroup) -> None:
                              (temperature - config['ambient_temperature'])) / config['heat_capacity']
     expected_columns['temperature_degc'] = expected_temperatures
     for key, expected in expected_columns.items():
-        if (not np.isfinite(expected).all()
-                or not np.allclose(values[key].to_numpy(dtype=float), expected,
-                                   rtol=0, atol=1e-10)):
+        actual = values[key].to_numpy(dtype=float)
+        if key in ('tick', 'measurement_source_tick'):
+            matches = np.array_equal(actual, expected)
+        else:
+            matches = np.allclose(actual, expected, rtol=0, atol=1e-10)
+        if not np.isfinite(expected).all() or not matches:
             raise ValueError(f'samples.{key}: inconsistent declared recurrence/timing')
 
 
