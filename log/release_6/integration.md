@@ -1,7 +1,7 @@
 # M01-W03-001 task integration
 
 Integrator: sw-tom. 2026-10-22 Asia/Shanghai.
-State: **updated all11 formal readiness PASS at48e69835; replacement candidate CI pending**.
+State: **task integrated; completion-record CI/reconciliation pending**.
 
 Coordinator all11 readiness PASS atffbf85c follows Reviewer69045ec approval and
 CR-W03-01 closure plus independent Tester273 full/13 focused warning-as-error,
@@ -45,3 +45,17 @@ warning dispositions with debt open, not warning suppression or production repai
 No review/Test issue closure is performed by this integrator. Exact replacement
 candidate both-version CI precedes dev merge; actual architecture and release PO
 acceptance remain later closure gates. No source/test/config/main changes.
+
+## Executed task integration after exact candidate success
+
+Candidate11f6c94a50b7f8e56a50d3a51f3f3cde91c58703 passed
+[CI39793295929](https://github.com/hoolheart/softlab/actions/runs/39793295929):
+overall and both Python3.9/3.13 explicitly completed/success before integration.
+Python3.13 job/check-run conclusion initially lagged completed step logs; merge
+waited until direct job and refreshed run JSON explicitly confirmed success.
+Watch exited0. Fetched dev6d332ce was clean/current. No-ff merge
+f7aa5890a162456f719cf498dcc22090854771ba pushed to origin/dev. Task Done;
+closure remains Backlog. Completion-record candidate CI/reconciliation precedes
+further task work; final merge/CI hashes supplied separately without recursion.
+Historical failed CI and scoped visible parser/pandas/runner warning dispositions
+remain recorded. No production/Test issue closure or warning-free platform claim.
