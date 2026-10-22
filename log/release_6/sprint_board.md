@@ -7,7 +7,7 @@ codex/m01-w03-stored-context, baseline dev6d332ce.
 | Task | Deliverable | Owner/phase | State | Start | Merge | Blockers |
 | --- | --- | --- | --- | --- | --- | --- |
 | M01-W03-SETUP | Requirements/backend decision/tasks/start principles | Completed setup | Done | 2026-10-22 | 9091bef70e26587d7c21f2ac93027027c6d12593 | Designer document review APPROVED on2ccd22d (reviews/M01-W03-SETUP-review.md); Tester document validation PASS on a6f1348 (test/M01-W03-SETUP-validation.md); Coordinator all11 setup readiness PASS at28c5a8c; targeted English amendment review5eb3c87 APPROVED/validation28c5a8c PASS; candidate355da8a CI39778422269 both PASS; dev9091bef pushed; completion reconciled dev6d332ce, CI39779059136 both versions PASS |
-| M01-W03-001 | Explainable stored context/typed inspection | sw-celeste / detailed design | Design | 2026-10-22 | Pending | Characterization35d68f2: three focused/260 full -W error PASS, compile/import PASS; plan proposed (test/M01-W03-001-plan.md); Developer review pending |
+| M01-W03-001 | Explainable stored context/typed inspection | sw-celeste / detailed design | Design | 2026-10-22 | Pending | Characterization35d68f2: three focused/260 full -W error PASS, compile/import PASS; Developer plan review APPROVED9a8347f (reviews/M01-W03-001-test-plan-review.md); detailed design/Architect review pending |
 | M01-W03-CLOSURE | Actual architecture/principles/acceptance/reconciliation | Unassigned | Backlog | Not started | Pending | Implementation integration |
 
 No runtime characterization, detailed design, feature tests/code or acceptance
