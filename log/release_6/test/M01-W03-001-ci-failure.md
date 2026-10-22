@@ -99,3 +99,63 @@ No test, production, dependency or CI configuration edit by Tester. Baseline
 R4/OBS/DEFECT debt remains open. Board/integrator record remains integration
 blocked; dev6d332ce unchanged as supplied by coordinator. Commit/push immediately
 with docs(log), then Architect scope/disposition review before test edits.
+
+## Expanded source evidence before Architect review
+
+After saving the initial report, fetched only versioned source text using GitHub
+contents API (no installation/dependency/test edits): Matplotlib v3.9.4
+[_fontconfig_pattern.py](https://github.com/matplotlib/matplotlib/blob/v3.9.4/lib/matplotlib/_fontconfig_pattern.py)
+and [_mathtext.py](https://github.com/matplotlib/matplotlib/blob/v3.9.4/lib/matplotlib/_mathtext.py).
+Executed the isolated versioned font parser with actual installed pyparsing3.3.3
+under warnings capture and four normal font patterns: observed exactly these
+three PyparsingDeprecationWarning messages attributed to that font module:
+
+- `'oneOf' deprecated - use 'one_of'` (source line64).
+- `'parseString' deprecated - use 'parse_string'` (line85).
+- `'resetCache' deprecated - use 'reset_cache'` (line89).
+
+The versioned _mathtext module executes ParserElement.enablePackrat at import
+(line45). An AST-extracted execution of that exact call against pyparsing3.3.3
+observed `'enablePackrat' deprecated - use 'enable_packrat'`, attributed to
+matplotlib._mathtext. Its later parser construction/rendering also contains
+oneOf/setName/setParseAction/leaveWhitespace and other deprecated aliases, but
+those were not exercised by this import diagnostic. Do not approve wildcard
+allowances for those later paths. The tested child mode is inspection, not plot
+rendering. Actual exact-stack child verification remains required after approval.
+
+Therefore oneOf-only handling is demonstrably insufficient. Proposed Architect
+review scope is test-child-only action-default rules with exact category and
+anchored message/module pairs for the three observed font messages plus the
+single observed _mathtext import enablePackrat message. All remain visible on
+stderr. Unknown warnings and every project/unrelated warning stay fatal. No
+handling is implemented until approval. Local isolated parser diagnostics do not
+claim the complete Matplotlib3.9 runtime was installed or tested.
+
+## Independently confirmed prior warning baseline and unresolved consequence
+
+`gh run view 39779059136 --log` now succeeded; read saved output from the
+[accepted setup reconciliation run](https://github.com/hoolheart/softlab/actions/runs/39779059136).
+It records the same Matplotlib3.9.4/pyparsing3.3.3/pandas2.3.3, 257-test runs and
+409 occurrences of the exact DataFrame-concat FutureWarning across its full log,
+versus650 occurrences in current failed candidate log. No PyparsingDeprecationWarning
+is printed in that prior run. This confirms the concat warning predates W03
+implementation, while the new child -W error policy newly exposes dependency
+import deprecation as a failing check. Counts characterize logs, not distinct
+underlying defects or permission to ignore them.
+
+W03-CI-WARN-02 remains **OPEN for explicit baseline disposition**. Current HDF5
+load_data_group_from_hdf5_group calls DataRecord.add_rows, whose concat path is
+where pandas attributes the warning to softlab.shui.data.base. Thus after parser
+import handling, the strict fresh child may next raise this baseline warning.
+That later child path has not yet executed in the failed environment; source
+inspection establishes a risk, not a reproduced second child failure. An exact
+parser allowlist cannot be promised sufficient for green CI.
+
+Preserving all project warnings as errors means **no pandas/project-module
+suppression is proposed or silently approved here**. If exact-stack verification
+reproduces this consequence, stop for Architect/PO/coordinator bounded prerequisite
+or baseline-disposition decision; do not add a new warning filter opportunistically,
+change dependencies or repair generic DataRecord/backend behavior without review.
+Historical baseline disposition must be explicit and cannot become a blanket
+zero-warning claim. Candidate failure remains OPEN until actual corrected checks
+and approved scope/disposition evidence exist. No tests or runtime source changed.
