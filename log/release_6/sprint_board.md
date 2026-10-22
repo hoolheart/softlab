@@ -39,3 +39,10 @@ review precedes exact candidate CI; integration remains blocked and dev unchange
 Designer CI harness review APPROVED on94e6730; exact candidate CI is next.
 Existing Python3.9 CI failure remains OPEN until actual matrix evidence and
 Tester-owned closure; no runtime checks performed by Reviewer.
+
+Final approved baseline harnessc8574bf: Architect91f024e/PO1fcc737 authorized
+only reproduced exact pandas message/module FutureWarning visible-default child
+rule, retaining four parser rules and all other warnings fatal. Local full275,
+manifest13/selectivity2 -W error plus compile/import PASS. No product/dependency/
+configuration change. Designer review then exact candidate CI both versions still
+required; both CI issues OPEN, no dev integration or baseline debt closure.

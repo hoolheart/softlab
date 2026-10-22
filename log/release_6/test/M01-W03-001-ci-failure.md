@@ -276,3 +276,47 @@ fix of DataRecord debt. W03-CI-01/W03-CI-WARN-02 remain OPEN until approvals,
 reviewed test change and actual corrected exact-candidate CI. No tests/source/
 dependencies/configuration edited during this retry investigation. Immediate
 docs(log) commit/push precedes handoff; no further speculative filter added.
+
+## Approved exact pandas child disposition implemented — local evidence
+
+Tester: sw-mike. 2026-10-22 Asia/Shanghai. Actual retryf082b73 evidence,
+Architect91f024e, PO1fcc737 and coordinator explicitly approve the one reproduced
+pandas baseline exception. Implemented test sourcec8574bf, changing only
+ tests/thermal_cli_bootstrap.py and tests/test_thermal_cli_warnings.py.
+No example/library/dependency/CI configuration or parent-suite policy change.
+
+Child retains -W error and four exact visible parser rules; adds action-default
+only for full escaped/anchored PANDAS_BASELINE_WARNING text quoted earlier,
+FutureWarning category and anchored ^softlab\.shui\.data\.base$ module.
+No prefix/wildcard or ignore action. Exact baseline diagnostics remain visible
+on child stderr; all other/new project/dependency warnings remain fatal. Real
+fresh runpy CLI argv/JSON stdout/typed/numeric/corrupt/version assertions unchanged.
+
+Updated selectivity methods assert all five permitted cases visibly print their
+category/message to stderr. Negative probes cover changed pandas message/category/
+module, the same pandas message from another project module, original parser
+negative cases and new project warnings. A different FutureWarning text at the
+same base module remains fatal. This is a bounded baseline disposition, not a
+repair or closure of pandas/DataRecord debt or a warning-free execution claim.
+
+Actual root commands, existing .venv/bin/python3.13.15 with -W error,
+MPLBACKEND=Agg, MPLCONFIGDIR=/tmp/softlab-w03-mpl,
+XDG_CACHE_HOME=/tmp/softlab-w03-cache, unchanged prior dependency inventory:
+
+| Command after runtime prefix | Result |
+| --- | --- |
+| `-m unittest discover -s tests -p test_thermal_cli_warnings.py -v` | Two methods,0.002s,OK, including five visible and ten strict negative cases. |
+| `-m unittest discover -s tests -p test_thermal_manifest.py -v` | Thirteen methods,11.494s,OK; actual fresh-process success/legacy/corrupt/version paths and data assertions pass. |
+| `-m unittest discover -s tests -p 'test_*.py'` | 275 tests,32.664s,OK, no skips. |
+| `-m compileall -q softlab examples tests` | Exit0, no diagnostics. |
+| `-c 'import softlab; print(softlab.__version__)'` | Exit0;0.3.0. |
+| `git diff --check` | Exit0, no whitespace diagnostics. |
+
+Named local3.13 commands passed on the same source bytes committedc8574bf;
+no unexpected Python warnings or cache diagnostics. Visibility probes capture
+their intentional warnings. No local3.9 or corrected remote execution inferred.
+**Both CI issues remain OPEN and integration BLOCKED** until Designer review and
+actual exact-candidate Python3.9/3.13 checks pass. Do not broaden rules if another
+warning/failure appears; save evidence and request new disposition. No debt
+closure or remote zero-warning claim. Report/board commit/push immediately as
+docs(log) before handoff.
