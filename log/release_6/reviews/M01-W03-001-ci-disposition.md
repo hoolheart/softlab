@@ -93,3 +93,48 @@ exact-candidate Python3.9 AND3.13 CI regression/compile/import success. No earli
 candidate or one-version pass substitutes. Only Tester can close failures after
 that evidence; coordinator gates integration. No PO acceptance, successful repair
 or exact-stack pass is certified by this scope review.
+
+## Reproduced pandas consequence — bounded Architect approval
+
+2026-10-22 Asia/Shanghai. Reviewed Tester evidencef082b73 for exact retry
+1c0406c8ffac8018b173cf59e8a2569bc69d4bbb,
+[CI39790520996](https://github.com/hoolheart/softlab/actions/runs/39790520996).
+Python3.9 job119865030335 reaches actual HDF5 inspection after the approved parser
+rules and fails the two valid-context/legacy child assertions on the exact
+DataRecord concat FutureWarning;275 regression tests ran, compile/import skipped.
+Python3.13 passed. Same full message and base.py314 attribution occur in accepted
+setup CI39779059136. This satisfies the previous actual-child prerequisite;
+source prediction alone is no longer the basis of disposition. Architect did
+not rerun tests/CI or close Tester failures.
+
+**APPROVED technical baseline disposition**, subject to explicit PO/coordinator
+approval before Tester implementation: add only a fresh-test-child action='default'
+rule, retaining visible stderr, category FutureWarning, anchored module
+`^softlab\.shui\.data\.base$`, and this complete escaped/anchored message:
+
+> The behavior of DataFrame concatenation with empty or all-NA entries is deprecated. In a future version, this will no longer exclude empty or all-NA columns when determining the result dtypes. To retain the old behavior, exclude the relevant entries before the concat operation.
+
+Use re.escape for the whole string plus start/end anchors; no shortened prefix,
+message/module/category wildcard, ignore action or extension to parent suite or
+production. Keep existing four exact parser rules unchanged. Retain -W error for
+every other/new project/dependency warning and all fresh-process typed/numeric/
+legacy/corruption/version assertions. Test negative cases for altered message,
+category and module and assert the permitted warning is visible on stderr while
+JSON stdout remains parseable. Unknown warning or different reproduced failure
+blocks for review rather than extending the exception opportunistically.
+
+This resolves the Architect's previously conditional eligibility only. It is an
+explicit principle8 baseline disposition for the unchanged concat path, not a
+library repair, zero-warning claim or broad warning exemption. No production,
+dependency, supported-Python or CI configuration change is authorized. Generic
+DataRecord/backend remediation remains separate future work; existing debt and
+platform notices stay recorded. Successful checks with this rule must disclose
+the visible baseline warnings and their narrow policy.
+
+W03-CI-01 and W03-CI-WARN-02 remain **OPEN**, integration BLOCKED. Next: PO scope/
+debt acceptance and coordinator gate → Tester bounded correction/selectivity and
+relevant checks → Designer independent harness review → corrected exact candidate
+Python3.9/3.13 regression/compile/import success → Tester-owned failure closure and
+coordinator integration gate. Earlier275 local results and single-version passes
+cannot certify the new correction. No code/tests/execution by Architect; immediate
+docs(log) commit/push and formal handoff verification required.
