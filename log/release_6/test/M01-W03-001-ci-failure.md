@@ -231,3 +231,48 @@ risk has not been reproduced after these parser rules and no exception is added.
 If it occurs, save actual trace and stop for separate disposition as required.
 Prior local273 PASS remains historical; this275 includes two new policy tests.
 Completed record/board update commit/push immediately as docs(log) before handoff.
+
+## Actual parser-retry CI and reproduced pandas child failure
+
+Tester: sw-mike. 2026-10-22 Asia/Shanghai.
+Retry candidate1c0406c8ffac8018b173cf59e8a2569bc69d4bbb,
+[run39790520996](https://github.com/hoolheart/softlab/actions/runs/39790520996).
+Queried `gh run view 39790520996 --json headSha,jobs` and read
+/tmp/w03-ci-1c0406c-py39.log. Exact candidate confirmed.
+[Python3.9 job](https://github.com/hoolheart/softlab/actions/runs/39790520996/job/119865030335)
+fails regression:275 tests,21.595s,two failures; compile/import remain skipped.
+[Python3.13 job](https://github.com/hoolheart/softlab/actions/runs/39790520996/job/119865029975)
+passes. Integration remains BLOCKED; these results do not close either issue.
+
+All four approved parser messages are now emitted visibly without stopping the
+child import; classic.mplstyle also prints its parseString/resetCache diagnostics.
+Both previous valid-context/legacy child failures now reach actual HDF5 inspection
+and exit1 with the exact diagnostic:
+`Thermal experiment failed: HDF5 load failed: Failed to load group: FutureWarning(...)`.
+The FutureWarning text exactly equals the full concat message in the conditional
+baseline proposal above, not a new or partially matched warning. Existing
+HDF5 load catches the warning-as-exception from DataRecord.add_rows/concat and
+records a failed load; inspect then reports it. This is now an actual reproduced
+child consequence, not merely the earlier static risk.
+
+Compared exact strings with accepted setup log39779059136:409 occurrences at
+softlab/shui/data/base.py314 there; retry has650 normal base.py314 warnings plus
+two matching warning-as-exception child diagnostics (652 exact message copies).
+Recorded stack remains Python3.9.25/pandas2.3.3, Matplotlib3.9.4/pyparsing3.3.3.
+Thus category FutureWarning/message/project attribution match the demonstrated
+preexisting baseline; no actual sample/manifest mismatch is shown by these exits.
+The failed fresh-process acceptance assertions still remain unresolved.
+
+**W03-CI-WARN-02 explicit disposition proposal is now ready for Architect/PO
+review; not implemented.** Permit only a separate test-child action-default rule
+for exact FutureWarning category, anchored `^softlab\.shui\.data\.base$` and the
+full escaped/anchored concat message already quoted above. Keep it visible on
+stderr, retain -W error for every other/new project/dependency warning, retain
+real fresh CLI and all typed/numeric/invalid-content assertions, and add negative
+selectivity checks for altered message/category/module. No ignore, wildcard,
+parent/production filter, dependency/configuration change or library repair.
+This is bounded baseline disposition rather than warning-free execution or a
+fix of DataRecord debt. W03-CI-01/W03-CI-WARN-02 remain OPEN until approvals,
+reviewed test change and actual corrected exact-candidate CI. No tests/source/
+dependencies/configuration edited during this retry investigation. Immediate
+docs(log) commit/push precedes handoff; no further speculative filter added.
