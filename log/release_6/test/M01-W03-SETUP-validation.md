@@ -67,3 +67,32 @@ Implementation test-plan/characterization/design/code/testing follows only after
 setup integration. Board advances to Formal/CI pending, never Done. Completed
 records immediately commit/push as docs(log); final hash/upstream/clean status
 are reported separately without circular self-hashes.
+
+## Targeted English-preference validation — 2026-10-22
+
+Tester: sw-mike. Subject committed5eb3c878ce4ba7503ac084a76ca2ac610e365dc3,
+including AGENTS.md preferencee46c914 and Designer targeted APPROVED review.
+Verdict: **PASS for targeted document update**; no issues found.
+
+The exact six-line Project language addition requires English for communication
+and newly created/updated deliverables in current and future softlab sessions.
+Preserving existing Chinese instructions avoids unrelated translation and leaves
+the new English requirement intact. This matches the direct user request.
+
+Actual Python3.13.9 pathlib/subprocess/re assertions verified that removing the
+exact added section reproduces the complete prior AGENTS.md byte content:
+all existing engineering/workflow policies are preserved. The e46c914 commit
+changes AGENTS.md only; changes since prior validated6b30e0c are that file and
+the targeted Designer review. Eight Markdown files/21 explicit local links resolve;
+all final newlines and added-section whitespace pass. `git diff --check 6b30e0c
+HEAD` exits0 with no diagnostics. `git rev-parse HEAD '@{upstream}'` returns
+5eb3c878ce4ba7503ac084a76ca2ac610e365dc3 for both; worktree clean before this
+report. Original setup documents and their validation remain applicable.
+
+All11 prior setup principle dispositions remain valid: this narrow language
+policy changes no runtime scope, ownership, serial gate, data, dependency or
+compatibility rule. No runtime/code/test/design checks were fabricated or run.
+Coordinator formal/start-principle and exact candidate CI/dev integration remain
+pending; board already correctly says Formal/CI pending and needs no phase change.
+This completed update commits/pushes immediately with docs(log) before handoff;
+no implementation or release acceptance is asserted.
