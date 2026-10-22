@@ -16,17 +16,21 @@ SPEC.loader.exec_module(child)
 
 
 class ThermalChildWarningTests(unittest.TestCase):
-    """No project, pandas or unreviewed dependency warning is exempted."""
+    """Only exact reviewed cases are visible; all other warnings stay fatal."""
 
-    def test_each_exact_dependency_warning_is_visible_on_stderr(self):
-        for message, module in child.DEPENDENCY_WARNINGS:
+    def test_each_exact_approved_warning_is_visible_on_stderr(self):
+        cases = [(message, PyparsingDeprecationWarning, module)
+                 for message, module in child.DEPENDENCY_WARNINGS]
+        cases.append((child.PANDAS_BASELINE_WARNING, FutureWarning,
+                      "softlab.shui.data.base"))
+        for message, category, module in cases:
             with self.subTest(message=message), warnings.catch_warnings():
                 child.install_warning_policy()
                 stderr = io.StringIO()
                 with contextlib.redirect_stderr(stderr):
-                    warnings.warn_explicit(message, PyparsingDeprecationWarning,
+                    warnings.warn_explicit(message, category,
                                            "dependency_fixture.py", 1, module=module)
-                self.assertIn("PyparsingDeprecationWarning", stderr.getvalue())
+                self.assertIn(category.__name__, stderr.getvalue())
                 self.assertIn(message, stderr.getvalue())
 
     def test_changed_message_category_module_and_project_warnings_stay_fatal(self):
@@ -38,6 +42,12 @@ class ThermalChildWarningTests(unittest.TestCase):
             (message, PyparsingDeprecationWarning, "softlab.warning_probe"),
             ("new project warning", UserWarning, "softlab.warning_probe"),
             ("baseline concat warning", FutureWarning, "softlab.shui.data.base"),
+            (child.PANDAS_BASELINE_WARNING + " changed", FutureWarning,
+             "softlab.shui.data.base"),
+            (child.PANDAS_BASELINE_WARNING, UserWarning, "softlab.shui.data.base"),
+            (child.PANDAS_BASELINE_WARNING, FutureWarning,
+             "softlab.shui.data.base.unreviewed"),
+            (child.PANDAS_BASELINE_WARNING, FutureWarning, "softlab.warning_probe"),
         ]
         for text, category, origin in cases:
             with self.subTest(category=category.__name__, origin=origin), warnings.catch_warnings():

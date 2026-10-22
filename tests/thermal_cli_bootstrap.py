@@ -1,4 +1,4 @@
-"""Fresh CLI test child: expose four approved dependency warnings on stderr."""
+"""Fresh CLI test child: expose approved baseline warnings on stderr."""
 
 import re
 import runpy
@@ -16,8 +16,16 @@ DEPENDENCY_WARNINGS = (
 )
 
 
+PANDAS_BASELINE_WARNING = (
+    "The behavior of DataFrame concatenation with empty or all-NA entries is "
+    "deprecated. In a future version, this will no longer exclude empty or "
+    "all-NA columns when determining the result dtypes. To retain the old "
+    "behavior, exclude the relevant entries before the concat operation."
+)
+
+
 def install_warning_policy() -> None:
-    """Keep all warnings fatal except exact approved, visible dependency cases."""
+    """Keep all warnings fatal except exact approved, visible baseline cases."""
     warnings.simplefilter("error")
     for message, module in DEPENDENCY_WARNINGS:
         warnings.filterwarnings(
@@ -25,6 +33,10 @@ def install_warning_policy() -> None:
             category=PyparsingDeprecationWarning,
             module="^" + re.escape(module) + "$",
         )
+    warnings.filterwarnings(
+        "default", message="^" + re.escape(PANDAS_BASELINE_WARNING) + "$",
+        category=FutureWarning, module=r"^softlab\.shui\.data\.base$",
+    )
 
 
 if __name__ == "__main__":
