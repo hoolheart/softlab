@@ -200,6 +200,36 @@ class ThermalManifestTests(unittest.TestCase):
                 with self.assertRaises((RuntimeError, ValueError)):
                     thermal.inspect_stored(path)
 
+    def test_fractional_logical_boundaries_below_float_tolerance_are_rejected(self):
+        for column in ("tick", "measurement_source_tick"):
+            with self.subTest(column=column):
+                path = self.copied_file("fractional-" + column)
+                with h5py.File(path, "a") as disk:
+                    parent = disk[str(self.default.group.id)]["thermal_trace"]["columns"]
+                    original = parent[column]
+                    values, attrs = original[()].astype(np.float64), dict(original.attrs)
+                    del parent[column]
+                    replacement = parent.create_dataset(column, data=values)
+                    for key, value in attrs.items():
+                        replacement.attrs[key] = value
+                # Integral float storage is compatible; only fractional identity is corrupt.
+                group, manifest = thermal.inspect_stored(path)
+                self.assertEqual(len(group.record("thermal_trace")), 8)
+                self.assertIsNotNone(manifest)
+                with h5py.File(path, "a") as disk:
+                    values = disk[str(self.default.group.id)]["thermal_trace"]["columns"][column]
+                    before = values[2, 0].item()
+                    values[2, 0] = before + 1e-11
+                    delta = values[2, 0].item() - before
+                    self.assertGreater(delta, 0)
+                    self.assertLess(delta, 1e-10)
+                digest = hashlib.sha256(path.read_bytes()).digest()
+                try:
+                    with self.assertRaises((RuntimeError, ValueError)):
+                        thermal.inspect_stored(path)
+                finally:
+                    self.assertEqual(hashlib.sha256(path.read_bytes()).digest(), digest)
+
     def test_changed_configuration_and_repeats_match_independent_euler_oracle(self):
         config = dataclasses.replace(thermal.ThermalConfig(), dt=0.5, power=6.0, points=5)
         result = thermal.execute(config, self.root / "changed")
