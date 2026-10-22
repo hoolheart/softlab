@@ -5,7 +5,7 @@ requirements affe67b. Exactly one active task, codex/m01-w03-setup.
 
 | Task | Deliverable | Owner/phase | State | Start | Merge | Blockers |
 | --- | --- | --- | --- | --- | --- | --- |
-| M01-W03-SETUP | Requirements/backend decision/tasks/start principles | Architect; Designer document review next | Design | 2026-10-22 | Pending | Completed logs require commit/push; independent review, Tester validation, coordinator formal gate and exact CI pending |
+| M01-W03-SETUP | Requirements/backend decision/tasks/start principles | Tester document validation next | Testing | 2026-10-22 | Pending | Designer document review APPROVED on2ccd22d (reviews/M01-W03-SETUP-review.md); Tester validation, coordinator formal gate and exact CI pending |
 | M01-W03-001 | Explainable stored context/typed inspection | Unassigned | Backlog | Not started | Pending | Setup integration; branch not created |
 | M01-W03-CLOSURE | Actual architecture/principles/acceptance/reconciliation | Unassigned | Backlog | Not started | Pending | Implementation integration |
 
