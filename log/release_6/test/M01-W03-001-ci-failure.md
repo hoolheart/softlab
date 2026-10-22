@@ -159,3 +159,29 @@ change dependencies or repair generic DataRecord/backend behavior without review
 Historical baseline disposition must be explicit and cannot become a blanket
 zero-warning claim. Candidate failure remains OPEN until actual corrected checks
 and approved scope/disposition evidence exist. No tests or runtime source changed.
+
+## Separate conditional baseline disposition proposal for Architect and PO
+
+Principle8 permits explicitly tracked baseline disposition; it does not permit
+silent suppression. If an actual fresh-process run after the four parser rules
+reproduces W03-CI-WARN-02, Architect and PO may review a separate child-only
+**visible action-default exception** for this one demonstrated preexisting case:
+category exact FutureWarning, anchored module `^softlab\.shui\.data\.base$`,
+message exactly the following (use re.escape plus start/end anchors, no prefix or
+wildcard matching):
+
+`The behavior of DataFrame concatenation with empty or all-NA entries is deprecated. In a future version, this will no longer exclude empty or all-NA columns when determining the result dtypes. To retain the old behavior, exclude the relevant entries before the concat operation.`
+
+The accepted setup/current logs both attribute it to base.py314. Approval would
+be a bounded baseline-warning disposition, **not a zero-warning claim or product
+fix**; the tracked warning/debt remains open. Keep the warning visible on child
+stderr, preserve clean JSON stdout and actual typed/numeric/legacy/version checks.
+Keep -W error for every other/new project or dependency warning. Require negative
+checks for changed message/category/module so the exception cannot expand. No
+parent-suite filter, production filter, dependency/config change or generic
+DataRecord repair is proposed. No exception is installed merely because it might
+be needed: first reproduce its actual blocking child consequence, then obtain
+explicit Architect/PO/coordinator disposition before implementation. This
+conditional option supplements, rather than silently overrides, the preceding
+no-suppression/default-blocking position. Both CI failure and disposition issues
+remain OPEN; no tests have been edited.
