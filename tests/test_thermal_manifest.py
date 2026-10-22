@@ -6,6 +6,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import platform
 from pathlib import Path
 import shutil
 import subprocess
@@ -68,6 +69,31 @@ class ThermalManifestTests(unittest.TestCase):
         self.assertEqual(manifest["model"]["name"], "lumped_thermal_body")
         self.assertEqual(manifest["model"]["method"], "explicit_euler")
         self.assertEqual(manifest["model"]["units"]["heat_capacity"], "J/K")
+        self.assertEqual(set(manifest["model"]), {"name", "method", "equation", "validity", "units"})
+        self.assertEqual(manifest["model"]["equation"],
+            "T_next = T + dt * (P - G * (T - T_ambient)) / C")
+        self.assertEqual(manifest["model"]["validity"],
+            "educational; constant parameters; 0 < dt*G/C <= 1; no physical calibration")
+        self.assertEqual(manifest["model"]["units"], {
+            "initial_temperature": "degC", "ambient_temperature": "degC",
+            "heat_capacity": "J/K", "conductance": "W/K", "dt": "s", "power": "W", "points": "1"})
+        self.assertEqual(manifest["procedure"], {"name": "thermal_count",
+            "advancement": "once_before_each_getter_row", "command": "constant_power", "requested_points": 8})
+        self.assertEqual(manifest["clock"], {"dt": 1.0, "simulation_unit": "s",
+            "acquisition": "post_step", "measurement_delay_ticks": 1,
+            "source_tick": "tick-1", "wall_timestamp": "unix_seconds"})
+        import softlab
+        self.assertEqual(manifest["software"], {"softlab_version": softlab.__version__,
+                                               "python_version": platform.python_version()})
+        self.assertEqual(set(manifest["source"]), {"reference", "digest_algorithm", "digest_scope",
+            "digest", "digest_unavailable_reason", "git_revision", "git_dirty", "git_unavailable_reason"})
+        self.assertEqual(manifest["source"]["reference"], "examples/thermal_experiment.py")
+        self.assertEqual(manifest["source"]["digest_algorithm"], "sha256")
+        self.assertEqual(manifest["source"]["digest"], hashlib.sha256(EXAMPLE.read_bytes()).hexdigest())
+        self.assertEqual(manifest["outcome"], {"snapshot": "completed_acquisition_before_persistence",
+            "acquisition": "completed", "requested_rows": 8, "completed_rows": 8,
+            "final_tick": 8, "final_sim_time": 8.0, "persistence": "not_yet_established",
+            "plotting": "not_yet_established", "cleanup": "not_yet_established", "overall": "not_yet_established"})
         self.assertEqual(manifest["procedure"]["requested_points"], 8)
         self.assertEqual(manifest["clock"]["measurement_delay_ticks"], 1)
         self.assertIs(type(manifest["clock"]["dt"]), float)
