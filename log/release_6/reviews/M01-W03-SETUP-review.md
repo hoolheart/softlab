@@ -36,3 +36,19 @@ and setup dev integration remain pending. Production TDD/UI gates are inapplicab
 to this documents-only setup; subsequent implementation retains them as relevant.
 This report/board handoff requires immediate docs(log) commit/push and upstream
 verification before progression; resulting hash is reported separately.
+
+## Targeted language-preference review
+
+Reviewer: sw-celeste. Date: 2026-10-22 Asia/Shanghai.
+Subject: AGENTS.md addition committed `e46c914` on codex/m01-w03-setup.
+Verdict: **APPROVED**; issue IDs: none.
+
+The six-line addition requires English communication and newly created/updated
+project deliverables in current and future softlab sessions, matching the user's
+direct instruction for this international project. Existing Chinese instructions
+remain intact unless translation is explicitly required. This preservation rule
+does not weaken the English requirement for new communication/deliverables.
+The committed diff changes no unrelated engineering/workflow rules. Earlier setup
+document approval remains valid for unchanged documents. No source/tests/design
+or runtime execution performed. Tester document validation is the next gate;
+this targeted approval does not certify CI, integration or release acceptance.
