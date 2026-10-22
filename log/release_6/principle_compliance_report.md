@@ -72,3 +72,17 @@ Tester-closed. Baseline debt remains open under accepted bounded measures; UI N/
 Developer records this delegated verdict only, without new technical review or
 issue closure. Exact both-version CI precedes dev integration; actual architecture,
 release principles and PO acceptance remain distinct release-closure gates.
+
+## Task CI failure closure evidence — 2026-10-22
+
+Tester independently verified authoritative jobs and exact-head check-runs for
+447ad095/CI39792211097:both3.9/3.13 completed/success,275 tests each plus
+compile/import. Earlier stale status resolved explicitly; failed candidate history
+retained in test/M01-W03-001-ci-failure.md. Tester closes only W03-CI-01 and
+W03-CI-WARN-02 scoped CI failures. Exact reviewed visible child warning rules keep
+underlying parser/pandas baseline debt open; remote warning-free claim forbidden.
+Principles7/8 now have named both-version evidence and approved bounded warning
+disposition; all11 prior task readiness evidence remains with no new code/scope.
+Principles6/11 require these completed records committed/pushed then exact new
+candidate CI/coordinator reconciliation before dev integration. Architecture/PO
+release closure remains pending; no task Done or main promotion inferred.

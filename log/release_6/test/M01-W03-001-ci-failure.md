@@ -320,3 +320,43 @@ actual exact-candidate Python3.9/3.13 checks pass. Do not broaden rules if anoth
 warning/failure appears; save evidence and request new disposition. No debt
 closure or remote zero-warning claim. Report/board commit/push immediately as
 docs(log) before handoff.
+
+## Authoritative exact-candidate success and scoped failure closure
+
+Tester: sw-mike. 2026-10-22 Asia/Shanghai.
+Verified candidate447ad0953f0a87e8475c89b6da8e84b44a328452,
+[run39792211097](https://github.com/hoolheart/softlab/actions/runs/39792211097).
+Used primary `gh api repos/hoolheart/softlab/actions/jobs/119870845569`, same
+for119870845633, and commits/447ad095/check-runs. Both authoritative job responses
+and both check-run responses now report **status=completed,conclusion=success**
+with exactly that head_sha; no reliance on earlier stale in_progress/null state.
+
+- [Python3.9 job119870845569](https://github.com/hoolheart/softlab/actions/runs/39792211097/job/119870845569):
+  all steps completed/success, including regression/compile/import/Complete job.
+  Saved log /tmp/w03-ci-447ad095-py39.log:275 tests,24.918s,OK.
+- [Python3.13 job119870845633](https://github.com/hoolheart/softlab/actions/runs/39792211097/job/119870845633):
+  completed/success; /tmp/w03-ci-447ad095-py313.log:275 tests,17.230s,OK,
+  compile/import and completion successful as recorded by CI.
+
+**Tester closes W03-CI-01 and W03-CI-WARN-02 as scoped failing CI gates** based
+on actual both-version success after approved, reviewed bounded harness changes.
+This does not close the underlying dependency/DataRecord warning debt, undo
+historic failed candidates or imply warning-free execution. The earlier OPEN
+entries are historical and superseded only for these two scoped gate failures.
+
+Python3.9 job log still prints651 occurrences of the exact baseline concat
+FutureWarning;3.13 prints none of that message. Exact parser warnings and the
+single approved pandas warning remain action-default/visible on fresh-child
+stderr, captured by subprocess tests; successful children do not dump all stderr
+into the job log. Thus absence of a parser string from aggregate passing log is
+not a claim the deprecation disappeared. Five visible-case and strict negative
+policy probes, actual typed/numeric/corrupt/version/legacy child assertions and
+full compatibility checks all pass. Existing parser/pandas debt remains explicitly
+open under Architect08e7e49/91f024e and PO338a9bf/1fcc737 bounded dispositions.
+No broader warning suppression or source/dependency/configuration change.
+
+No test/source edits or runtime reruns by Tester in this closure; this is remote
+results verification. Current dev remains6d332ce before integration. These new
+evidence records create a fresh candidate requiring its own both-version CI and
+coordinator reconciliation before dev merge. Task Done/release acceptance/main
+promotion remain later gates; historical success cannot preapprove the new SHA.

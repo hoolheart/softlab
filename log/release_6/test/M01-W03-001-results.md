@@ -126,3 +126,19 @@ platform annotations, not a whole-system warning waiver or new local warning.
 No hardware/UI, durable partial persistence/resume, W04, universal provenance,
 authentication/environment lock or package publication is certified. This PASS
 does not accept the release or whole M01 milestone.
+
+## Subsequent CI compatibility closure — 2026-10-22
+
+The local273/13 evidence above remains historical. After two new selectivity
+methods and reviewed child-only warning disposition, exactcandidate
+447ad0953f0a87e8475c89b6da8e84b44a328452 passed275 tests on both configured
+versions in CI39792211097:3.9job119870845569 (24.918s) and
+3.13job119870845633 (17.230s), with compile/import success. Primary jobs API and
+exact-head check-runs both returned completed/success for both; earlier stale job
+state was resolved, never inferred. See M01-W03-001-ci-failure.md for exact links,
+failed-candidate history, approvals and evidence. Tester now closes the two
+scoped CI gate failures W03-CI-01/W03-CI-WARN-02; underlying parser/pandas baseline
+warning debt stays open and visible under exact child-only dispositions. No remote
+zero-warning claim:3.9 still reports baseline concat warnings. This supersedes the
+earlier pending exact CI statement only for named447ad095, not new evidence-head
+CI/dev integration, release closure or PO acceptance. No source/test changes here.
