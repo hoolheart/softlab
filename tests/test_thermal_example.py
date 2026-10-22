@@ -490,7 +490,12 @@ class ThermalAcceptanceTests(unittest.TestCase):
                 writer.save_group.side_effect = ValueError('primary marker')
                 original = mock.Mock()
                 original.record.return_value = []
-                with mock.patch.object(thermal, '_make_scheduler',
+                # Isolate this synthetic cleanup fixture from pre-save schema work.
+                with mock.patch.object(thermal, '_make_manifest',
+                                       return_value={}), \
+                        mock.patch.object(thermal, '_encode_manifest',
+                                          return_value='{}'), \
+                        mock.patch.object(thermal, '_make_scheduler',
                                        return_value=scheduler), \
                         mock.patch.object(thermal, '_acquire',
                                           return_value=original), \
@@ -510,6 +515,7 @@ class ThermalAcceptanceTests(unittest.TestCase):
                     self.assertIn('drain marker', message)
                 if close_fails:
                     self.assertIn('close marker', message)
+                writer.save_group.assert_called_once_with(original)
                 pending.cancel.assert_called_once_with()
                 gather.assert_called_once_with(pending, return_exceptions=True)
                 owned_loop.run_until_complete.assert_called_once_with(drain)
