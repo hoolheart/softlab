@@ -1,14 +1,14 @@
 # M01-W03 sprint board
 
 Architect: sw-jerry. 2026-10-22 Asia/Shanghai. Baseline dev410bc16;
-requirements affe67b. Setup Done; M01-W03-001 is the sole active task on
-codex/m01-w03-stored-context, baseline dev6d332ce.
+requirements affe67b. Setup/implementation Done; M01-W03-CLOSURE is the sole active task on
+codex/m01-w03-release-closure, baseline dev20fa9a0 (activated2026-10-24).
 
 | Task | Deliverable | Owner/phase | State | Start | Merge | Blockers |
 | --- | --- | --- | --- | --- | --- | --- |
 | M01-W03-SETUP | Requirements/backend decision/tasks/start principles | Completed setup | Done | 2026-10-22 | 9091bef70e26587d7c21f2ac93027027c6d12593 | Designer document review APPROVED on2ccd22d (reviews/M01-W03-SETUP-review.md); Tester document validation PASS on a6f1348 (test/M01-W03-SETUP-validation.md); Coordinator all11 setup readiness PASS at28c5a8c; targeted English amendment review5eb3c87 APPROVED/validation28c5a8c PASS; candidate355da8a CI39778422269 both PASS; dev9091bef pushed; completion reconciled dev6d332ce, CI39779059136 both versions PASS |
-| M01-W03-001 | Explainable stored context/typed inspection | Completed implementation | Done | 2026-10-22 | f7aa5890a162456f719cf498dcc22090854771ba | Reviewer69045ec approved, scoped CI failures Tester-closed at48e69835; candidate11f6c94 CI39793295929 both versions PASS; devf7aa589 pushed; completion records reconciliation pending |
-| M01-W03-CLOSURE | Actual architecture/principles/acceptance/reconciliation | Unassigned | Backlog | Not started | Pending | Implementation integration |
+| M01-W03-001 | Explainable stored context/typed inspection | Completed implementation | Done | 2026-10-22 | f7aa5890a162456f719cf498dcc22090854771ba | Reviewer69045ec approved, scoped CI failures Tester-closed at48e69835; candidate11f6c94 CI39793295929 both versions PASS; devf7aa589 pushed; completion records integrated dev20fa9a0; CI39797205010 both versions PASS |
+| M01-W03-CLOSURE | Actual architecture/principles/acceptance/reconciliation | sw-jerry / actual architecture and release principles | Design | 2026-10-24 | Pending | Implementation finaldev20fa9a0 CI39797205010 both versions PASS; closure architecture/principles pending |
 
 No runtime characterization, detailed design, feature tests/code or acceptance
 is certified by setup documents. No fixed calendar deadline. Follow tasks.md's
@@ -66,3 +66,13 @@ at48e69835. Exact replacement candidate CI/dev integration remain pending.
 Current summary: setup and implementation Done; no next task started. Accepted
 task candidate11f6c94/CI39793295929 both PASS integrated devf7aa589. Historical
 pending/failure statements above are phase chronology, superseded by this summary.
+
+## Current closure handoff — 2026-10-24
+
+Final implementation dev20fa9a0e179d62dbbfc765335d0d03de188f1dd8 verified
+[CI39797205010](https://github.com/hoolheart/softlab/actions/runs/39797205010):
+exact head and both Python3.9/3.13 explicitly completed/success. Closure branch
+created/pushed from that fetched dev. Architect owns actual architecture/release
+principles next. Historical task-pending statements above are superseded; setup
+and implementation are Done, closure sole Design. No runtime/architecture work
+is claimed by this Developer branch/log handoff. Main remains acceptance-gated.

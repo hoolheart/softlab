@@ -5,8 +5,8 @@ Architect: sw-jerry. 2026-10-22 Asia/Shanghai. PRD affe67b; dev410bc16.
 | Order / ID | Deliverable | Branch/dependency | State |
 | --- | --- | --- | --- |
 | 0 / M01-W03-SETUP | Activated requirements, backend-reviewed envelope, tasks/start principles; independent document review/validation/CI | codex/m01-w03-setup from dev410bc16 | Done; final dev6d332ce; completion records/CI both versions PASS |
-| 1 / M01-W03-001 | Strict stored manifest and independent typed inspection; corruption/version/source/outcome/compatibility tests and guide | codex/m01-w03-stored-context from integrated setup dev6d332ce; created/pushed | Done; devf7aa589; completion reconciliation pending |
-| 2 / M01-W03-CLOSURE | Actual architecture, release principles, document checks and PO acceptance/reconciliation | Fresh codex closure branch after implementation integration | Backlog |
+| 1 / M01-W03-001 | Strict stored manifest and independent typed inspection; corruption/version/source/outcome/compatibility tests and guide | codex/m01-w03-stored-context from integrated setup dev6d332ce; created/pushed | Done; finaldev20fa9a0; completion records integrated/both CI versions PASS |
+| 2 / M01-W03-CLOSURE | Actual architecture, release principles, document checks and PO acceptance/reconciliation | codex/m01-w03-release-closure from verifieddev20fa9a0; created/pushed | Design; sw-jerry actual architecture/release principles pending,2026-10-24 |
 
 One implementation slice keeps encoding, actual stored evidence validation and
 fresh-process inspection coherent across AC01–12. No deadline or overlapping task.
