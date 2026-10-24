@@ -87,3 +87,12 @@ OBS-004/005/006/DEFECT-2; private executor, text hydration and copy-only reads m
 regress. No backend repair/migration, SQLite parity, framework, dependency/Python
 change, partial resume/retry, W04/hardware/UI or publication. A demonstrated
 prerequisite blocks affected implementation for Architect/PO scope disposition.
+
+## Delivered disposition — 2026-10-24
+
+[Actual architecture](../../arch.md#m01-w03-explainable-stored-reference--implemented)
+now documents the bounded delivered scope at8dde568, integrated implementation
+and final recordsdev20fa9a0. The original [PLANNED] envelope remains historical
+architecture evidence, not additional pending library work. JSON text in existing
+group metadata was delivered; no library/backend repair or sidecar was needed.
+See release-architecture.md. W04 remains future; W03 PO acceptance is pending.

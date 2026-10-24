@@ -1,14 +1,19 @@
 # M01-W03 sprint board
 
-Architect: sw-jerry. 2026-10-22 Asia/Shanghai. Baseline dev410bc16;
-requirements affe67b. Setup Done; M01-W03-001 is the sole active task on
-codex/m01-w03-stored-context, baseline dev6d332ce.
+Current summary2026-10-24: setup/implementation Done; W03 PO acceptance PASS.
+Closure sole active task, runner prerequisite independently resolved; Coordinator
+3397a743 final readiness PASS. Exact final candidate CI/integration pending.
+This summary supersedes historical phase/blocker notes below.
+
+Architect: sw-jerry. 2026-10-24 Asia/Shanghai. Baseline dev410bc16;
+requirements affe67b. Setup/implementation Done; M01-W03-CLOSURE is the sole active task on
+codex/m01-w03-release-closure, baseline dev20fa9a0 (activated2026-10-24).
 
 | Task | Deliverable | Owner/phase | State | Start | Merge | Blockers |
 | --- | --- | --- | --- | --- | --- | --- |
 | M01-W03-SETUP | Requirements/backend decision/tasks/start principles | Completed setup | Done | 2026-10-22 | 9091bef70e26587d7c21f2ac93027027c6d12593 | Designer document review APPROVED on2ccd22d (reviews/M01-W03-SETUP-review.md); Tester document validation PASS on a6f1348 (test/M01-W03-SETUP-validation.md); Coordinator all11 setup readiness PASS at28c5a8c; targeted English amendment review5eb3c87 APPROVED/validation28c5a8c PASS; candidate355da8a CI39778422269 both PASS; dev9091bef pushed; completion reconciled dev6d332ce, CI39779059136 both versions PASS |
-| M01-W03-001 | Explainable stored context/typed inspection | Completed implementation | Done | 2026-10-22 | f7aa5890a162456f719cf498dcc22090854771ba | Reviewer69045ec approved, scoped CI failures Tester-closed at48e69835; candidate11f6c94 CI39793295929 both versions PASS; devf7aa589 pushed; completion records reconciliation pending |
-| M01-W03-CLOSURE | Actual architecture/principles/acceptance/reconciliation | Unassigned | Backlog | Not started | Pending | Implementation integration |
+| M01-W03-001 | Explainable stored context/typed inspection | Completed implementation | Done | 2026-10-22 | f7aa5890a162456f719cf498dcc22090854771ba | Reviewer69045ec approved, scoped CI failures Tester-closed at48e69835; candidate11f6c94 CI39793295929 both versions PASS; devf7aa589 pushed; completion records integrated dev20fa9a0; CI39797205010 both versions PASS |
+| M01-W03-CLOSURE | Actual architecture/principles/acceptance/reconciliation | sw-tom / final candidate CI and integration | CI pending | 2026-10-24 | Pending | PO0e0986fd AC01–12 PASS; all11 Coordinator3397a743 readiness PASS; Designer/Tester runner gate closed ondcab463 CI40107138176 both PASS; final candidate CI pending |
 
 No runtime characterization, detailed design, feature tests/code or acceptance
 is certified by setup documents. No fixed calendar deadline. Follow tasks.md's
@@ -66,3 +71,43 @@ at48e69835. Exact replacement candidate CI/dev integration remain pending.
 Current summary: setup and implementation Done; no next task started. Accepted
 task candidate11f6c94/CI39793295929 both PASS integrated devf7aa589. Historical
 pending/failure statements above are phase chronology, superseded by this summary.
+
+## Current closure handoff — 2026-10-24
+
+Final implementation dev20fa9a0e179d62dbbfc765335d0d03de188f1dd8 verified
+[CI39797205010](https://github.com/hoolheart/softlab/actions/runs/39797205010):
+exact head and both Python3.9/3.13 explicitly completed/success. Closure branch
+created/pushed from that fetched dev. Architect owns actual architecture/release
+principles next. Historical task-pending statements above are superseded; setup
+and implementation are Done, closure sole Design. No runtime/architecture work
+is claimed by this Developer branch/log handoff. Main remains acceptance-gated.
+
+Architect closure8dde568 actual architecture delivered; release readiness all11
+principles inspected, release-architecture.md saved. Designer closure-document
+review next, then Tester document validation/coordinator gate/PO acceptance and
+exact closure CI/dev reconciliation. No release acceptance/main promotion claimed.
+
+Designer closure-document review APPROVED one28575c; no issues raised.
+Actual architecture/release readiness inspection are complete; Tester final
+document/evidence validation is next. PO acceptance, exact closure CI/dev
+reconciliation and main promotion remain pending. No Reviewer runtime execution.
+
+Final Tester closure validation84df298:275 full -W error (33.412s), compile/import,
+actual architecture/release6 links/scope PASS; runtime/tests/guide/config unchanged
+from finaldev20fa9a0 and prior tested/reviewed subjects. See
+ test/M01-W03-CLOSURE-validation.md. Earlier Tester-pending language superseded;
+PO acceptance/coordinator formal/exact closure CI/dev reconciliation remain pending.
+Underlying warning debt open/visible; no release acceptance/main promotion claim.
+
+PO product acceptance — 2026-10-24: **PASS AC01–12**, acceptance.md, for
+integrated runtime20fa9a0 with unchanged closure runtime/guide bytes. Coordinator
+all11 formal readiness PASS ata61b08d is recorded by delegation in principles.
+This supersedes earlier PO/formal-pending states; M01-W03-CLOSURE remains sole
+active task pending exact final closure candidate CI, dev reconciliation and
+authorized main/target checks. Not Done; no whole-M01/W04/publication claim.
+Known warnings/debt remain explicit and open; no technical closure by PO.
+
+Designer runner configuration review APPROVED on630dce6/fixcf28530
+(reviews/M01-W03-CLOSURE-ci-runner-review.md). Tester actual exact-candidate
+Python3.9/3.13 CI validation is next; platform failure remains OPEN until both
+succeed and Tester closes it. No runtime/configuration edits by Reviewer.

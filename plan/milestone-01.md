@@ -1,6 +1,6 @@
 # M01 — Proposed reference experiment milestone
 
-Status: **IN PROGRESS**. M01-W01 and M01-W02 product accepted; W03/W04 remain
+Status: **IN PROGRESS**. M01-W01, M01-W02 and M01-W03 product accepted; W04 remains
 proposed. Four working-week increments including review
 and integration. Purpose: prove the complete simulation → procedure → record →
 persistence → plot path before extracting a framework. No hardware is needed.
@@ -25,6 +25,12 @@ on 2026-10-22, with controlled interruption/repetition verified; its accepted cl
 and authorized main promotion are integrator operations at this planning update.
 Actual final hashes and CI are supplied by the release integration handoff.
 This does not accept W03/W04 or the complete M01 milestone.
+
+M01-W03 is [product accepted](../log/release_6/acceptance.md) on 2026-10-24:
+closed typed stored context and fresh-process inspection delivered. Final closure
+candidate CI/dev reconciliation/main promotion remain pending at this update;
+actual final hashes/CI are supplied in the release integration handoff. W04 remains
+proposed; this does not accept the whole M01 milestone.
 
 ## Weekly execution discipline
 
