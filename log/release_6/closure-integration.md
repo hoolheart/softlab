@@ -1,7 +1,7 @@
 # M01-W03 accepted release integration
 
 Integrator: sw-tom. 2026-10-24 Asia/Shanghai.
-State: **runtime PO accepted; closure CI BLOCKED by runner prerequisite, no dev merge**.
+State: **PO accepted; platform prerequisite resolved; final candidate CI pending**.
 
 PO acceptance0e0986fd PASS maps AC01–12 to committed independent evidence.
 Coordinator all11 readiness, actual architecture, Designer closure approval and
@@ -51,3 +51,16 @@ Designer config review then Tester remote verification/owned failure closure are
 required before integration readiness. Automatic push CI may run; integrator does
 not retry/merge or mark platform failure closed. Runtime PO acceptance unchanged;
 platform gate OPEN. This evidence/board handoff commits/pushes immediately.
+
+## Renewed final release readiness — 2026-10-24
+
+Coordinator all11/formal readiness PASS at3397a743 follows independent Designer
+runner reviewdcab463 and Tester-owned platform failure closure. Exactdcab463
+[CI40107138176](https://github.com/hoolheart/softlab/actions/runs/40107138176)
+explicitly passes both Python3.9.25/3.13.16 setup,275 tests,compile/import on
+Ubuntu24.04. Missing-runner blocker is resolved, not waived. Runtime PO acceptance
+0e0986fd AC01–12 remains applicable. Approved sole workflow change is runs-on
+ubuntu-24.04; accepted runtime/tests/guide remain identical to dev20fa9a0.
+Historical failed candidates, scoped warning dispositions/debt and API lag remain
+recorded, superseded for readiness by actual successful owner-verified evidence.
+Final exact candidate CI still precedes dev integration and accepted promotion.

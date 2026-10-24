@@ -1,8 +1,9 @@
 # M01-W03 sprint board
 
-Current summary2026-10-24: setup/implementation Done; PO W03 acceptance PASS
-0e0986fd. Closure sole active task awaiting final candidate CI/integration; this
-summary supersedes historical pending-state notes below.
+Current summary2026-10-24: setup/implementation Done; W03 PO acceptance PASS.
+Closure sole active task, runner prerequisite independently resolved; Coordinator
+3397a743 final readiness PASS. Exact final candidate CI/integration pending.
+This summary supersedes historical phase/blocker notes below.
 
 Architect: sw-jerry. 2026-10-24 Asia/Shanghai. Baseline dev410bc16;
 requirements affe67b. Setup/implementation Done; M01-W03-CLOSURE is the sole active task on
@@ -12,7 +13,7 @@ codex/m01-w03-release-closure, baseline dev20fa9a0 (activated2026-10-24).
 | --- | --- | --- | --- | --- | --- | --- |
 | M01-W03-SETUP | Requirements/backend decision/tasks/start principles | Completed setup | Done | 2026-10-22 | 9091bef70e26587d7c21f2ac93027027c6d12593 | Designer document review APPROVED on2ccd22d (reviews/M01-W03-SETUP-review.md); Tester document validation PASS on a6f1348 (test/M01-W03-SETUP-validation.md); Coordinator all11 setup readiness PASS at28c5a8c; targeted English amendment review5eb3c87 APPROVED/validation28c5a8c PASS; candidate355da8a CI39778422269 both PASS; dev9091bef pushed; completion reconciled dev6d332ce, CI39779059136 both versions PASS |
 | M01-W03-001 | Explainable stored context/typed inspection | Completed implementation | Done | 2026-10-22 | f7aa5890a162456f719cf498dcc22090854771ba | Reviewer69045ec approved, scoped CI failures Tester-closed at48e69835; candidate11f6c94 CI39793295929 both versions PASS; devf7aa589 pushed; completion records integrated dev20fa9a0; CI39797205010 both versions PASS |
-| M01-W03-CLOSURE | Actual architecture/principles/acceptance/reconciliation | Coordinator / formal and final candidate CI | CI reconciliation pending | 2026-10-24 | Pending | Architect9ef6e7d/PO18bb7be2 approved one-line runner pin; Developercf28530 pushed, structural/diff checks PASS; Designer dcab463 APPROVED; Tester exactdcab463 CI40107138176 both versions completed/success on Ubuntu24.04,275 tests and setup/compile/import PASS; scoped platform failure CLOSED; formal/final evidence candidate CI pending |
+| M01-W03-CLOSURE | Actual architecture/principles/acceptance/reconciliation | sw-tom / final candidate CI and integration | CI pending | 2026-10-24 | Pending | PO0e0986fd AC01–12 PASS; all11 Coordinator3397a743 readiness PASS; Designer/Tester runner gate closed ondcab463 CI40107138176 both PASS; final candidate CI pending |
 
 No runtime characterization, detailed design, feature tests/code or acceptance
 is certified by setup documents. No fixed calendar deadline. Follow tasks.md's
