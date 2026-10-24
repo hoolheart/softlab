@@ -93,10 +93,11 @@ columns in HDF5-compatible alphabetical order:
 
 Only temperature is marked dependent. `timestamp` is Unix wall time, separate
 from simulation time; exclude it and the UUID when comparing repeat traces.
-Group metadata is minimal text: `example`, JSON `configuration` and JSON `timing`.
+Group metadata retains `example`, JSON `configuration` and JSON `timing`,
+and adds the closed JSON-text `thermal_manifest` envelope for new complete runs.
 The timing text states post-step acquisition, one-tick measurement delay,
-source `tick-1` and Unix wall seconds. Rich setup/environment provenance is
-outside this weekly example.
+source `tick-1` and Unix wall seconds. The manifest below captures bounded
+producer context; it does not lock dependencies or certify physical calibration.
 
 The runner checks save/connect results and backend errors, disconnects the writer,
 then reopens through a new backend on an owned temporary copy. It compares UUID,
@@ -107,7 +108,8 @@ name, timestamp, declared metadata, ordered schema and every numeric value
 There are existing backend limitations: plain HDF5 `load_group` consumes reserved
 attributes on its open file, and the DataGroup constructor drops metadata.
 This example preserves `thermal.h5` by copying it before legacy loading and
-hydrating only its three declared text metadata values read from that same copy.
+hydrating its three legacy text values plus the optional manifest from that same
+copy. A present manifest is decoded and checked against the actual stored rows.
 It never repairs missing disk values using an earlier in-memory group. Returned
 backend information points to the delivered file, not the deleted copy. These
 are local compatibility measures, not storage-format changes or library fixes.
@@ -259,5 +261,123 @@ factory failure propagates with the previous committed model state preserved.
 Prior terminal evidence remains available. Repetition uses a fresh execute call,
 process, stop request, record and resources; legacy Process.reset is not a promise
 that a cancelled process can be reused or that its record is cleared. Successful
-repeats have equal numeric traces, distinct UUIDs and fresh files. No result or
-partial outcome manifest is added to the on-disk format in this release.
+repeats have equal numeric traces, distinct UUIDs and fresh files. Only completed acquisition receives the stored manifest described below;
+interruption/failure partials remain in memory without a durable outcome artifact.
+
+## Typed stored context and a fresh-process inspector
+
+New completed acquisitions contain `thermal_manifest`, schema
+`softlab.thermal-reference`, integer version `1`, encoded as one JSON string in
+the same HDF5 group as the samples. No sidecar or backend-wide serializer is used.
+The schema is closed at every object; missing/undeclared fields, duplicate keys,
+wrong types, arbitrary objects and nonfinite numbers are rejected. Encoding has
+no fallback stringification. Declared real fields decode as Python `float` and
+counts/version as exact `int`, excluding booleans. JSON null is permitted only
+for the declared unavailable source-identity fields, and booleans only for column
+dependency and available Git dirty state.
+
+| Field | Meaning and declared types |
+| --- | --- |
+| schema, version, run_id | Fixed schema text, integer1, canonical UUID text tied to the stored group. |
+| configuration | All seven ThermalConfig fields; points positive int, other values finite floats with the same stability validation as generation. |
+| model | Fixed lumped thermal body/explicit Euler equation, educational validity text, and complete parameter-unit object. |
+| procedure | Fixed thermal_count/constant-power/once-before-row semantics and requested_points int. |
+| columns | Ordered list of name/label/unit strings plus dependent bool; exact six-column stored definitions above. |
+| clock | dt float, seconds/post_step, integer one-boundary delay, tick-1 source and Unix wall timestamp meanings. |
+| software | Producer softlab_version and python_version strings. |
+| source | Reference path/digest algorithm/byte scope strings; digest/revision strings or null; dirty bool or null; explicit unavailable-reason strings when unavailable. |
+| outcome | Named completed-acquisition snapshot, requested/completed rows and final_tick ints, final_sim_time float; later persistence/plot/cleanup/overall states explicitly not_yet_established. |
+
+Generate and inspect in two separate Python invocations from the repository root:
+
+```sh
+python examples/thermal_experiment.py --output-dir /tmp/thermal-context-01
+python examples/thermal_experiment.py --inspect-file /tmp/thermal-context-01/thermal.h5
+```
+
+Inspection emits exactly one JSON object on stdout with `context`, `manifest`,
+`run_id`, ordered `columns` and numeric `rows`. Backend informational messages go
+to stderr in inspection mode. `context` is `available` with the typed manifest,
+or `legacy_unavailable` with manifest null only when that attribute is absent.
+Use `--group-id UUID` when inspecting a file containing multiple groups; omitting
+it requires exactly one group. Inspection and generation output modes are mutually
+exclusive; stop controls apply only to generation. The Python helper
+`inspect_stored(Path(...), group_id=None)` returns `(group, manifest_or_none)`.
+These remain example-local helpers, not supported library APIs.
+
+The inspector uses the disposable-copy loader and never steps a model. It checks
+UUID, exact ordered schema/units, counts/final tick/time, finite samples, actual
+tick/source-boundary/time/power columns and the independently recomputed delayed
+Euler temperatures. Legacy configuration/timing values must agree with the
+manifest. It does not repair values from current defaults or compare producer
+identity with the reader's current checkout. These checks establish internal
+explanatory consistency; a coordinated rewrite of all metadata and samples can
+remain self-consistent and is not authenticated by this format.
+
+For a different declared experiment, choose another fresh path:
+
+```sh
+python examples/thermal_experiment.py --output-dir /tmp/thermal-context-changed --dt 0.5 --power 6 --points 5
+python examples/thermal_experiment.py --inspect-file /tmp/thermal-context-changed/thermal.h5
+```
+
+The output recovers the changed configuration and five delayed observations.
+Fresh default repeats have different UUIDs, equal configuration/numeric traces,
+and different wall timestamps; source revision/state may change between producers.
+The digest is SHA256 of exact reference script bytes at production, not the whole
+repository, installed environment or data. Git queries are scoped to the source
+repository and require a tracked source file. An available full revision is paired
+with a repository worktree/index/untracked dirty flag. Dirty true means that commit
+alone does not identify all producer changes. Git missing/unavailable/untracked
+installation yields null revision/dirty and a reason without blocking generation.
+Unreadable source bytes yield null digest with a reason. Capture is best effort,
+not an atomic snapshot of concurrent checkout changes or a dependency lock.
+
+The stored outcome is `completed_acquisition_before_persistence`: it records actual
+completed acquisition and boundary before save/reload/plot/cleanup. It cannot
+forecast success of those later operations. The current in-memory RunResult is
+authoritative for them; verified HDF5 acquisition can coexist with overall failure
+after plotting or cleanup. Cancelled/failed acquisition still skips manifest
+creation/save/plot, retaining its complete partial rows only in memory. Invalid
+manifest encoding fails persistence before a writer is constructed; later failed
+writes may leave incomplete bytes, not an atomic or byte-free failure guarantee.
+
+## Legacy, corruption and version policy on disposable copies
+
+Old files without the attribute remain numerically inspectable with explicitly
+unavailable manifest context. Present malformed/nontext/invalid data or unsupported
+schema/version fails visibly (exit1), never downgrading to legacy or announcing
+available context. There is no automatic migration. Exercise the distinctions on
+copies of a synthetic run, keeping the delivered original unchanged:
+
+```sh
+python - <<'CONTEXT_FIXTURES'
+from pathlib import Path
+import json
+import shutil
+import h5py
+source = Path('/tmp/thermal-context-01/thermal.h5')
+for state in ('legacy', 'malformed', 'version'):
+    destination = source.with_name(state + '.h5')
+    if destination.exists():
+        raise FileExistsError(destination)
+    shutil.copy2(source, destination)
+    with h5py.File(destination, 'a') as disk:
+        attrs = disk[next(iter(disk))].attrs
+        manifest = json.loads(attrs['thermal_manifest'])
+        del attrs['thermal_manifest']
+        if state == 'malformed':
+            attrs['thermal_manifest'] = '{'
+        elif state == 'version':
+            manifest['version'] = 999
+            attrs['thermal_manifest'] = json.dumps(manifest)
+CONTEXT_FIXTURES
+python examples/thermal_experiment.py --inspect-file /tmp/thermal-context-01/legacy.h5
+# The following commands intentionally exit 1 with visible diagnostics:
+python examples/thermal_experiment.py --inspect-file /tmp/thermal-context-01/malformed.h5
+python examples/thermal_experiment.py --inspect-file /tmp/thermal-context-01/version.h5
+```
+
+Retain the earlier copy-only warning for the legacy backend. This envelope changes
+only the thermal example's declared metadata; arbitrary softlab metadata and
+Parameter values are not restricted to JSON by this feature.

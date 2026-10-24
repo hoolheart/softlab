@@ -1,6 +1,8 @@
 """Synthetic thermal reference; helpers are not supported public APIs."""
 
 import argparse
+from contextlib import redirect_stdout
+import hashlib
 import asyncio
 from dataclasses import asdict, dataclass, field
 import inspect
@@ -8,9 +10,12 @@ import json
 import math
 from numbers import Real
 import os
+import platform
+import re
 from pathlib import Path
 import shutil
 import sys
+import subprocess
 import tempfile
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 import uuid
@@ -22,6 +27,9 @@ if __name__ == '__main__':
     matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
+import h5py
+
+import softlab
 
 from softlab.huo.process import count
 from softlab.huo.scheduler import Action, Scheduler
@@ -399,6 +407,338 @@ def _disconnect(backend: HDF5DataBackend) -> None:
         raise RuntimeError('; '.join(errors))
 
 
+_MANIFEST_KEY = 'thermal_manifest'
+_MODEL = {
+    'name': 'lumped_thermal_body', 'method': 'explicit_euler',
+    'equation': 'T_next = T + dt * (P - G * (T - T_ambient)) / C',
+    'validity': 'educational; constant parameters; 0 < dt*G/C <= 1; no physical calibration',
+    'units': {'initial_temperature': 'degC', 'ambient_temperature': 'degC',
+              'heat_capacity': 'J/K', 'conductance': 'W/K', 'dt': 's',
+              'power': 'W', 'points': '1'},
+}
+
+
+def _manifest_object(value: Any, keys: Sequence[str], path: str) -> None:
+    """Require one closed manifest object, with no implicit key conversion."""
+    if (type(value) is not dict or any(type(k) is not str for k in value)
+            or set(value) != set(keys)):
+        raise ValueError(f'{path}: expected exact object fields {list(keys)}')
+
+
+def _manifest_text(value: Any, path: str) -> None:
+    """Require nonempty text at a declared manifest path."""
+    if type(value) is not str or not value:
+        raise ValueError(f'{path}: expected nonempty text')
+
+
+def _manifest_real(value: Any, path: str) -> float:
+    """Normalize a declared finite JSON real, excluding booleans."""
+    if type(value) not in (int, float):
+        raise ValueError(f'{path}: expected finite real')
+    try:
+        number = float(value)
+    except (OverflowError, ValueError) as exc:
+        raise ValueError(f'{path}: expected finite real') from exc
+    if not math.isfinite(number):
+        raise ValueError(f'{path}: expected finite real')
+    return number
+
+
+def _manifest_integer(value: Any, path: str) -> None:
+    """Require a positive exact integer, excluding bool and integral floats."""
+    if type(value) is not int or value <= 0:
+        raise ValueError(f'{path}: expected positive integer')
+
+
+def _check_manifest(manifest: Any) -> dict:
+    """Validate the closed v1 schema and return normalized declared real fields."""
+    if type(manifest) is not dict:
+        raise ValueError('manifest: expected object')
+    if (type(manifest.get('schema')) is not str
+            or manifest['schema'] != 'softlab.thermal-reference'):
+        raise ValueError('schema: unsupported manifest schema')
+    if type(manifest.get('version')) is not int or manifest['version'] != 1:
+        raise ValueError('version: unsupported manifest version')
+    _manifest_object(manifest, ('schema', 'version', 'run_id', 'configuration',
+                     'model', 'procedure', 'columns', 'clock', 'software',
+                     'source', 'outcome'), 'manifest')
+    result = dict(manifest)
+    _manifest_text(result['run_id'], 'run_id')
+    try:
+        if str(uuid.UUID(result['run_id'])) != result['run_id']:
+            raise ValueError('noncanonical UUID')
+    except ValueError as exc:
+        raise ValueError('run_id: expected canonical UUID') from exc
+    config = result['configuration']
+    _manifest_object(config, tuple(asdict(ThermalConfig())), 'configuration')
+    config = dict(config)
+    for key in config:
+        if key == 'points':
+            _manifest_integer(config[key], f'configuration.{key}')
+        else:
+            config[key] = _manifest_real(config[key], f'configuration.{key}')
+    _validate_config(ThermalConfig(**config))
+    result['configuration'] = config
+    model = result['model']
+    _manifest_object(model, tuple(_MODEL), 'model')
+    _manifest_object(model['units'], tuple(_MODEL['units']), 'model.units')
+    for key in ('name', 'method', 'equation', 'validity'):
+        _manifest_text(model[key], f'model.{key}')
+    for key, value in model['units'].items():
+        _manifest_text(value, f'model.units.{key}')
+    if model != _MODEL:
+        raise ValueError('model: unsupported model semantics or units')
+    procedure = result['procedure']
+    _manifest_object(procedure, ('name', 'advancement', 'command',
+                               'requested_points'), 'procedure')
+    for key in ('name', 'advancement', 'command'):
+        _manifest_text(procedure[key], f'procedure.{key}')
+    _manifest_integer(procedure['requested_points'], 'procedure.requested_points')
+    if procedure != {'name': 'thermal_count',
+                     'advancement': 'once_before_each_getter_row',
+                     'command': 'constant_power',
+                     'requested_points': config['points']}:
+        raise ValueError('procedure: inconsistent declared acquisition')
+    columns = result['columns']
+    if type(columns) is not list or len(columns) != len(_SCHEMA):
+        raise ValueError('columns: expected ordered thermal schema')
+    for index, (column, definition) in enumerate(zip(columns, _SCHEMA)):
+        keys = ('name', 'label', 'unit', 'dependent')
+        _manifest_object(column, keys, f'columns.{index}')
+        for key in ('name', 'label', 'unit'):
+            _manifest_text(column[key], f'columns.{index}.{key}')
+        if type(column['dependent']) is not bool or column != dict(zip(keys, definition)):
+            raise ValueError(f'columns.{index}: invalid column definition')
+    clock = result['clock']
+    _manifest_object(clock, ('dt', 'simulation_unit', 'acquisition',
+                     'measurement_delay_ticks', 'source_tick', 'wall_timestamp'), 'clock')
+    clock = dict(clock)
+    clock['dt'] = _manifest_real(clock['dt'], 'clock.dt')
+    for key in ('simulation_unit', 'acquisition', 'source_tick', 'wall_timestamp'):
+        _manifest_text(clock[key], f'clock.{key}')
+    if (type(clock['measurement_delay_ticks']) is not int or clock != {
+            'dt': config['dt'], 'simulation_unit': 's', 'acquisition': 'post_step',
+            'measurement_delay_ticks': 1, 'source_tick': 'tick-1',
+            'wall_timestamp': 'unix_seconds'}):
+        raise ValueError('clock: inconsistent acquisition timing')
+    result['clock'] = clock
+    software = result['software']
+    _manifest_object(software, ('softlab_version', 'python_version'), 'software')
+    for key, value in software.items():
+        _manifest_text(value, f'software.{key}')
+    source = result['source']
+    _manifest_object(source, ('reference', 'digest_algorithm', 'digest_scope',
+                     'digest', 'digest_unavailable_reason', 'git_revision',
+                     'git_dirty', 'git_unavailable_reason'), 'source')
+    for key, value in {
+            'reference': 'examples/thermal_experiment.py',
+            'digest_algorithm': 'sha256',
+            'digest_scope': 'exact reference script bytes at production'}.items():
+        if type(source[key]) is not str or source[key] != value:
+            raise ValueError(f'source.{key}: invalid declared scope')
+    if source['digest'] is None:
+        _manifest_text(source['digest_unavailable_reason'], 'source.digest_unavailable_reason')
+    elif (type(source['digest']) is not str
+          or re.fullmatch('[0-9a-f]{64}', source['digest']) is None
+          or source['digest_unavailable_reason'] is not None):
+        raise ValueError('source.digest: invalid digest or availability')
+    if source['git_revision'] is None:
+        if source['git_dirty'] is not None:
+            raise ValueError('source.git_dirty: unavailable revision requires null')
+        _manifest_text(source['git_unavailable_reason'], 'source.git_unavailable_reason')
+    elif (type(source['git_revision']) is not str
+          or re.fullmatch(r'[0-9a-f]{40}|[0-9a-f]{64}', source['git_revision']) is None
+          or type(source['git_dirty']) is not bool
+          or source['git_unavailable_reason'] is not None):
+        raise ValueError('source.git_revision: invalid revision/state availability')
+    outcome = result['outcome']
+    _manifest_object(outcome, ('snapshot', 'acquisition', 'requested_rows',
+                     'completed_rows', 'final_tick', 'final_sim_time',
+                     'persistence', 'plotting', 'cleanup', 'overall'), 'outcome')
+    outcome = dict(outcome)
+    for key in ('requested_rows', 'completed_rows', 'final_tick'):
+        _manifest_integer(outcome[key], f'outcome.{key}')
+    outcome['final_sim_time'] = _manifest_real(outcome['final_sim_time'], 'outcome.final_sim_time')
+    expected = {'snapshot': 'completed_acquisition_before_persistence',
+                'acquisition': 'completed', 'requested_rows': config['points'],
+                'completed_rows': config['points'], 'final_tick': config['points'],
+                'final_sim_time': config['points'] * config['dt'],
+                **{key: 'not_yet_established' for key in
+                   ('persistence', 'plotting', 'cleanup', 'overall')}}
+    for key in ('snapshot', 'acquisition', 'persistence', 'plotting', 'cleanup', 'overall'):
+        _manifest_text(outcome[key], f'outcome.{key}')
+    time = outcome['final_sim_time']
+    if (time < 0 or not math.isclose(time, expected['final_sim_time'],
+                                       rel_tol=0, abs_tol=1e-10)
+            or any(outcome[key] != value for key, value in expected.items()
+                   if key != 'final_sim_time')):
+        raise ValueError('outcome: inconsistent completed acquisition snapshot')
+    result['outcome'] = outcome
+    return result
+
+
+def _encode_manifest(manifest: dict) -> str:
+    """Encode only validated closed v1 values, without fallback serialization."""
+    return json.dumps(_check_manifest(manifest), sort_keys=True, allow_nan=False)
+
+
+def _decode_manifest(text: str) -> dict:
+    """Decode strict JSON and v1 types; reject duplicates/nonfinite constants."""
+    if type(text) is not str:
+        raise TypeError('manifest: expected JSON text')
+
+    def pairs(items):
+        result = {}
+        for key, value in items:
+            if key in result:
+                raise ValueError(f'manifest: duplicate object key {key}')
+            result[key] = value
+        return result
+
+    def invalid_constant(value):
+        raise ValueError(f'manifest: nonfinite JSON token {value}')
+
+    return _check_manifest(json.loads(text, object_pairs_hook=pairs,
+                                      parse_constant=invalid_constant))
+
+
+def _query_source_git(source_path: Path) -> dict:
+    """Query tracked source's repository with bounded calls, ignoring caller cwd."""
+    unavailable = {'git_revision': None, 'git_dirty': None}
+    try:
+        source_path = source_path.resolve()
+
+        def query(*arguments):
+            completed = subprocess.run(
+                ['git', *arguments], cwd=str(source_path.parent),
+                check=True, capture_output=True, text=True, timeout=5)
+            return completed.stdout.strip()
+
+        root = Path(query('rev-parse', '--show-toplevel')).resolve()
+        relative = source_path.relative_to(root)
+        tracked = query('ls-files', '--full-name', '--error-unmatch',
+                        '--', source_path.name)
+        if tracked != relative.as_posix():
+            raise ValueError('Source is not the tracked reference file')
+        revision = query('rev-parse', '--verify', 'HEAD')
+        dirty = bool(query('status', '--porcelain', '--untracked-files=normal'))
+        return {'git_revision': revision, 'git_dirty': dirty,
+                'git_unavailable_reason': None}
+    except (OSError, ValueError, subprocess.SubprocessError) as exc:
+        return {**unavailable, 'git_unavailable_reason': str(exc) or type(exc).__name__}
+
+
+def _capture_source_identity() -> dict:
+    """Capture exact reference bytes and best-effort source repository identity."""
+    source = Path(__file__).resolve()
+    identity = {'reference': 'examples/thermal_experiment.py',
+                'digest_algorithm': 'sha256',
+                'digest_scope': 'exact reference script bytes at production',
+                'digest': None, 'digest_unavailable_reason': None}
+    try:
+        identity['digest'] = hashlib.sha256(source.read_bytes()).hexdigest()
+    except OSError as exc:
+        identity['digest_unavailable_reason'] = str(exc) or type(exc).__name__
+    identity.update(_query_source_git(source))
+    return identity
+
+
+def _make_manifest(config: ThermalConfig, group: DataGroup,
+                   result: RunResult) -> dict:
+    """Build and validate a completed-acquisition snapshot before persistence."""
+    if result.acquisition != 'completed':
+        raise ValueError('outcome.acquisition: manifest requires completed acquisition')
+    manifest = {
+        'schema': 'softlab.thermal-reference', 'version': 1,
+        'run_id': str(group.id), 'configuration': asdict(config),
+        'model': {**_MODEL, 'units': dict(_MODEL['units'])},
+        'procedure': {'name': 'thermal_count',
+                      'advancement': 'once_before_each_getter_row',
+                      'command': 'constant_power', 'requested_points': config.points},
+        'columns': group.record('thermal_trace').columns,
+        'clock': {'dt': config.dt, 'simulation_unit': 's',
+                  'acquisition': 'post_step', 'measurement_delay_ticks': 1,
+                  'source_tick': 'tick-1', 'wall_timestamp': 'unix_seconds'},
+        'software': {'softlab_version': softlab.__version__,
+                     'python_version': platform.python_version()},
+        'source': _capture_source_identity(),
+        'outcome': {'snapshot': 'completed_acquisition_before_persistence',
+                    'acquisition': result.acquisition,
+                    'requested_rows': result.requested_rows,
+                    'completed_rows': result.completed_rows,
+                    'final_tick': result.final_tick,
+                    'final_sim_time': result.final_sim_time,
+                    **{key: 'not_yet_established' for key in
+                       ('persistence', 'plotting', 'cleanup', 'overall')}},
+    }
+    manifest = _check_manifest(manifest)
+    _validate_manifest_data(manifest, group)
+    return manifest
+
+
+def _validate_manifest_data(manifest: dict, group: DataGroup) -> None:
+    """Check disk-derived rows and independent Euler recurrence without acquisition."""
+    manifest = _check_manifest(manifest)
+    if manifest['run_id'] != str(group.id):
+        raise ValueError('run_id: differs from stored group identity')
+    if list(group.records) != ['thermal_trace']:
+        raise ValueError('columns: expected one thermal_trace record')
+    record = group.record('thermal_trace')
+    if record.columns != manifest['columns']:
+        raise ValueError('columns: differ from stored definitions')
+    config = manifest['configuration']
+    n, dt = config['points'], config['dt']
+    if len(record) != n:
+        raise ValueError('outcome.completed_rows: differs from stored row count')
+    for key in ('configuration', 'timing'):
+        text = group.get_meta(key)
+        if type(text) is not str:
+            raise ValueError(f'{key}: missing legacy text metadata')
+        legacy = json.loads(text)
+        expected = config if key == 'configuration' else {
+            'acquisition': 'post_step', 'measurement_delay_ticks': 1,
+            'source_tick': 'tick-1', 'wall_timestamp': 'unix_seconds'}
+        if legacy != expected:
+            raise ValueError(f'{key}: differs from manifest')
+    values = record.table
+    if not np.isfinite(values.to_numpy(dtype=float)).all():
+        raise ValueError('samples: nonfinite numeric value')
+    ticks = np.arange(1, n + 1)
+    expected_columns = {'tick': ticks, 'measurement_source_tick': ticks - 1,
+                        'sim_time_s': ticks * dt,
+                        'commanded_power_w': np.full(n, config['power'])}
+    temperature = config['initial_temperature']
+    expected_temperatures = []
+    for _ in range(n):
+        expected_temperatures.append(temperature)
+        temperature += dt * (config['power'] - config['conductance'] *
+                             (temperature - config['ambient_temperature'])) / config['heat_capacity']
+    expected_columns['temperature_degc'] = expected_temperatures
+    for key, expected in expected_columns.items():
+        actual = values[key].to_numpy(dtype=float)
+        if key in ('tick', 'measurement_source_tick'):
+            matches = np.array_equal(actual, expected)
+        else:
+            matches = np.allclose(actual, expected, rtol=0, atol=1e-10)
+        if not np.isfinite(expected).all() or not matches:
+            raise ValueError(f'samples.{key}: inconsistent declared recurrence/timing')
+
+
+def inspect_stored(path: Path, group_id: Optional[str] = None
+                   ) -> Tuple[DataGroup, Optional[dict]]:
+    """Inspect a disposable copy; None context means absent legacy envelope only."""
+    if group_id is None:
+        with h5py.File(path, 'r') as disk:
+            identities = list(disk.keys())
+        if len(identities) != 1:
+            raise ValueError('group_id: require exactly one stored group or explicit ID')
+        group_id = identities[0]
+    group = _reload_group(path, group_id)
+    text = group.get_meta(_MANIFEST_KEY)
+    manifest = _decode_manifest(text) if text is not None else None
+    return group, manifest
+
+
 def _load_group(backend: HDF5DataBackend, group_id: str) -> DataGroup:
     """Load once from a copy and hydrate its verified disk text metadata."""
     attrs = backend.file[group_id].attrs
@@ -408,6 +748,10 @@ def _load_group(backend: HDF5DataBackend, group_id: str) -> DataGroup:
     if attrs['id'] != group_id:
         raise RuntimeError('Disk group identity mismatch')
     metadata = {key: attrs[key] for key in _META_KEYS}
+    if _MANIFEST_KEY in attrs:
+        if type(attrs[_MANIFEST_KEY]) is not str:
+            raise ValueError('thermal_manifest: present value is not text')
+        metadata[_MANIFEST_KEY] = attrs[_MANIFEST_KEY]
     loaded = backend.load_group(group_id)
     if (not isinstance(loaded, DataGroup) or not backend.just_succeeded
             or backend.errors):
@@ -432,6 +776,9 @@ def _reload_group(path: Path, group_id: str) -> DataGroup:
             raise RuntimeError(
                 f'HDF5 reader connect failed: {backend.last_error}')
         loaded = _load_group(backend, group_id)
+        if _MANIFEST_KEY in loaded.meta:
+            _validate_manifest_data(
+                _decode_manifest(loaded.get_meta(_MANIFEST_KEY)), loaded)
         loaded.backend = {
             'type': 'hdf5',
             'arguments': {'path': str(Path(path).absolute())},
@@ -542,6 +889,8 @@ def execute(config: ThermalConfig, output_dir: Path, *,
         result.acquisition = 'completed'
         result.persistence = 'failed'
         stage = 'persistence'
+        original.set_meta(_MANIFEST_KEY, _encode_manifest(
+            _make_manifest(config, original, result)))
         writer = HDF5DataBackend()
         if (not writer.connect({'path': str(data_path)})
                 or not writer.connected or writer.errors):
@@ -637,15 +986,35 @@ def reset_after_run(result: RunResult) -> None:
 def main(argv: Optional[Sequence[str]] = None) -> int:
     """Parse the documented command; announce completion only after cleanup."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--output-dir', required=True, type=Path)
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument('--output-dir', type=Path)
+    mode.add_argument('--inspect-file', type=Path)
+    parser.add_argument('--group-id')
     for key, value in asdict(ThermalConfig()).items():
         parser.add_argument('--' + key.replace('_', '-'), default=value,
                             type=int if key == 'points' else float)
     parser.add_argument('--stop-after', type=int)
     arguments = vars(parser.parse_args(argv))
+    inspect_file = arguments.pop('inspect_file')
+    group_id = arguments.pop('group_id')
     stop_after = arguments.pop('stop_after')
     output_dir = arguments.pop('output_dir')
     try:
+        if inspect_file is not None:
+            if stop_after is not None:
+                raise ValueError('--stop-after requires generation mode')
+            with redirect_stdout(sys.stderr):
+                stored, manifest = inspect_stored(inspect_file, group_id)
+            record = stored.record('thermal_trace')
+            print(json.dumps({
+                'context': 'available' if manifest is not None else 'legacy_unavailable',
+                'manifest': manifest, 'run_id': str(stored.id),
+                'columns': [column['name'] for column in record.columns],
+                'rows': record.table.to_numpy(dtype=float).tolist(),
+            }, sort_keys=True, allow_nan=False))
+            return 0
+        if group_id is not None:
+            raise ValueError('--group-id requires inspection mode')
         config = ThermalConfig(**arguments)
         if stop_after is not None and not 0 <= stop_after <= config.points:
             raise ValueError('--stop-after must be between zero and points')
