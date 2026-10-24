@@ -1,7 +1,7 @@
 # M01-W03 accepted release integration
 
 Integrator: sw-tom. 2026-10-24 Asia/Shanghai.
-State: **PO accepted; platform prerequisite resolved; final candidate CI pending**.
+State: **accepted closure task Done/dev integrated; final reconciliation/promotion checks pending**.
 
 PO acceptance0e0986fd PASS maps AC01–12 to committed independent evidence.
 Coordinator all11 readiness, actual architecture, Designer closure approval and
@@ -64,3 +64,16 @@ ubuntu-24.04; accepted runtime/tests/guide remain identical to dev20fa9a0.
 Historical failed candidates, scoped warning dispositions/debt and API lag remain
 recorded, superseded for readiness by actual successful owner-verified evidence.
 Final exact candidate CI still precedes dev integration and accepted promotion.
+
+## Accepted closure merge and completion handoff
+
+Exact candidateec198da4d63ccb57246a8b25959249f0df72f1e7 passed
+[CI40107483677](https://github.com/hoolheart/softlab/actions/runs/40107483677),
+overall and both3.9/3.13 explicitly completed/success before dev no-ff merge
+ a0b35539984400f850d6c46c4cbf5d8c294d40e6, pushed. Accepted runtime/tests/guide/
+pyproject unchanged from20fa9a0; approved workflow-only exception remains the
+single Ubuntu24.04 runner line. All release tasks Done; no next task started.
+This completion candidate must pass CI before final dev reconciliation/checks,
+then authorized main promotion/checks. Final exact hashes/URLs are handoff evidence
+without recursive document commits. W04 and full M01 remain unaccepted; no tag,
+package publication or branch deletion. Historical warnings/debt/status lag retained.
