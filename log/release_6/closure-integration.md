@@ -36,3 +36,18 @@ reversal or permission to waive the both-version gate.
 No dev/main integration: dev20fa9a0/main9656b27 remain unchanged. Tester investigates
 platform evidence/proposal before Architect/PO narrow runner disposition. Integrator
 makes no workflow/dependency/source/test changes or failure closure; promotion held.
+
+## Approved runner prerequisite implementation — 2026-10-24
+
+Architect9ef6e7d/PO18bb7be2/Coordinator authorized exactly one workflow line
+following Tester reportd50c698b. Commitcf28530 pushed:
+compatibility.runs-on ubuntu-latest → ubuntu-24.04. Structural Python assertion
+reversed that line and established every other workflow byte unchanged; git diff
+--numstat is1 insertion/1 deletion, both matrix versions3.9/3.13 retained.
+Git diff --check exit0. No fake production tests for configuration-only change;
+no runtime/tests/dependencies/actions/support/permissions/triggers/check changes.
+
+Designer config review then Tester remote verification/owned failure closure are
+required before integration readiness. Automatic push CI may run; integrator does
+not retry/merge or mark platform failure closed. Runtime PO acceptance unchanged;
+platform gate OPEN. This evidence/board handoff commits/pushes immediately.
