@@ -105,3 +105,8 @@ This supersedes earlier PO/formal-pending states; M01-W03-CLOSURE remains sole
 active task pending exact final closure candidate CI, dev reconciliation and
 authorized main/target checks. Not Done; no whole-M01/W04/publication claim.
 Known warnings/debt remain explicit and open; no technical closure by PO.
+
+Designer runner configuration review APPROVED on630dce6/fixcf28530
+(reviews/M01-W03-CLOSURE-ci-runner-review.md). Tester actual exact-candidate
+Python3.9/3.13 CI validation is next; platform failure remains OPEN until both
+succeed and Tester closes it. No runtime/configuration edits by Reviewer.
