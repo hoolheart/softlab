@@ -177,3 +177,18 @@ for integrated runtime20fa9a0 and unchanged closure runtime/guide bytes.
 Exact closure candidate CI/dev reconciliation, target checks and authorized main
 promotion remain required, not executed by this recording. Explicit warning and
 R4/OBS/DEFECT debt/software limits remain unchanged; no whole-M01 acceptance.
+
+## Reviewed closure platform repair — Tester actual CI evidence
+
+2026-10-24. Tester verified exactdcab463/CI40107138176 aggregate and both jobs
+completed/success on Ubuntu24.04:Python3.9.25/3.13.16 each275 tests plus setup,
+compile/import PASS. Prior running3.9 state was awaited, never inferred passing.
+One-line runner change exactly scoped by Architect9ef6e7d/PO18bb7be2 and Designer
+dcab463 approval; all other workflow/runtime/tests/guide/dependency bytes retained.
+Tester closes scoped platform failure only; underlying parser/pandas and R4/OBS/
+DEFECT debt remains open/visible with no remote zero-warning claim. Evidence in
+ test/M01-W03-CLOSURE-ci-platform.md and closure-validation.md supplements all11
+readiness, particularly principles7/8/10/11. No source/test/config edit by Tester.
+Final completed evidence requires docs(log) commit/push, coordinator formal
+reconciliation and exact new candidate CI before dev/main action. No unrun gate
+or prior skipped check is marked passed by this historical-failure disposition.

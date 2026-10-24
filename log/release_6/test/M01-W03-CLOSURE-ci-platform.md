@@ -66,3 +66,48 @@ Actual investigation commands also checked clean baseline/status and
 /tmp/w03-closure-platform-py39.log and /tmp/w03-closure-platform-py313.log.
 These are remote-log/official-artifact findings, not a local3.9 runtime test or
 completed replacement-platform check. Failure remains OPEN pending reviewed fix.
+
+## Exact reviewed runner-fix verification and platform failure closure
+
+Tester: sw-mike. Date: 2026-10-24 Asia/Shanghai.
+Scope approved by Architect9ef6e7d/PO18bb7be2; configurationcf28530,
+Designer APPROVEDdcab463 for subject630dce6. Verified exact head
+**dcab46320c638728538ff79d79f079b726af1509** in
+[run40107138176](https://github.com/hoolheart/softlab/actions/runs/40107138176).
+Initial direct query correctly showed3.9 regression still running; no closure
+was inferred from the already successful3.13 job or earlier candidates.
+`gh run watch 40107138176 --interval 30 --exit-status` subsequently exited0;
+refreshed primary run/jobs JSON reports completed/success for aggregate and both
+jobs, matching exact head. No stale/null field was treated as passing.
+
+| Actual exact-candidate job | Executed evidence |
+| --- | --- |
+| [Python3.9 job120911058264](https://github.com/hoolheart/softlab/actions/runs/40107138176/job/120911058264) | Completed/success; Ubuntu24.04 image ubuntu24/20261012.334; Python3.9.25 setup succeeds;275 tests,27.348s,OK; compile/import both explicitly completed/success. |
+| [Python3.13 job120911058445](https://github.com/hoolheart/softlab/actions/runs/40107138176/job/120911058445) | Completed/success; same Ubuntu24.04 image; Python3.13.16;275 tests,17.648s,OK; setup/compile/import explicitly completed/success. |
+
+Saved actual full logs /tmp/w03-runner-pin-dcab463-py39.log and
+/tmp/w03-runner-pin-dcab463-py313.log. Both show actual runner identity and named
+execution; not merely workflow configuration or a prior green run. Setup/cache/
+dependency/environment/VISA checks succeeded before runtime checks.
+
+Independent structural assertions prove resulting workflow equals its prior
+contents with exactly one ubuntu-latest→ubuntu-24.04 replacement; every other
+workflow byte, both Python entries and all commands/actions remain unchanged.
+`git diff --name-only 20fa9a0 HEAD -- softlab examples tests docs pyproject.toml`
+is empty; `git diff --check` exits0. No extra local runtime rerun was needed for
+this approved configuration-only repair; actual both-version CI supplies evidence.
+
+**Tester closes this scoped closure platform CI failure based on actual success.**
+Historical399df915 setup failure/skips remain recorded; no previous unrun check
+is retroactively marked passed. Ubuntu24.04 pin is a bounded CI-platform choice,
+not all-platform certification or indefinite upstream-availability guarantee.
+Python3.9 log still emits651 known concat FutureWarnings,3.13 none of that text;
+exact reviewed child parser/pandas visible dispositions and underlying debt stay
+open. Node/action/platform notices remain separately disclosed. No remote
+zero-warning claim, dependency repair or new warning filter.
+
+No source/test/config edits by Tester during validation. Coordinator formal
+reconciliation and exact final evidence-record candidate CI remain required
+before closure dev integration/main promotion; completed product acceptance is
+separate from these gates. Dev/main untouched by Tester. This evidence/results/
+principle/board update commits/pushes immediately with docs(log) before handoff.

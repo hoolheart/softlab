@@ -95,3 +95,19 @@ Ubuntu3.9/3.13 evidence is cited, not rerun or fabricated. Closure's exact candi
 must pass both versions before dev integration; PO acceptance precedes main.
 Hardware/UI, W04, whole-M01 acceptance and package publication remain excluded.
 No production/source/test changes by Tester. This PASS is not release acceptance.
+
+## Reviewed runner prerequisite — actual remote validation
+
+2026-10-24, Tester sw-mike. Prior399df915 closure CI failed Python3.9 setup on
+Ubuntu26.04 before runtime; this historical failure is not waived. Approved
+one-line runner pin cf28530, independently reviewed atdcab463, changes no other
+workflow byte/runtime/test/guide/dependency configuration. Exactdcab46320c638728538ff79d79f079b726af1509
+CI40107138176 now completed/success on both configured versions, actually using
+Ubuntu24.04:3.9.25 job120911058264 passes275 in27.348s;3.13.16 job120911058445
+passes275 in17.648s. Setup/compile/import explicitly completed/success for both.
+Exact links/commands/runner logs and scoped platform-failure closure are in
+M01-W03-CLOSURE-ci-platform.md. No local runtime rerun or source/test edit in this
+configuration-only gate. Existing local275/guide evidence remains applicable.
+Known parser/pandas warning debt remains open/visible; no zero-warning CI claim.
+Coordinator formal/final evidence candidate CI/reconciliation, dev integration
+and main promotion remain pending; this does not undo those required gates.
