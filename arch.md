@@ -727,3 +727,85 @@ Designer closed CR-W02-01; Tester closed scoped failures. R4-BASE-SCHED-01,
 R4-BASE-META-01 and R4-BASE-HDF5-01 remain unfixed with the regressed private
 executor/text hydration/copy-only-reader measures above. OBS-004/005/006 and
 DEFECT-2 retain existing dispositions. No broader library repair is claimed.
+
+## M01-W03 explainable stored reference — implemented
+
+Updated 2026-10-24. W03 implementation and scoped repair341c55b are integrated
+through devf7aa589, reconciled at20fa9a0e179d62dbbfc765335d0d03de188f1dd8.
+This supersedes earlier future-W03 statements for the delivered behavior below;
+release PO acceptance/main promotion remain pending. No library source/export,
+dependency, Python support, backend format or package version changed. W04 remains
+future scope. Existing W01 numeric and W02 lifecycle contracts are retained.
+
+The [thermal example](examples/thermal_experiment.py) stores a single explicit
+JSON-text thermal_manifest attribute using existing DataGroup.set_meta/HDF5 save.
+Closed schema softlab.thermal-reference version1 contains run UUID, full declared
+thermal configuration, educational Euler model/validity/units, procedure, ordered
+columns, simulation/source/wall-clock interpretation, producer software/source
+identity and outcome snapshot. Exact keys/types, finite reals, integer/bool
+separation and declared availability nulls are validated; duplicate JSON keys,
+malformed content and unsupported schema/version fail visibly. This is a bounded
+example schema, not arbitrary metadata serialization or a provenance framework.
+
+Capture occurs after completed acquisition and before persistence. Snapshot fields
+name that stage and leave persistence/plotting/cleanup/overall not_yet_established;
+later RunResult outcomes remain authoritative. Encoding/validation failure leaves
+completed acquisition with failed persistence. Cancelled/failed acquisition still
+retains partials only in memory, without manifest save/plot. No sidecar or atomic/
+zero-byte storage guarantee is added. Existing text metadata remains intact.
+
+Producer identity includes softlab/Python versions and SHA256 of exact resolved
+reference-script bytes, with explicit unavailable reason on read failure. Bounded
+Git queries use the tracked source's repository, not caller cwd; available full
+revision plus repository dirty status or explicit unavailable fields are stored.
+Dirty state is not represented as merely a clean revision. Git absence does not
+prevent installed-source use. This is not an atomic concurrent-checkout snapshot,
+full dependency/environment lock, authenticity proof or physical calibration.
+Inspection preserves producer identity rather than substituting reader facts.
+
+Example-local inspect_stored(path, group_id=None) returns numeric DataGroup and
+typed manifest, or None only for absent legacy context. Optional ID discovery is
+read-only and requires exactly one stored group when unspecified. Existing copied
+reload captures optional raw text before the destructive legacy loader and
+hydrates disk-derived metadata explicitly. Present invalid/nontext/unsupported
+content never downgrades to legacy; source bytes remain untouched. The existing
+three mandatory legacy text keys remain unchanged. Produced-run roundtrip metadata
+equality additionally detects removal of its newly written manifest.
+
+Validation compares decoded context with actual disk identity, one thermal_trace,
+exact ordered schema/units, counts and committed boundary/time; checks finite
+samples, exact logical tick/source identities, power and simulation-time relations;
+and recomputes delayed Euler observations from declared configuration with absolute
+1e-10 physical-value tolerance. It does not step a model or infer context from
+reader defaults. This establishes explanatory consistency, not protection against
+a coordinated rewrite of all data/context. Legacy files remain numerically
+inspectable with unavailable context, without automatic migration.
+
+The [guide](docs/user-guide/thermal-experiment.md) documents unchanged headless
+generation and fresh-interpreter --inspect-file PATH [--group-id UUID]. Inspection
+emits one JSON object with available/legacy_unavailable context, manifest, run ID,
+columns and numeric rows; backend informational prints go to stderr. Errors fail
+visibly. W02 primary-cause/ordered cleanup reporting, independent owned resource
+release, explicit postterminal reset and fresh repeats remain unchanged.
+
+[Independent results](log/release_6/test/M01-W03-001-results.md) record273 local
+full/13 manifest tests and guide walkthrough, then275 after child warning-policy
+tests. [Integration](log/release_6/integration.md) records exact candidate11f6c94
+[CI39793295929](https://github.com/hoolheart/softlab/actions/runs/39793295929)
+both-version success before dev merge; final implementation records20fa9a0 have
+[CI39797205010](https://github.com/hoolheart/softlab/actions/runs/39797205010),
+explicitly successful Python3.9/3.13. Historical stale API state was resolved by
+actual job/check-run success, not inferred. These named checks do not certify
+this later documentation SHA, other platforms or unconfigured linters.
+
+Scoped CI failures are Tester-closed, while underlying parser/pandas warning debt
+remains open. Reviewed child-only bootstrap keeps -W error except four exact
+Matplotlib-attributed pyparsing deprecations and one exact existing DataRecord
+concat FutureWarning, each action-default and visible on stderr. All other/new
+warnings remain fatal. No production/parent-suite filters, dependency pins or
+backend repair were added; passing CI is not warning-free CI. See
+[explicit dispositions](log/release_6/reviews/M01-W03-001-ci-disposition.md).
+R4-BASE-SCHED-01/META-01/HDF5-01 retain private executor/text hydration/copy-only
+reader measures; OBS-004/005/006/DEFECT-2 and CI platform notices remain separately
+tracked. No SQLite parity, universal serializer, durable partial resume/retry,
+W04 adapter/hardware, whole-M01 acceptance or publication is implied.
