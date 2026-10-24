@@ -146,3 +146,22 @@ coordinator formal gate → PO acceptance → exact closure candidate CI/dev
 reconciliation → authorized main promotion. No active scoped technical blocker
 remains, but these gates are not run/accepted by this inspection. Reinspect any
 code/scope change; W04/full-M01 acceptance and package publication are excluded.
+
+## Final Tester closure validation — 2026-10-24
+
+Tester sw-mike independently validated committed84df298 with **PASS for final
+local integration/document checks**. Actual -W error full275 (33.412s), compile
+softlab/examples/tests and import pass; no skips or unexpected local warnings.
+Actual architecture/release6 paths/links/diff/scope pass; runtime/tests/guide/
+config match finaldev20fa9a0, verified447ad095 and tested harnessc8574bf exactly.
+Prior independently executed guide evidence remains applicable; no redundant
+unchanged walkthrough or fabricated new test/design. All11 readiness evidence,
+commands/environment/limits and explicit warning/debt disposition are saved in
+[test/M01-W03-CLOSURE-validation.md](test/M01-W03-CLOSURE-validation.md).
+
+This supersedes pending Tester closure-validation handoffs. Actual Architect and
+Designer closure work are complete; coordinator formal gate, PO acceptance,
+exact closure candidate CI/dev reconciliation and main promotion remain pending.
+Known parser/pandas warning debt stays open/visible, no remote zero-warning claim.
+No source/test edit or technical issue closure in this gate. Completed evidence
+commits/pushes immediately as docs(log), then formal transport verification.

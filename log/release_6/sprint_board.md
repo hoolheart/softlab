@@ -8,7 +8,7 @@ codex/m01-w03-release-closure, baseline dev20fa9a0 (activated2026-10-24).
 | --- | --- | --- | --- | --- | --- | --- |
 | M01-W03-SETUP | Requirements/backend decision/tasks/start principles | Completed setup | Done | 2026-10-22 | 9091bef70e26587d7c21f2ac93027027c6d12593 | Designer document review APPROVED on2ccd22d (reviews/M01-W03-SETUP-review.md); Tester document validation PASS on a6f1348 (test/M01-W03-SETUP-validation.md); Coordinator all11 setup readiness PASS at28c5a8c; targeted English amendment review5eb3c87 APPROVED/validation28c5a8c PASS; candidate355da8a CI39778422269 both PASS; dev9091bef pushed; completion reconciled dev6d332ce, CI39779059136 both versions PASS |
 | M01-W03-001 | Explainable stored context/typed inspection | Completed implementation | Done | 2026-10-22 | f7aa5890a162456f719cf498dcc22090854771ba | Reviewer69045ec approved, scoped CI failures Tester-closed at48e69835; candidate11f6c94 CI39793295929 both versions PASS; devf7aa589 pushed; completion records integrated dev20fa9a0; CI39797205010 both versions PASS |
-| M01-W03-CLOSURE | Actual architecture/principles/acceptance/reconciliation | sw-mike / final document validation | Testing | 2026-10-24 | Pending | Implementation finaldev20fa9a0 CI39797205010 both versions PASS; actual architecture8dde568 and all11 release readiness PASS; Designer closure-document review APPROVED one28575c (reviews/M01-W03-CLOSURE-review.md); Tester final validation pending |
+| M01-W03-CLOSURE | Actual architecture/principles/acceptance/reconciliation | sw-camille / PO acceptance | Acceptance pending | 2026-10-24 | Pending | Implementation finaldev20fa9a0 CI39797205010 both versions PASS; actual architecture8dde568 and all11 release readiness PASS; Designer closure-document review APPROVED one28575c (reviews/M01-W03-CLOSURE-review.md); Tester final validation PASS on84df298:275 -W error/compile/import/doc scope; coordinator formal/PO/exact closure CI pending |
 
 No runtime characterization, detailed design, feature tests/code or acceptance
 is certified by setup documents. No fixed calendar deadline. Follow tasks.md's
@@ -86,3 +86,10 @@ Designer closure-document review APPROVED one28575c; no issues raised.
 Actual architecture/release readiness inspection are complete; Tester final
 document/evidence validation is next. PO acceptance, exact closure CI/dev
 reconciliation and main promotion remain pending. No Reviewer runtime execution.
+
+Final Tester closure validation84df298:275 full -W error (33.412s), compile/import,
+actual architecture/release6 links/scope PASS; runtime/tests/guide/config unchanged
+from finaldev20fa9a0 and prior tested/reviewed subjects. See
+ test/M01-W03-CLOSURE-validation.md. Earlier Tester-pending language superseded;
+PO acceptance/coordinator formal/exact closure CI/dev reconciliation remain pending.
+Underlying warning debt open/visible; no release acceptance/main promotion claim.
