@@ -1,7 +1,17 @@
 # M01-W03 accepted release integration
 
 Integrator: sw-tom. 2026-10-24 Asia/Shanghai.
-State: **accepted closure task Done/dev integrated; final reconciliation/promotion checks pending**.
+State: **CLOSED — accepted, promoted and both-version CI verified**.
+Definitive current evidence: [closure.md](closure.md), recorded2026-10-25.
+Final dev `055959c7f38fad082098159383d737b0a55ca39e`, promoted main
+`bc3226f5031ec42029c9e444281d8b53eeaf802b`; both exact CI runs passed.
+Only this post-release documentation branch's integration checks remain separate.
+
+## Historical integration chronology — 2026-10-24
+
+The entries below preserve phase-time decisions and pending/failed states.
+They are historical and superseded for current release status by closure.md.
+
 
 PO acceptance0e0986fd PASS maps AC01–12 to committed independent evidence.
 Coordinator all11 readiness, actual architecture, Designer closure approval and

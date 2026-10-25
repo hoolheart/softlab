@@ -1,20 +1,21 @@
 # M01-W03 sprint board
 
-Current summary2026-10-24: all three W03 tasks Done; PO acceptance PASS and
-closure integrated deva0b3553 after exact both-version CI40107483677 success.
-No active/next task. Final completion reconciliation and authorized promotion
-checks are integrator operations; final hashes/CI supplied in release handoff.
-Historical phase/blocker statements below are superseded by this summary.
-
-Architect: sw-jerry. 2026-10-24 Asia/Shanghai. Baseline dev410bc16;
-requirements affe67b. Setup/implementation Done; All scoped tasks are Done; no next task is active on
-codex/m01-w03-release-closure, baseline dev20fa9a0 (activated2026-10-24).
+Current summary2026-10-25: **W03 CLOSED**. All three tasks Done; PO acceptance
+PASS, final dev055959c and promoted mainbc3226f both explicitly passed configured
+Python3.9/3.13 CI. No active W03 or next-release task.
+See [definitive closure](closure.md). This record branch needs document checks
+before integration; accepted release status is unchanged.
 
 | Task | Deliverable | Owner/phase | State | Start | Merge | Blockers |
 | --- | --- | --- | --- | --- | --- | --- |
 | M01-W03-SETUP | Requirements/backend decision/tasks/start principles | Completed setup | Done | 2026-10-22 | 9091bef70e26587d7c21f2ac93027027c6d12593 | Designer document review APPROVED on2ccd22d (reviews/M01-W03-SETUP-review.md); Tester document validation PASS on a6f1348 (test/M01-W03-SETUP-validation.md); Coordinator all11 setup readiness PASS at28c5a8c; targeted English amendment review5eb3c87 APPROVED/validation28c5a8c PASS; candidate355da8a CI39778422269 both PASS; dev9091bef pushed; completion reconciled dev6d332ce, CI39779059136 both versions PASS |
 | M01-W03-001 | Explainable stored context/typed inspection | Completed implementation | Done | 2026-10-22 | f7aa5890a162456f719cf498dcc22090854771ba | Reviewer69045ec approved, scoped CI failures Tester-closed at48e69835; candidate11f6c94 CI39793295929 both versions PASS; devf7aa589 pushed; completion records integrated dev20fa9a0; CI39797205010 both versions PASS |
-| M01-W03-CLOSURE | Actual architecture/principles/acceptance/reconciliation | Completed closure | Done | 2026-10-24 | a0b35539984400f850d6c46c4cbf5d8c294d40e6 | PO acceptance/all11 readiness PASS; candidateec198da CI40107483677 both success; deva0b3553 pushed; final completion reconciliation/promotion operations pending |
+| M01-W03-CLOSURE | Actual architecture/principles/acceptance/reconciliation | Completed closure | Done | 2026-10-24 | 055959c7f38fad082098159383d737b0a55ca39e | None; PO/all11 gates PASS; finaldev CI40107845781 and promotedmainbc3226f CI40107998729 both matrix jobs success |
+
+## Historical phase notes
+
+All following phase-time pending/blocker statements are historical; closure.md
+and the current table above establish the final completed state.
 
 No runtime characterization, detailed design, feature tests/code or acceptance
 is certified by setup documents. No fixed calendar deadline. Follow tasks.md's
