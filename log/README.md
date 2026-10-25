@@ -13,11 +13,19 @@ Copy the relevant files from `templates/` for future approved releases/tasks.
 - `principle_compliance_report.md`: phase-by-phase principle inspection.
 - `sprint-board.md`: one active task, phase, blockers and integration evidence.
 - `acceptance.md`: explicit product-owner verdict and evidence links.
+- [Release checklist](templates/release-checklist.md): proportional gates,
+  candidate freeze, final handoff and a single authoritative closure summary.
 
-Commit completed record updates immediately with `docs(log):` and push before
-handoff on the active task branch. Do not invent approvals or results; pending,
-blocked and not-applicable statuses must carry reasons. Reference the revision
+Commit a completed phase's related record updates together with `docs(log):` and
+push before handoff on the active task branch. Do not invent approvals or results;
+pending, blocked and not-applicable statuses must carry reasons. Reference the revision
 being inspected rather than requiring a document to contain its own commit hash.
+Freeze required records before final candidate CI. Resulting merge hashes and CI
+URLs belong in the final handoff; do not create a commit merely to record the
+previous commit's result. Reuse unchanged evidence, and do not create recursive
+closure/reconciliation tasks. One authoritative closure summary records the final
+facts when available; later factual corrections use direct consistency/diff checks
+without reopening the accepted release or restarting the full review chain.
 
 Tasks branch from and integrate into `dev` after the agreed gates. Promote an
 accepted release to `main`. The user-authorized bootstrap uses configuration and
