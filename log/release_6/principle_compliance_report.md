@@ -1,5 +1,8 @@
 # M01-W03 release-start principle inspection
 
+Current release state: **CLOSED**; [final promotion/CI evidence](closure.md).
+The phase-time acceptance/principle evidence below retains its original scope.
+
 Delegated inspector: sw-jerry (Architect). 2026-10-22 Asia/Shanghai.
 Subject PRD affe67b, baseline dev410bc16 and local setup envelope/backlog/board.
 **PASS for start readiness only, subject to formal completed-artifact commit/push

@@ -1,12 +1,20 @@
 # M01-W03 serial backlog
 
+Current state2026-10-25: **all tasks Done; W03 CLOSED**. See
+[closure.md](closure.md); no active W03/next-release task.
+
 Architect: sw-jerry. 2026-10-22 Asia/Shanghai. PRD affe67b; dev410bc16.
 
 | Order / ID | Deliverable | Branch/dependency | State |
 | --- | --- | --- | --- |
 | 0 / M01-W03-SETUP | Activated requirements, backend-reviewed envelope, tasks/start principles; independent document review/validation/CI | codex/m01-w03-setup from dev410bc16 | Done; final dev6d332ce; completion records/CI both versions PASS |
 | 1 / M01-W03-001 | Strict stored manifest and independent typed inspection; corruption/version/source/outcome/compatibility tests and guide | codex/m01-w03-stored-context from integrated setup dev6d332ce; created/pushed | Done; finaldev20fa9a0; completion records integrated/both CI versions PASS |
-| 2 / M01-W03-CLOSURE | Actual architecture, release principles, document checks and PO acceptance/reconciliation | codex/m01-w03-release-closure from verifieddev20fa9a0; created/pushed | Done; accepted closure integrated deva0b3553; final reconciliation/promotion operations pending |
+| 2 / M01-W03-CLOSURE | Actual architecture, release principles, document checks and PO acceptance/reconciliation | codex/m01-w03-release-closure from verifieddev20fa9a0; created/pushed | Done; finaldev055959c, promotedmainbc3226f; both exact matrix CI runs passed |
+
+## Historical planning and execution gates
+
+These phase-time instructions describe the completed workflow; remaining future
+planning applies to separately authorized work, not a pending W03 release.
 
 One implementation slice keeps encoding, actual stored evidence validation and
 fresh-process inspection coherent across AC01–12. No deadline or overlapping task.
