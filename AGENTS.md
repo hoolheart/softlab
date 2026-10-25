@@ -6,6 +6,43 @@ Use English for all communication and newly created or updated project
 deliverables in this and future softlab sessions. Preserve existing Chinese
 instructions unless a task explicitly requires their translation.
 
+## Proportionate workflow and release closure
+
+These project rules override conflicting ceremony in workflow skills, including
+`sw-prod-workflow`, and the historical process guidance below. Read
+[principles.md](principles.md) and use the
+[release checklist](log/templates/release-checklist.md). Do not modify shared
+skills to apply these project-specific rules.
+
+- Define the finish line before implementation: required independent review and
+  testing, product acceptance, successful exact integration-candidate CI, verified
+  promotion and required promoted-state checks, and a clean worktree. Once these
+  conditions hold, mark the release CLOSED and deliver the final handoff.
+- Scale gates to the changed scope. Behavioral changes retain independent review,
+  tests and issue-owner closure. Workflow/configuration changes receive relevant
+  configuration review and validation. Factual status, links and final-hash
+  corrections need a direct consistency/diff check, not every team role or a new
+  development task. Delegate only work needing that role's expertise or independence.
+- Freeze code and required documents before final candidate CI. Commit/push a
+  completed phase's related artifacts together before handoff; do not create a
+  separate handoff or commit for each file or status change. Supply resulting merge
+  hashes and CI URLs in the final handoff; never create a commit just to record the
+  previous commit's CI result. Final closure facts may be recorded together when
+  available, without restarting the release or repeating the gate chain.
+- Reuse review, test and acceptance evidence for unchanged content. Rerun checks
+  only for affected changes, failures or unresolved risks, recording applicability.
+  Required exact-candidate CI still precedes `dev` integration. Verify the promoted
+  state, but do not invent additional merge/reconciliation CI gates. Automatic CI
+  runs are not new tasks and need not each produce another evidence commit.
+- Use one authoritative closure summary with acceptance, final revision/CI links,
+  remaining debt and scope limits. Correct administrative inconsistencies directly;
+  they do not reopen an accepted release. Do not create recursive closure tasks.
+- Distinguish product failures, environment failures and CI reporting lag. Bound
+  investigation to evidence needed for a decision; do not blindly retry unchanged
+  work. Never invent a pass, silently waive a failure or hide baseline warnings.
+- Report meaningful findings, decisions, blockers and completion. Consolidate
+  unchanged waiting status; do not repeatedly narrate the same queue or job state.
+
 本文件适用于整个仓库。修改前先阅读相关模块及其调用方，以现有实现和
 `pyproject.toml` 为准；以下内容描述当前工程，不代表尚未实现的能力。
 
