@@ -1,5 +1,8 @@
 # M01-W03 product acceptance
 
+Current release state: **CLOSED**; [final promotion/CI evidence](closure.md).
+The phase-time acceptance/principle evidence below retains its original scope.
+
 Product Owner: sw-camille. Date: 2026-10-24 Asia/Shanghai.
 Verdict: **PASS — bounded M01-W03 runtime and documentation accepted**.
 Accepted integrated runtime: dev20fa9a0; closure evidence subjecta61b08d on
