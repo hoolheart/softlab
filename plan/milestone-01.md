@@ -20,17 +20,19 @@ limits. It does not claim physical calibration or universal thermal accuracy.
 ## Accepted progress
 
 M01-W01 is [accepted](../log/release_4/acceptance.md) and promoted to main
-at b03092e. M01-W02 is [product accepted](../log/release_5/acceptance.md)
-on 2026-10-22, with controlled interruption/repetition verified; its accepted closure is integrated to devbfcdc9f. Final completion-record checks
-and authorized main promotion are integrator operations at this planning update.
-Actual final hashes and CI are supplied by the release integration handoff.
-This does not accept W03/W04 or the complete M01 milestone.
+at b03092e. M01-W02 is [accepted](../log/release_5/acceptance.md) and promoted
+at 9656b2792da4d195b50e9dd36974848044320016 on 2026-10-22.
 
-M01-W03 is [product accepted](../log/release_6/acceptance.md) on 2026-10-24:
-closed typed stored context and fresh-process inspection delivered. Accepted closure is integrated to deva0b3553 after both-version candidate CI.
-Final completion-record reconciliation and authorized promotion checks remain;
-actual final hashes/CI are supplied in the release integration handoff. W04 remains
-proposed; this does not accept the whole M01 milestone.
+M01-W03 is [CLOSED](../log/release_6/closure.md): product acceptance PASS
+AC-01–12, final dev055959c7f38fad082098159383d737b0a55ca39e and promoted
+mainbc3226f5031ec42029c9e444281d8b53eeaf802b on 2026-10-24. Exact
+[final dev CI](https://github.com/hoolheart/softlab/actions/runs/40107845781) and
+[promoted main CI](https://github.com/hoolheart/softlab/actions/runs/40107998729)
+both explicitly passed Python3.9/3.13. The definitive closure record preserves
+limits and historical gate evidence. Post-release documentation reconciliation
+has separate record-integration checks; it does not reopen W03 acceptance.
+
+W04 remains proposed; the complete M01 milestone is not yet accepted.
 
 ## Weekly execution discipline
 
