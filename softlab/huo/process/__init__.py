@@ -44,3 +44,4 @@ from softlab.huo.process.common import (
     scan,
     grid_scan,
 )
+from softlab.huo.process.bounded import CountResult, StopRequest, run_count
