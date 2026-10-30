@@ -16,7 +16,7 @@ summary and principle compliance report.
 
 | ID | Scope | Owner / next handoff | Phase | Started | Expected completion | Blockers / remaining gates | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| M02-W01-001 | Characterize existing count execution and decide minimal justified seam | Coordinator / closure sequence per minimal finish line | Closure — minimal gates | 2026-10-30 | 2026-10-30 | Acceptance, exact-candidate CI, `dev`/`main` integration and promotion, closure summary pending; W02 unauthorized | None |
+| M02-W01-001 | Characterize existing count execution and decide minimal justified seam | Coordinator / closure sequence per minimal finish line | Closure — minimal gates | 2026-10-30 | 2026-10-30 | AC01 caller-inventory check: **COMPLETE** ([verdict](reviews/caller-inventory-check.md)); acceptance, exact-candidate CI, `dev`/`main` integration and promotion, closure summary pending; W02 unauthorized | None |
 
 Exactly one task is active. W02 implementation has not started. M01 is
 [CLOSED](../release_7/closure.md); the M02 milestone planning reviews approve
