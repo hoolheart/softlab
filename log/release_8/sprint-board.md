@@ -1,24 +1,20 @@
 # Sprint board — M02-W01 (process release_8)
 
-Updated: 2026-10-30 Asia/Shanghai (Product Owner acceptance **PASS**). Integration
-branch: `dev`. Current task branch: `codex/m02-w01-preparation`.
-Release status: **OPEN — CLOSURE (MINIMAL GATES, USER-APPROVED)**. The user chose
-Option A (finish this release now) with explicitly cut checks. Preparation was
-pushed at `1935fab`; characterization at `d300c7e`; decision + reviews + scope
-agreement through `b47fb3d`. Completed minimal gates: AC01 caller-inventory
-check **COMPLETE** ([verdict](reviews/caller-inventory-check.md)); Product Owner
-acceptance **PASS** ([record](acceptance.md)). Remaining minimal finish line:
-task-completion principle/document checks → frozen exact-candidate CI → `dev`
-merge → `main` promotion and verification → clean worktree → one closure summary
-→ CLOSED. Cut by user authorization: the independent full review round of the
-characterization suite (zero production-code changes in this release; suite
-developer-reviewed at plan level; full 306-test regression evidence reusable).
-Applicability and this scope reduction are recorded in the acceptance record and
-remain required in the closure summary and principle compliance report.
+Updated: 2026-10-30 Asia/Shanghai (release **CLOSED**). Integration
+branch: `dev`. Task branch: `codex/m02-w01-preparation` (merged; retained per
+repository precedent).
+Release status: **CLOSED** — see the authoritative [closure summary](closure.md).
+Preparation was pushed at `1935fab`; characterization at `d300c7e`; decision,
+reviews, scope agreement and acceptance through `c312bb3`; frozen candidate
+`5757a7e` with passing CI; integrated to `dev` at `4b8500d`; promoted to `main`
+at `fa893c3` with passing promoted-state CI and clean worktree. The user
+authorized finishing with minimal gates and a cut independent full review
+round (recorded in the closure summary). W02 remains unauthorized until its
+own release starts.
 
 | ID | Scope | Owner / next handoff | Phase | Started | Expected completion | Blockers / remaining gates | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| M02-W01-001 | Characterize existing count execution and decide minimal justified seam | Coordinator / post-acceptance closure sequence | Closure — product accepted | 2026-10-30 | 2026-10-30 | Product acceptance: **PASS** ([record](acceptance.md)); task-completion principle/document checks, frozen exact-candidate CI, `dev`/`main` integration and promotion verification, closure summary and clean worktree pending; W02 unauthorized | None |
+| M02-W01-001 | Characterize existing count execution and decide minimal justified seam | Coordinator / CLOSED | **Done** — merged to `dev` (`4b8500d`), promoted to `main` (`fa893c3`) | 2026-10-30 | 2026-10-30 | None — [closure](closure.md); W02 unauthorized until its own release | `4b8500d` |
 
 Exactly one task is active. W02 implementation has not started. M01 is
 [CLOSED](../release_7/closure.md); the M02 milestone planning reviews approve
