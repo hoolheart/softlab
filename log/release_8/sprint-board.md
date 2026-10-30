@@ -2,14 +2,21 @@
 
 Updated: 2026-10-30 Asia/Shanghai (AR-ED-01…03 closed by Designer). Integration
 branch: `dev`. Current task branch: `codex/m02-w01-preparation`.
-Release status: **OPEN — RESUMED**, on the user's explicit instruction. Preparation
-was committed/pushed at `1935fab`; characterization completed and was pushed at
-`d300c7e` (25-test suite, full 306-test regression green, results recorded).
-The user resumed at the evidence-decision phase.
+Release status: **OPEN — CLOSURE (MINIMAL GATES, USER-APPROVED)**. The user chose
+Option A (finish this release now) with explicitly cut checks. Preparation was
+pushed at `1935fab`; characterization at `d300c7e`; decision + reviews + scope
+agreement through `b47fb3d`. Remaining minimal finish line: AC01 caller-inventory
+check → Product acceptance → principle inspection → frozen exact-candidate CI →
+`dev` merge → `main` promotion and verification → clean worktree → one closure
+summary → CLOSED. Cut by user authorization: the independent full review round
+of the characterization suite (zero production-code changes in this release;
+suite developer-reviewed at plan level; full 306-test regression evidence
+reusable). Applicability and this scope reduction are recorded in the closure
+summary and principle compliance report.
 
 | ID | Scope | Owner / next handoff | Phase | Started | Expected completion | Blockers / remaining gates | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| M02-W01-001 | Characterize existing count execution and decide minimal justified seam | Independent reviewer / characterization review; Tester / test-evidence and failure closure | Product Owner scope **AGREED** for candidate 3 ([scope agreement](reviews/scope-agreement.md)); Architect boundary **APPROVED**, AR-ED-01…03 closed | 2026-10-30 | Release date unset | AC01 caller-inventory consolidation/completeness check before acceptance; independent review/testing, acceptance, CI/integration/promotion pending; W02 unauthorized | None |
+| M02-W01-001 | Characterize existing count execution and decide minimal justified seam | Coordinator / closure sequence per minimal finish line | Closure — minimal gates | 2026-10-30 | 2026-10-30 | Acceptance, exact-candidate CI, `dev`/`main` integration and promotion, closure summary pending; W02 unauthorized | None |
 
 Exactly one task is active. W02 implementation has not started. M01 is
 [CLOSED](../release_7/closure.md); the M02 milestone planning reviews approve
