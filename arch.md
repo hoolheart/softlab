@@ -809,3 +809,23 @@ R4-BASE-SCHED-01/META-01/HDF5-01 retain private executor/text hydration/copy-onl
 reader measures; OBS-004/005/006/DEFECT-2 and CI platform notices remain separately
 tracked. No SQLite parity, universal serializer, durable partial resume/retry,
 W04 adapter/hardware, whole-M01 acceptance or publication is implied.
+
+## M01-W04 model-backed adaptation — implemented candidate
+
+The same [thermal example](examples/thermal_experiment.py) now selects either
+`coordinated` (the unchanged default) or `direct` model-backed adapters. Both
+use the existing acquisition loop and ordered record schema. The direct control
+forwards to the existing mock control; the direct measurement invokes the pure
+thermal body's committed-output observation after each step. Its source boundary
+is the current tick, whereas the coordinator-delivered measurement is from the
+previous tick. Direct observation invokes the callback again and is not a
+contract for stateful or physical sensors. Neither mode uses physical settling.
+
+The default continues to produce the strictly validated version 1 manifest;
+direct runs produce a separately validated version 2 with zero delay and matching
+source ticks and sample recurrence. Legacy absence and unsupported versions
+retain their distinct behavior. The [guide](docs/user-guide/thermal-experiment.md)
+contains an end-to-end headless command and an explicitly unverified physical
+mapping. No VISA simulation, hardware operation, new framework or calibration is
+claimed. This section describes the candidate implementation; release acceptance,
+CI and promotion are recorded separately when established.

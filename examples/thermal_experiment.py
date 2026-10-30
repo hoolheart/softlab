@@ -300,6 +300,35 @@ def _build_simulation(config: ThermalConfig) -> Tuple[
     return coordinator, heater, thermometer
 
 
+class _DirectMeasurement:
+    """Observe this example's pure model output at its committed boundary."""
+
+    def __init__(self, body: SimulatedObject) -> None:
+        self._body = body
+
+    def read(self) -> Any:
+        return self._body.observe_outputs()['reading']
+
+
+class _ControlAdapter:
+    """Forward the example's control operations to the model-backed endpoint."""
+
+    def __init__(self, control: MockControl) -> None:
+        self._control = control
+
+    def write(self, value: Any) -> None:
+        self._control.write(value)
+
+    def read(self) -> Any:
+        return self._control.read()
+
+
+def _timing(delay: int) -> Dict[str, Any]:
+    return {'acquisition': 'post_step', 'measurement_delay_ticks': delay,
+            'source_tick': 'tick-1' if delay else 'tick',
+            'wall_timestamp': 'unix_seconds'}
+
+
 _SCHEMA = [
     ('commanded_power_w', 'Commanded heater power', 'W', False),
     ('measurement_source_tick', 'Measurement source boundary', '1', False),
@@ -315,7 +344,8 @@ def _acquire(config: ThermalConfig, coordinator: Coordinator,
              heater: MockControl, thermometer: MockMeasurement,
              scheduler: Scheduler, *, stop: Optional[StopRequest] = None,
              after_row: Optional[Callable[[RunResult], None]] = None,
-             result: Optional[RunResult] = None) -> DataGroup:
+             result: Optional[RunResult] = None,
+             delay: int = 1) -> DataGroup:
     """Prepare and execute exactly one step per count getter row."""
     stop = stop if stop is not None else StopRequest()
     if result is None:
@@ -324,10 +354,7 @@ def _acquire(config: ThermalConfig, coordinator: Coordinator,
     group.set_meta('example', 'thermal_experiment')
     group.set_meta('configuration', json.dumps(
         asdict(config), sort_keys=True, allow_nan=False))
-    group.set_meta('timing', json.dumps({
-        'acquisition': 'post_step', 'measurement_delay_ticks': 1,
-        'source_tick': 'tick-1', 'wall_timestamp': 'unix_seconds',
-    }, sort_keys=True))
+    group.set_meta('timing', json.dumps(_timing(delay), sort_keys=True))
     record = DataRecord('thermal_trace', [dict(zip(
         ('name', 'label', 'unit', 'dependent'), definition))
         for definition in _SCHEMA])
@@ -335,7 +362,7 @@ def _acquire(config: ThermalConfig, coordinator: Coordinator,
     result.group = group
     readers = {
         'commanded_power_w': heater.read,
-        'measurement_source_tick': lambda: coordinator.tick - 1,
+        'measurement_source_tick': lambda: coordinator.tick - delay,
         'sim_time_s': lambda: coordinator.sim_time,
         'temperature_degc': thermometer.read,
         'tick': lambda: coordinator.tick,
@@ -457,7 +484,7 @@ def _check_manifest(manifest: Any) -> dict:
     if (type(manifest.get('schema')) is not str
             or manifest['schema'] != 'softlab.thermal-reference'):
         raise ValueError('schema: unsupported manifest schema')
-    if type(manifest.get('version')) is not int or manifest['version'] != 1:
+    if type(manifest.get('version')) is not int or manifest['version'] not in (1, 2):
         raise ValueError('version: unsupported manifest version')
     _manifest_object(manifest, ('schema', 'version', 'run_id', 'configuration',
                      'model', 'procedure', 'columns', 'clock', 'software',
@@ -518,8 +545,7 @@ def _check_manifest(manifest: Any) -> dict:
         _manifest_text(clock[key], f'clock.{key}')
     if (type(clock['measurement_delay_ticks']) is not int or clock != {
             'dt': config['dt'], 'simulation_unit': 's', 'acquisition': 'post_step',
-            'measurement_delay_ticks': 1, 'source_tick': 'tick-1',
-            'wall_timestamp': 'unix_seconds'}):
+            **_timing(1 if manifest['version'] == 1 else 0)}):
         raise ValueError('clock: inconsistent acquisition timing')
     result['clock'] = clock
     software = result['software']
@@ -644,12 +670,12 @@ def _capture_source_identity() -> dict:
 
 
 def _make_manifest(config: ThermalConfig, group: DataGroup,
-                   result: RunResult) -> dict:
+                   result: RunResult, delay: int = 1) -> dict:
     """Build and validate a completed-acquisition snapshot before persistence."""
     if result.acquisition != 'completed':
         raise ValueError('outcome.acquisition: manifest requires completed acquisition')
     manifest = {
-        'schema': 'softlab.thermal-reference', 'version': 1,
+        'schema': 'softlab.thermal-reference', 'version': 1 if delay else 2,
         'run_id': str(group.id), 'configuration': asdict(config),
         'model': {**_MODEL, 'units': dict(_MODEL['units'])},
         'procedure': {'name': 'thermal_count',
@@ -657,8 +683,7 @@ def _make_manifest(config: ThermalConfig, group: DataGroup,
                       'command': 'constant_power', 'requested_points': config.points},
         'columns': group.record('thermal_trace').columns,
         'clock': {'dt': config.dt, 'simulation_unit': 's',
-                  'acquisition': 'post_step', 'measurement_delay_ticks': 1,
-                  'source_tick': 'tick-1', 'wall_timestamp': 'unix_seconds'},
+                  **_timing(delay)},
         'software': {'softlab_version': softlab.__version__,
                      'python_version': platform.python_version()},
         'source': _capture_source_identity(),
@@ -695,24 +720,27 @@ def _validate_manifest_data(manifest: dict, group: DataGroup) -> None:
         if type(text) is not str:
             raise ValueError(f'{key}: missing legacy text metadata')
         legacy = json.loads(text)
-        expected = config if key == 'configuration' else {
-            'acquisition': 'post_step', 'measurement_delay_ticks': 1,
-            'source_tick': 'tick-1', 'wall_timestamp': 'unix_seconds'}
+        expected = config if key == 'configuration' else _timing(
+            1 if manifest['version'] == 1 else 0)
         if legacy != expected:
             raise ValueError(f'{key}: differs from manifest')
     values = record.table
     if not np.isfinite(values.to_numpy(dtype=float)).all():
         raise ValueError('samples: nonfinite numeric value')
     ticks = np.arange(1, n + 1)
-    expected_columns = {'tick': ticks, 'measurement_source_tick': ticks - 1,
+    delay = 1 if manifest['version'] == 1 else 0
+    expected_columns = {'tick': ticks, 'measurement_source_tick': ticks - delay,
                         'sim_time_s': ticks * dt,
                         'commanded_power_w': np.full(n, config['power'])}
     temperature = config['initial_temperature']
     expected_temperatures = []
     for _ in range(n):
-        expected_temperatures.append(temperature)
+        if delay:
+            expected_temperatures.append(temperature)
         temperature += dt * (config['power'] - config['conductance'] *
                              (temperature - config['ambient_temperature'])) / config['heat_capacity']
+        if not delay:
+            expected_temperatures.append(temperature)
     expected_columns['temperature_degc'] = expected_temperatures
     for key, expected in expected_columns.items():
         actual = values[key].to_numpy(dtype=float)
@@ -852,7 +880,8 @@ def _plot_record(record: DataRecord, path: Path) -> None:
 
 def execute(config: ThermalConfig, output_dir: Path, *,
             stop: Optional[StopRequest] = None,
-            after_row: Optional[Callable[[RunResult], None]] = None) -> RunResult:
+            after_row: Optional[Callable[[RunResult], None]] = None,
+            adapter: str = 'coordinated') -> RunResult:
     """Execute once, retaining partial rows and operational failure evidence.
 
     Validation and output-collision errors raise before acquisition. Operational
@@ -860,6 +889,9 @@ def execute(config: ThermalConfig, output_dir: Path, *,
     The synchronous after_row callback must not mutate execution state.
     """
     _validate_config(config)
+    if adapter not in ('coordinated', 'direct'):
+        raise ValueError('Unsupported adapter')
+    delay = 1 if adapter == 'coordinated' else 0
     try:
         asyncio.get_running_loop()
     except RuntimeError:
@@ -881,16 +913,20 @@ def execute(config: ThermalConfig, output_dir: Path, *,
     try:
         scheduler = _make_scheduler()
         coordinator, heater, thermometer = _build_simulation(config)
+        if adapter == 'direct':
+            heater = _ControlAdapter(heater)
+            thermometer = _DirectMeasurement(coordinator.station.object('body'))
         result._coordinator = coordinator
         stage = 'acquisition'
         original = _acquire(config, coordinator, heater, thermometer, scheduler,
-                            stop=stop, after_row=after_row, result=result)
+                            stop=stop, after_row=after_row, result=result, delay=delay)
         result.group = original
         result.acquisition = 'completed'
         result.persistence = 'failed'
         stage = 'persistence'
         original.set_meta(_MANIFEST_KEY, _encode_manifest(
-            _make_manifest(config, original, result)))
+            _make_manifest(config, original, result) if delay else
+            _make_manifest(config, original, result, delay=delay)))
         writer = HDF5DataBackend()
         if (not writer.connect({'path': str(data_path)})
                 or not writer.connected or writer.errors):
@@ -994,10 +1030,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         parser.add_argument('--' + key.replace('_', '-'), default=value,
                             type=int if key == 'points' else float)
     parser.add_argument('--stop-after', type=int)
+    parser.add_argument('--adapter', choices=('coordinated', 'direct'),
+                        default='coordinated')
     arguments = vars(parser.parse_args(argv))
     inspect_file = arguments.pop('inspect_file')
     group_id = arguments.pop('group_id')
     stop_after = arguments.pop('stop_after')
+    adapter = arguments.pop('adapter')
     output_dir = arguments.pop('output_dir')
     try:
         if inspect_file is not None:
@@ -1026,7 +1065,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             if result.completed_rows == stop_after:
                 stop.request()
 
-        result = execute(config, output_dir, stop=stop, after_row=after_row)
+        result = execute(config, output_dir, stop=stop, after_row=after_row,
+                         adapter=adapter)
         if not result.overall_success:
             raise RunFailure(result) from result.cause
         group = result.loaded

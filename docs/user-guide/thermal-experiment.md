@@ -77,6 +77,36 @@ simulation acquisition time `k * dt` with the delivered reading sourced from
 boundary `k - 1`. The PNG uses acquisition time, so its first point at one second
 shows the initial temperature. It does not remove or compensate for this latency.
 
+## Adapter rehearsal and physical mapping
+
+Select the alternate model-backed adapters with a fresh destination:
+
+```sh
+MPLBACKEND=Agg python examples/thermal_experiment.py --adapter direct --output-dir /tmp/thermal-direct-01
+```
+
+This single command executes the same acquisition, saves and reopens its HDF5
+record, verifies its manifest and writes the PNG. Inspect it separately with
+`python examples/thermal_experiment.py --inspect-file /tmp/thermal-direct-01/thermal.h5`.
+The default `coordinated` mode uses the previous-boundary measurement edge.
+The `direct` mode forwards the control operations and reads the body's committed
+output immediately after each step. Its source boundary is `tick`, delay is zero,
+and default temperatures are `21, 21.9, 22.71, 23.439, 24.0951, 24.68559,
+25.217031, 25.6953279` degC. Both modes issue one command and take one step per
+row with the same ordered record. Direct observation invokes the model's pure
+observation callback again; this is not a general guarantee for stateful sensors.
+Version 1 manifests retain the coordinated policy; version 2 identifies the direct
+policy. Both are checked against their declared timing and numerical samples.
+
+A future physical setup would map control `write`/`read` to a heater power
+setpoint in W and measurement `read` to a thermometer value in degC. Its owner
+must define connection and cleanup, configuration, read/write timeouts and error
+handling, and whether setpoint readback is a command or a measured power. A
+separate physical settling policy would wait or observe a documented stability
+condition using elapsed physical time before reading. It cannot be inferred from
+simulation steps, wall timestamps, or either model observation delay. No real
+instrument, settling behavior, calibration or VISA simulation is validated here.
+
 ## Stored result and safe inspection
 
 The `thermal_experiment` DataGroup contains a `thermal_trace` record with these
@@ -95,8 +125,9 @@ Only temperature is marked dependent. `timestamp` is Unix wall time, separate
 from simulation time; exclude it and the UUID when comparing repeat traces.
 Group metadata retains `example`, JSON `configuration` and JSON `timing`,
 and adds the closed JSON-text `thermal_manifest` envelope for new complete runs.
-The timing text states post-step acquisition, one-tick measurement delay,
-source `tick-1` and Unix wall seconds. The manifest below captures bounded
+For the default mode, timing text states post-step acquisition, one-tick measurement
+delay, source `tick-1` and Unix wall seconds. Direct mode records zero delay and
+source `tick`. The manifest below captures bounded
 producer context; it does not lock dependencies or certify physical calibration.
 
 The runner checks save/connect results and backend errors, disconnects the writer,
@@ -267,7 +298,8 @@ interruption/failure partials remain in memory without a durable outcome artifac
 ## Typed stored context and a fresh-process inspector
 
 New completed acquisitions contain `thermal_manifest`, schema
-`softlab.thermal-reference`, integer version `1`, encoded as one JSON string in
+`softlab.thermal-reference`, integer version `1` for coordinated or `2` for
+direct observations, encoded as one JSON string in
 the same HDF5 group as the samples. No sidecar or backend-wide serializer is used.
 The schema is closed at every object; missing/undeclared fields, duplicate keys,
 wrong types, arbitrary objects and nonfinite numbers are rejected. Encoding has
@@ -278,12 +310,12 @@ dependency and available Git dirty state.
 
 | Field | Meaning and declared types |
 | --- | --- |
-| schema, version, run_id | Fixed schema text, integer1, canonical UUID text tied to the stored group. |
+| schema, version, run_id | Fixed schema text, integer version 1 (coordinated) or 2 (direct), canonical UUID text tied to the stored group. |
 | configuration | All seven ThermalConfig fields; points positive int, other values finite floats with the same stability validation as generation. |
 | model | Fixed lumped thermal body/explicit Euler equation, educational validity text, and complete parameter-unit object. |
 | procedure | Fixed thermal_count/constant-power/once-before-row semantics and requested_points int. |
 | columns | Ordered list of name/label/unit strings plus dependent bool; exact six-column stored definitions above. |
-| clock | dt float, seconds/post_step, integer one-boundary delay, tick-1 source and Unix wall timestamp meanings. |
+| clock | dt float, seconds/post_step, integer delay, tick-1 or tick source and Unix wall timestamp meanings. |
 | software | Producer softlab_version and python_version strings. |
 | source | Reference path/digest algorithm/byte scope strings; digest/revision strings or null; dirty bool or null; explicit unavailable-reason strings when unavailable. |
 | outcome | Named completed-acquisition snapshot, requested/completed rows and final_tick ints, final_sim_time float; later persistence/plot/cleanup/overall states explicitly not_yet_established. |
