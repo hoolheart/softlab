@@ -15,6 +15,8 @@ preparation tool; agreement with physical reality requires separate validation.
 - [Roadmap](roadmap.md): twelve month-length milestones and exit gates.
 - [Milestone M01](milestone-01.md): four week-length releases for the first month.
 - [M01-W01 PRD](release-01-prd.md): detailed requirements for the first release.
+- [Milestone M02](milestone-02.md): proposed execution scope, four increments,
+  acceptance gates and dispositions informed by M01.
 - [Hardware decision and pilot](hardware-pilot.md): M04 GO/DEFER/NO-GO and a
   separately scheduled conditional M05 pilot with distinct qualification claims.
 - [Recommended instruments](recommended-instruments.md): below-US$100 target rig,
@@ -25,7 +27,7 @@ preparation tool; agreement with physical reality requires separate validation.
   results and the limits of the checks performed.
 
 `M01`–`M12` are relative development months, approximately four working weeks
-each. `M01-W01`–`M01-W04` are weekly acceptance increments, not promised calendar
+each. `M01-W01`–`M01-W04` and proposed `M02-W01`–`M02-W04` are weekly acceptance increments, not promised calendar
 deadlines or mandatory package publications. They do not rename historical
 `log/release_1`–`release_3`, and do not imply a Python package version or tag.
 At execution kickoff assign an unused process-log namespace and package version
@@ -35,7 +37,9 @@ move dates or reduce scope instead of bypassing gates.
 
 ## Verified planning baseline
 
-The source inspection baseline is `dev` commit `82883ad`; historical Release 3
+The initial planning source inspection baseline was `dev` commit `82883ad`;
+M01 subsequently closed with evidence in [its closure record](../log/release_7/closure.md).
+Historical Release 3
 completion is recorded in [completion_report.md](../log/release_3/completion_report.md).
 Its accepted/promotion and 210-test statements are historical evidence, not checks
 rerun for this plan. [arch.md](../arch.md) documents the implemented primitives.
