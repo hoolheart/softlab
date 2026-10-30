@@ -9,7 +9,7 @@ The user resumed at the evidence-decision phase.
 
 | ID | Scope | Owner / next handoff | Phase | Started | Expected completion | Blockers / remaining gates | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| M02-W01-001 | Characterize existing count execution and decide minimal justified seam | Designer (sw-celeste) / Architect boundary review, Product Owner scope agreement | Evidence decision in progress | 2026-10-30 | Release date unset | Architect/Product Owner decision agreement, independent review/testing, acceptance, CI/integration/promotion all pending | None |
+| M02-W01-001 | Characterize existing count execution and decide minimal justified seam | Designer (sw-celeste) / Architect boundary review, Product Owner scope agreement | Evidence decision recorded — minimal additive seam accepted (see [evidence-decision](design/evidence-decision.md)) | 2026-10-30 | Release date unset | Architect/Product Owner decision agreement, independent review/testing, acceptance, CI/integration/promotion all pending | None |
 
 Exactly one task is active. W02 implementation has not started. M01 is
 [CLOSED](../release_7/closure.md); the M02 milestone planning reviews approve
