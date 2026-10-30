@@ -1,8 +1,8 @@
-# M01 — Proposed reference experiment milestone
+# M01 — Reference experiment milestone
 
-Status: **IN PROGRESS**. M01-W01, M01-W02 and M01-W03 product accepted; W04 remains
-proposed. Four working-week increments including review
-and integration. Purpose: prove the complete simulation → procedure → record →
+Status: **CLOSED**. All four weekly increments and the milestone product outcome
+are accepted; see the [authoritative closure](../log/release_7/closure.md).
+The plan comprised four working-week increments including review and integration. Purpose: prove the complete simulation → procedure → record →
 persistence → plot path before extracting a framework. No hardware is needed.
 
 Use one deterministic thermal step-response example. A lumped thermal body is
@@ -32,7 +32,8 @@ both explicitly passed Python3.9/3.13. The definitive closure record preserves
 limits and historical gate evidence. Post-release documentation reconciliation
 has separate record-integration checks; it does not reopen W03 acceptance.
 
-W04 remains proposed; the complete M01 milestone is not yet accepted.
+M01-W04 and the complete milestone are [CLOSED](../log/release_7/closure.md),
+with product acceptance, exact-candidate CI and promoted-state verification recorded.
 
 ## Weekly execution discipline
 

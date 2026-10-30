@@ -1,9 +1,9 @@
 # M01-W04 independent product acceptance
 
 Date: 2026-10-30. Reviewer: independent of example and guide implementation.
-Verdict: **PASS for the bounded W04 product outcome**, conditional only in the
-sense that release integration and promotion remain separate uncompleted gates.
-This is not a CLOSED release; the M01 product outcome is accepted separately in the milestone matrix. The
+Verdict: **PASS for the bounded W04 product outcome**. The M01 product outcome
+is accepted in the milestone matrix; subsequent integration and promotion are
+recorded in the [authoritative closure](closure.md). The
 reviewer also executed tests and relies on the separately authored independent
 code review for code-review conclusions.
 
@@ -16,11 +16,11 @@ code review for code-review conclusions.
 | AC-05 | PASS: independent full regression and targeted failure, cleanup, legacy and manifest tests; evidence and timing of later nonbehavioral changes are in tester results. |
 | AC-06 | PASS for the documented backlog and milestone assessment: [backlog](follow-on-backlog.md) records proposed dispositions, and [matrix](milestone-acceptance.md) links accepted weekly evidence and records the fresh-environment exit evidence. Later milestone work is not authorized by this assessment. |
 | AC-07 | PASS for applicable pre-integration review and testing: independent design and code review, tester evidence and [principle inspection](reviews/principle-inspection.md) are recorded. Review findings were closed by their reviewer; no test failures remain open. Actual local environment and warning limits are reported. Candidate-level checks remain separate. |
-| AC-08 | PENDING: exact frozen candidate CI before dev integration, promotion, promoted-state checks, final clean worktree and closure summary are not yet established. |
+| AC-08 | PASS: candidate CI, integration and promotion verification are recorded in the [closure summary](closure.md). |
 
 The roadmap's fresh-environment condition is met by the isolated Python 3.9.6
 walkthrough and independent repeat in [test results](test/results.md), with the
-installation retry, pip upgrade and pandas warnings recorded. Product acceptance
-does not complete the CI, integration, promotion or release closure gates. Existing baseline R4-BASE-SCHED-01, R4-BASE-META-01,
+installation retry, pip upgrade and pandas warnings recorded. The subsequent CI, integration, promotion and release closure facts are recorded
+in the closure summary. Existing baseline R4-BASE-SCHED-01, R4-BASE-META-01,
 R4-BASE-HDF5-01, OBS-004/005/006 and DEFECT-2 remain tracked. No hardware, VISA, package publication, full Python 3.9 regression or universal
 warning-free claim is made.
