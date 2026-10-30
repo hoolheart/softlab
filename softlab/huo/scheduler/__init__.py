@@ -12,3 +12,4 @@ from softlab.huo.scheduler.scheduler import (
     Scheduler,
 )
 from softlab.huo.scheduler.impl_scheduler import get_scheduler
+from softlab.huo.scheduler.serial import SerialScheduler
