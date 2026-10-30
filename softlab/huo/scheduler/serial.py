@@ -7,6 +7,14 @@ from typing import Any, Dict, Optional
 from .scheduler import Action, Scheduler
 
 
+class _SchedulerInitFailure(BaseException):
+    """Transport constructor primary and cleanup failure to the runner."""
+
+    def __init__(self, primary, cleanup):
+        self.primary = primary
+        self.cleanup = cleanup
+
+
 class _ActionTimeout(Exception):
     """Distinguish an action-raised TimeoutError from a wait deadline."""
 
@@ -21,14 +29,32 @@ class SerialScheduler(Scheduler):
     awaitables but cannot preempt a synchronous blocking action.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, _capture_failures: bool = False) -> None:
         self._loop = asyncio.new_event_loop()
+        try:
+            self._initialize()
+        except BaseException as primary:
+            try:
+                self._loop.close()
+            except BaseException as cleanup:
+                if _capture_failures:
+                    raise _SchedulerInitFailure(primary, cleanup) from primary
+                if not isinstance(primary, Exception):
+                    raise primary from cleanup
+                if not isinstance(cleanup, Exception):
+                    raise cleanup from primary
+                raise primary from cleanup
+            raise
+
+    def _initialize(self) -> None:
+        """Initialize owned scheduler state after loop allocation."""
         self._running = False
         self._points = {}
         self._done = {}
         self.last_error = ''
         self.last_exception = None
         self.cleanup_errors = []
+        self.secondary_errors = []
         self.work_drained = False
         self.loop_closed = False
 
@@ -53,6 +79,7 @@ class SerialScheduler(Scheduler):
             self.stop()
         except BaseException as exc:
             self.cleanup_errors.append(f'Scheduler stop: {exc}')
+            self.secondary_errors.append(('Scheduler stop', exc))
             if not isinstance(exc, Exception):
                 interruption = exc
         try:
@@ -65,6 +92,7 @@ class SerialScheduler(Scheduler):
             self.work_drained = True
         except BaseException as exc:
             self.cleanup_errors.append(f'Owned loop drain: {exc}')
+            self.secondary_errors.append(('Owned loop drain', exc))
             if interruption is None and not isinstance(exc, Exception):
                 interruption = exc
         try:
@@ -72,6 +100,7 @@ class SerialScheduler(Scheduler):
             self.loop_closed = self._loop.is_closed()
         except BaseException as exc:
             self.cleanup_errors.append(f'Owned loop close: {exc}')
+            self.secondary_errors.append(('Owned loop close', exc))
             if interruption is None and not isinstance(exc, Exception):
                 interruption = exc
         if interruption is not None:
