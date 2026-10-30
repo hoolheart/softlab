@@ -9,7 +9,7 @@ The user resumed at the evidence-decision phase.
 
 | ID | Scope | Owner / next handoff | Phase | Started | Expected completion | Blockers / remaining gates | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| M02-W01-001 | Characterize existing count execution and decide minimal justified seam | Architect (sw-jerry) / re-review evidence decision; Product Owner scope agreement pending | AR-ED-01…03 **CLOSED by Designer** (documentation-only corrections; see [evidence-decision review](reviews/evidence-decision-review.md)); Architect re-review requested | 2026-10-30 | Release date unset | Architect re-review/Product Owner agreement, independent review/testing, acceptance, CI/integration/promotion all pending | None |
+| M02-W01-001 | Characterize existing count execution and decide minimal justified seam | Product Owner (sw-prod) / scope agreement on the Architect-approved evidence decision | Architect boundary review **APPROVED**; AR-ED-01…03 **CONFIRMED CLOSED** by Architect (see [evidence-decision review](reviews/evidence-decision-review.md)) | 2026-10-30 | Release date unset | Product Owner scope agreement, independent review/testing, acceptance, CI/integration/promotion all pending | None |
 
 Exactly one task is active. W02 implementation has not started. M01 is
 [CLOSED](../release_7/closure.md); the M02 milestone planning reviews approve

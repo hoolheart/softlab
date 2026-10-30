@@ -2,11 +2,13 @@
 
 Reviewer: Architect (sw-jerry role) | Date: 2026-10-30 Asia/Shanghai
 
-Verdict: **CHANGES REQUESTED**. The minimal additive executor seam is
-architecturally sound and justified in direction, but the decision record needs
-three documentation corrections before Architect boundary approval. This review
-does not authorize W02 implementation, change the PRD, or close any independent
-review, testing, acceptance, CI, integration or promotion gate.
+Verdict: **APPROVED** (final re-review: 2026-10-30 Asia/Shanghai).
+AR-ED-01, AR-ED-02 and AR-ED-03 are **CONFIRMED CLOSED**. The minimal additive
+executor seam is architecturally sound, and the corrected decision record stays
+within the recorded evidence. This grants Architect boundary approval only; it
+does not authorize W02 implementation, change the PRD, or close Product Owner
+scope agreement, independent review, testing, acceptance, CI, integration or
+promotion gates.
 
 ## Inputs and review scope
 
@@ -219,3 +221,52 @@ new isolation-caveat paragraph).
 actually isolates it, or (for side-effect ordering) states the residual W02
 obligation instead of citing non-isolating references. The unknown/missing-
 point and after-stop rows retain their valid F-03/T02/T10 citations.
+
+## Architect final re-review (2026-10-30 Asia/Shanghai)
+
+Reinspection covered the corrected evidence decision, the Designer closure
+records above, the recorded characterization results, and the cited regression
+assertions. This was a documentation and recorded-evidence review; no new
+runtime test was executed and no production code, test or PRD was changed.
+
+### AR-ED-01 — CONFIRMED CLOSED
+
+Sections 3.1 and 3.5 now distinguish unchanged legacy `Process.reset()` run
+eligibility, cooperative abort and append-on-repeat behavior from the thermal
+caller-owned `reset_after_run()` policy and fresh-run construction. The legacy
+contract has no new terminal/drained guard and introduces no scheduler reset
+API. These statements trace to T03, T08, T10 and F-06 without conflating their
+scopes. W02 carries forward the legacy behavior and caller-owned model reset;
+scheduler-level reset/lifecycle refinement remains W03 scope.
+
+### AR-ED-02 — CONFIRMED CLOSED
+
+The section 1 T06 row and section 2 candidate-1 rationale now limit the
+second-client demonstration to serial point/action dispatch through public
+`count`/`run_process`, acquisition-policy separation, action-failure
+propagation and caller-visible partial consumption. Terminal state,
+cooperative stop acknowledgment and owned cleanup are attributed only to the
+thermal T08/T09 evidence. The monitoring fixture is no longer presented as a
+second full lifecycle client, while the demonstrated basis for the minimal
+executor seam remains intact.
+
+### AR-ED-03 — CONFIRMED CLOSED
+
+Section 3.2 now cites
+`CountSchedulerContractTests.test_serial_action_success_failure_and_unsupported_actions`
+for chained, threaded and re-commit rejection on a started thermal scheduler.
+That regression is within the recorded 306-test full discovery that passed at
+baseline `35e6e9b`; its assertions match the cited rejection outcomes. F-03 is
+no longer cited for re-commit, T02 is retained only as not-started evidence,
+and the isolation caveat explicitly rejects interpreting T02's never-started
+chained/threaded results as mode-isolating proof. Rejection before action side
+effects remains a required W02 assertion rather than an overclaimed existing
+result.
+
+### Final verdict
+
+**APPROVED — 2026-10-30 Asia/Shanghai.** All three Architect review issues are
+closed and the evidence decision receives Architect boundary approval. Product
+Owner scope agreement and all independent review, testing, acceptance,
+exact-candidate CI, integration, promotion and release-closure gates remain
+separate and pending. This verdict does not authorize W02 implementation.
