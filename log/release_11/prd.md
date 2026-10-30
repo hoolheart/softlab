@@ -51,7 +51,10 @@ scheduler repair, storage repair, global scheduler replacement, generalized
 provenance, new scan behavior, automatic retry, rollback or durable recovery is
 implied. M03 owns broader provenance, M04 physical contracts, M05 scan
 extensions and M07 durable recovery. W04 does not expand the supported bounded
-runner or silently change legacy `Process.reset()`.
+runner or silently change legacy `Process.reset()`. The Product Owner approved
+the explicit [pre-run setup-failure compatibility change](reviews/setup-failure-product-decision.md):
+when no runner was created, cleanup flags are false and thermal reset is
+ineligible; other behavior remains subject to the acceptance criteria above.
 
 R4-BASE-SCHED-01/F-01 and generic timeout F-02 remain tracked; use the accepted
 serial seam rather than the defective private generic scheduler. R4-BASE-META-01,
