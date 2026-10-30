@@ -829,3 +829,26 @@ contains an end-to-end headless command and an explicitly unverified physical
 mapping. No VISA simulation, hardware operation, new framework or calibration is
 claimed. This section describes the candidate implementation; release acceptance,
 CI and promotion are recorded separately when established.
+
+## M02-W02 bounded count execution
+
+`huo.process.run_count` adds an owned, synchronous execution boundary for a
+fresh `Counter` and its caller-owned record. It uses the public
+`huo.scheduler.SerialScheduler`, a serial scheduler with a private event loop;
+it does not use or repair the existing global scheduler. The caller configures
+and advances the model through the existing count hooks, supplies row-count and
+boundary readers, and owns control writes, model resources and persistence.
+Each successful count action must add one complete row. The result independently
+reports completed rows, last observed boundary, acquisition outcome, primary
+cause and owned-cleanup diagnostics. A boundary can advance without a completed
+row when a read fails. Cooperative stop is acknowledged before another cycle;
+a request after the final row leaves completion unchanged.
+
+The serial scheduler rejects chained and threaded actions and closes its owned
+loop via `close()`. Its timeout can interrupt a cooperative awaitable, not a
+synchronous blocking action. The runner rejects invocation inside an already
+running event loop and has no borrowed scheduler or loop mode. Existing `count`,
+`scan`, scheduler and process behavior is unchanged. The thermal CLI still owns
+its existing executor; migration is scheduled for M02-W04. The distinct
+[synthetic signal monitor](examples/signal_monitor.py) uses the shared runner;
+[usage guidance](docs/user-guide/bounded-count.md) describes the contract.
