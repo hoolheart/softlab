@@ -2,14 +2,15 @@
 
 Updated: 2026-10-30 Asia/Shanghai (characterization executed). Integration
 branch: `dev`. Current task branch: `codex/m02-w01-preparation`.
-Release status: **OPEN — RESUMED**, on the user's explicit instruction to
-continue and finish release 8. Preparation was committed/pushed at `1935fab`;
-the remaining approved sequence is characterization → evidence decision →
-independent checks → closure per [tasks](tasks.md).
+Release status: **OPEN — PAUSED**, on the user's explicit instruction. Preparation
+was committed/pushed at `1935fab`; characterization completed and was pushed at
+`d300c7e` (25-test suite, full 306-test regression green, results recorded).
+The user paused before the evidence-decision phase; resume instruction required
+to continue.
 
 | ID | Scope | Owner / next handoff | Phase | Started | Expected completion | Blockers / remaining gates | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| M02-W01-001 | Characterize existing count execution and decide minimal justified seam | Tester (sw-mike) / Designer evidence review | Characterization executed; evidence decision next | 2026-10-30 | Release date unset | Evidence decision, independent review/testing, acceptance, CI/integration/promotion all pending | None |
+| M02-W01-001 | Characterize existing count execution and decide minimal justified seam | Coordinator / user resume instruction | **PAUSED**: characterization executed; evidence decision not started | 2026-10-30 | Release date unset | Evidence decision, independent review/testing, acceptance, CI/integration/promotion all pending | None |
 
 Exactly one task is active. W02 implementation has not started. M01 is
 [CLOSED](../release_7/closure.md); the M02 milestone planning reviews approve
