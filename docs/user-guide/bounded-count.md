@@ -47,3 +47,21 @@ Only unchained, nonthreaded actions are supported. A timeout can interrupt a
 cooperative awaitable, but cannot preempt a blocking synchronous action.
 Legacy `count` and `scan` APIs retain their existing behavior; the thermal CLI
 has not yet migrated to this execution seam.
+
+Each accepted bounded run has an in-memory `result.run_id` UUID. Use a fresh
+Counter, record, model and stop request for each run. A Counter already used by
+`run_count` is rejected before its row-count reader is called; a Counter used
+only through legacy APIs cannot be identified reliably, so supplying a fresh
+one remains the caller's responsibility. There is no automatic retry or resume.
+Legacy `Process.reset()` semantics are unchanged.
+
+`result.boundary_observed` distinguishes no successful boundary observation
+from a successfully observed value of `None`. The last observed boundary can be
+stale after a later reader failure. `result.secondary_errors` retains ordered
+`(stage, exception)` pairs alongside the existing string diagnostics; a primary
+failure remains in `result.cause`.
+
+Use `reset_after_count(result, reset_callback)` to invoke a caller-owned model
+reset only after terminal state, owned-work drain and loop closure. A reset
+failure propagates unchanged and does not rewrite the prior result or rerun the
+acquisition. This helper does not make the old Counter eligible for reuse.

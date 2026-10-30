@@ -852,3 +852,16 @@ running event loop and has no borrowed scheduler or loop mode. Existing `count`,
 its existing executor; migration is scheduled for M02-W04. The distinct
 [synthetic signal monitor](examples/signal_monitor.py) uses the shared runner;
 [usage guidance](docs/user-guide/bounded-count.md) describes the contract.
+
+## M02-W03 lifecycle refinement
+
+Bounded results carry an in-memory run UUID, boundary-observation flag and
+ordered secondary exception evidence. Row and boundary readers are observed
+independently; the last observed boundary can be stale if a subsequent read
+fails. A bounded Counter is claimed once and fresh runs require fresh caller
+state. A Counter used through legacy APIs cannot reliably be detected as such;
+the caller must supply a fresh one. `reset_after_count` guards a caller-owned
+model reset on terminal, drained and closed evidence without changing legacy
+`Process.reset()` or enabling executor reuse. No retry or durable resume is
+introduced. Cleanup remains owned by the run and never disposes global or
+borrowed execution resources.
