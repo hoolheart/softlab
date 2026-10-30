@@ -136,3 +136,86 @@ Designer should close AR-ED-01 through AR-ED-03 in the evidence-decision record
 with documentation-only corrections and request Architect re-review. No new
 production implementation or broadened characterization scope is authorized by
 these findings.
+
+## Issue closure records (Designer, 2026-10-30 Asia/Shanghai)
+
+Closure owner: Software Designer (sw-celeste role). All corrections are
+documentation-only edits to
+[evidence-decision.md](../design/evidence-decision.md); no production code,
+test, or PRD change was made. Final acceptance rests with the Architect on
+reinspection.
+
+### AR-ED-01 — CLOSED by owner (pending Architect reinspection)
+
+**What changed:** Section 3.5 was rewritten to separate the three behaviors
+previously conflated under "reset": (1) legacy `Process.reset()` restores run
+eligibility and, while running, signals cooperative abort without preemption
+(T08), with no terminal/drained precondition and no record clearing — legacy
+count/scan repeat appends rows (F-06, T03, T10), and the seam preserves this
+verbatim; (2) thermal `reset_after_run()` is caller-owned post-run model reset
+with terminal/drained/closed preconditions, is not a `Scheduler.reset()` API,
+and does not restore executor eligibility; (3) repeat is fresh-run
+construction with fresh identities (T10). Section 3.5 now states the W02
+obligation explicitly: no scheduler reset API is defined; legacy
+`Process.reset()`/abort and append-on-repeat semantics are a W02 carry-forward
+obligation; post-run model reset stays caller-owned; scheduler-level
+reset/lifecycle refinement is W03 scope. Section 3.1's Interface row was
+qualified to reference the unchanged legacy reset semantics.
+
+**Where:** `log/release_8/design/evidence-decision.md`, sections 3.1 and 3.5.
+
+**Closure statement:** The corrected boundary is internally consistent with
+T03 (reset/repeat-append), T08 (reset-during-running-body signals abort
+without preemption; no terminal/drained guard on legacy reset), T10 (fresh
+runs, append-not-clear), and F-06 (legacy append semantics). No new scheduler
+reset API or new guard on unchanged legacy `Process.reset()` is implied.
+
+### AR-ED-02 — CLOSED by owner (pending Architect reinspection)
+
+**What changed:** The candidate-1 rationale in section 2 now limits the
+two-client shared shape to what T06/T07 actually demonstrate: caller-owned
+serial executor with private loop, one unchained nonthreaded `Action` per
+point, commit/join per boundary through public `count`/`run_process`, and
+truthful action-failure propagation with caller-visible partial consumption.
+The claims of truthful terminal state, cooperative stop acknowledgment, and
+owned cleanup are now attributed solely to the thermal client (T08/T09); the
+text explicitly records that the monitoring fixture implements no terminal
+result, stop acknowledgment, owned-work drain, or cleanup diagnostics, and
+that its test cleanup only stops and closes the fixture scheduler. The
+section-1 T06 evidence row was likewise narrowed: "execution/lifecycle shape"
+became the demonstrated serial execution shape (executor reuse through public
+`count`/`run_process`), with an explicit note that T06/T07 do not demonstrate
+terminal-state or owned-cleanup behavior.
+
+**Where:** `log/release_8/design/evidence-decision.md`, section 1 (T06 row)
+and section 2 (candidate-1 rationale).
+
+**Closure statement:** Terminal state, cooperative stop, and owned cleanup
+remain thermal-derived W02 contract obligations (sections 3.3/3.4/3.5
+unchanged in substance). The concrete evidence for the minimal executor seam —
+executor reuse and acquisition-policy separation across two real clients — is
+retained; the core verdict is unchanged.
+
+### AR-ED-03 — CLOSED by owner (pending Architect reinspection)
+
+**What changed:** Section 3.2 now cites the recorded regression
+`CountSchedulerContractTests.test_serial_action_success_failure_and_unsupported_actions`
+(`tests/test_thermal_example.py`, green within the recorded 306-test full
+discovery at baseline `35e6e9b`) as the isolating evidence for chained-action,
+threaded-action, and re-commit rejection, each asserted on a **started**
+thermal scheduler. The F-03 citation for re-commit was removed (F-03 records
+unknown/missing-point and after-stop behavior only). The T02 citation on the
+chained/threaded rows was removed from those rows and T02 is retained only on
+the not-started row, with an explicit isolation caveat: the T02 fixture makes
+its chained/threaded commits against a never-started scheduler, so those
+`False` results do not isolate the rejection modes. The caveat also records
+that W02 must prove rejection before action side effects in its own suite and
+that no side-effect-ordering claim is made for the current T02 fixture.
+
+**Where:** `log/release_8/design/evidence-decision.md`, section 3.2 (table and
+new isolation-caveat paragraph).
+
+**Closure statement:** Each rejection mode now references evidence that
+actually isolates it, or (for side-effect ordering) states the residual W02
+obligation instead of citing non-isolating references. The unknown/missing-
+point and after-stop rows retain their valid F-03/T02/T10 citations.

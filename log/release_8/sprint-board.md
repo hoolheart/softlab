@@ -1,6 +1,6 @@
 # Sprint board — M02-W01 (process release_8)
 
-Updated: 2026-10-30 Asia/Shanghai (characterization executed). Integration
+Updated: 2026-10-30 Asia/Shanghai (AR-ED-01…03 closed by Designer). Integration
 branch: `dev`. Current task branch: `codex/m02-w01-preparation`.
 Release status: **OPEN — RESUMED**, on the user's explicit instruction. Preparation
 was committed/pushed at `1935fab`; characterization completed and was pushed at
@@ -9,7 +9,7 @@ The user resumed at the evidence-decision phase.
 
 | ID | Scope | Owner / next handoff | Phase | Started | Expected completion | Blockers / remaining gates | Merge commit |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| M02-W01-001 | Characterize existing count execution and decide minimal justified seam | Designer (sw-celeste) / close AR-ED-01…03, then Architect re-review; Product Owner scope agreement pending | Architect boundary review **CHANGES REQUESTED** (see [evidence-decision review](reviews/evidence-decision-review.md)) | 2026-10-30 | Release date unset | AR-ED-01…03 open; Architect re-review/Product Owner agreement, independent review/testing, acceptance, CI/integration/promotion all pending | None |
+| M02-W01-001 | Characterize existing count execution and decide minimal justified seam | Architect (sw-jerry) / re-review evidence decision; Product Owner scope agreement pending | AR-ED-01…03 **CLOSED by Designer** (documentation-only corrections; see [evidence-decision review](reviews/evidence-decision-review.md)); Architect re-review requested | 2026-10-30 | Release date unset | Architect re-review/Product Owner agreement, independent review/testing, acceptance, CI/integration/promotion all pending | None |
 
 Exactly one task is active. W02 implementation has not started. M01 is
 [CLOSED](../release_7/closure.md); the M02 milestone planning reviews approve

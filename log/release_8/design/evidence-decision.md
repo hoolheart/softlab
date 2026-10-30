@@ -26,7 +26,7 @@ Python 3.13.15), executable evidence in
 | Legacy `count`/`scan` rerun appends rows; `reset()` restores run eligibility without clearing the record. | F-06; `ScanCompatibility`, `RepeatAndTransitions.test_count_record_append_versus_clear_on_repeat` | AC02, AC05 | Legacy append semantics are observed behavior; the seam must not promise clearing. |
 | Public `count` + `run_process` work unchanged through a caller-owned serial executor: ordered hook/get events, exact rows and column order, `(bool, elapsed)` return, scheduler reusable after the run. | T02; `CountCompatibility` | AC02, AC05 | **Demonstrates the reuse hypothesis**: the existing public `Scheduler` interface already decouples count execution from executor implementation. |
 | Scan setter/getter order, terminal dry-run (3 waits, 2 rows), reset/repeat append — all through the same caller-owned executor. | T03; `ScanCompatibility` | AC02 | The same seam carries scan without modification; no scan extension is implied. |
-| The distinct signal-monitoring client runs through public count machinery with its own acquisition policy: exact predeclared trace, 3 reads per source confirmed by the counting double, count-owned and caller-owned derived rows both inspectable. | T06; `SignalMonitorClient` | AC03, AC04 | A **second real client** (not a rename, not a double alone) reuses the same execution/lifecycle shape with a different policy. |
+| The distinct signal-monitoring client runs through public count machinery with its own acquisition policy: exact predeclared trace, 3 reads per source confirmed by the counting double, count-owned and caller-owned derived rows both inspectable. | T06; `SignalMonitorClient` | AC03, AC04 | A **second real client** (not a rename, not a double alone) reuses the same serial execution shape — executor reuse across runs through public `count`/`run_process` — with a different acquisition policy. T06/T07 do **not** demonstrate terminal-state, stop-acknowledgment or owned-cleanup behavior; that evidence is thermal-derived (T08/T09). |
 | First/second read failures: exact consumed counts (failed reference read still consumed the second signal value), one completed pair, boundary 2 reached, no derived row for the failed boundary, no rollback, `run_process` returns `False` with scheduler diagnostics. | T07; `SignalMonitorFailures` | AC03, AC04 | Failure truthfulness is achievable at the seam boundary; partial consumption is caller-policy-visible and must stay observable. |
 | Thermal advance fault at tick 3 keeps rows=3/tick=3; read fault at tick 4 keeps rows=3/tick=4 (boundary ≠ row count); cause identity retained. | T07; `ThermalFaultFixtures` | AC03, AC05 | The truthful partial-row/final-boundary invariant required by AC05 is demonstrated. |
 | Failed run drains and closes the owned loop (`work_drained`, `loop_closed`); obstructed `stop` is recorded in `cleanup_errors` without hiding the primary cause; other cleanup still attempted. | T09; `ThermalFaultFixtures` cleanup tests | AC05 | Owned-resource cleanup and primary/cleanup error independence are demonstrated and must be carried forward. |
@@ -50,15 +50,23 @@ seam.
 The design required "concrete shared behavior across real clients" to justify
 any seam. The evidence now supplies it. Two real clients with distinct
 acquisition policies — the thermal acquisition loop (`_acquire`, both adapters)
-and the signal-monitoring client (T06/T07) — execute the **same** lifecycle
-shape: caller-owned serial executor with a private loop, one unchained
-nonthreaded `Action` per acquired point, commit/join per boundary through the
-public `count`/`run_process` path, truthful terminal state, owned cleanup.
-Without a seam, the monitor client must copy the executor and its
-rejection/cleanup semantics verbatim (the characterization suite literally
-reuses the thermal `_CountScheduler` as a fixture for lack of a shared one).
-Retaining local execution preserves a demonstrated duplication, contrary to
-the M02 product outcome.
+and the signal-monitoring client (T06/T07) — execute the **same** serial
+execution shape: caller-owned serial executor with a private loop, one
+unchained nonthreaded `Action` per acquired point, commit/join per boundary
+through the public `count`/`run_process` path, and truthful action-failure
+propagation with caller-visible partial consumption (T07). The shared shape
+demonstrated by both clients ends there. Truthful terminal state, cooperative
+stop acknowledgment, and owned cleanup (drain/close with `cleanup_errors`
+diagnostics) are demonstrated **only by the thermal client** (T08/T09); the
+monitoring fixture implements no terminal result, stop acknowledgment,
+owned-work drain, or cleanup diagnostics — its test cleanup merely stops and
+closes the fixture scheduler. Those lifecycle obligations are thermal-derived
+W02 contract requirements, not second-client demonstrations. Without a seam,
+the monitor client must copy the executor and its rejection/failure semantics
+verbatim (the characterization suite literally reuses the thermal
+`_CountScheduler` as a fixture for lack of a shared one). Retaining local
+execution preserves a demonstrated duplication, contrary to the M02 product
+outcome.
 
 ### Candidate 2 — Reuse/extend the existing generic scheduler: **REJECTED (refuted by evidence)**
 
@@ -112,7 +120,7 @@ public API; this record is its only boundary deliverable (W01-AC05).
 
 | Aspect | Supported (must carry forward) | Evidence |
 | --- | --- | --- |
-| Interface | Implements the existing public `softlab.huo.scheduler.Scheduler` interface; consumed by unchanged public `count`, `scan` (as-is), `run_process`, `Process.commit/join/reset`. Legacy imports and behavior preserved. | T02, T03, T06 |
+| Interface | Implements the existing public `softlab.huo.scheduler.Scheduler` interface; consumed by unchanged public `count`, `scan` (as-is), `run_process`, `Process.commit/join/reset` — with unchanged legacy reset/abort semantics (see 3.5, item 1). Legacy imports and behavior preserved. | T02, T03, T06 |
 | Execution model | Serial, bounded: one `Action` per acquired point, dispatched inside `wait_point` on the executor's privately owned loop; sync bodies and awaitable results both dispatchable (as characterized). | F-01 workaround, T02, T04 |
 | Ownership | Executor owns its private event loop; the caller owns the executor and stops/drains/closes it after terminal state; borrowed thread loops and the module-global singleton are never mutated, stopped or closed. | T04, T09 cleanup evidence |
 | Lifecycle | `start()` before any commit; `stop()` disables commits and discards owned references; `is_running` truthful; executor reusable after a completed run before caller cleanup. | T02 (post-run reuse), T10 |
@@ -121,13 +129,23 @@ public API; this record is its only boundary deliverable (W01-AC05).
 
 | Mode | Behavior | Evidence |
 | --- | --- | --- |
-| Chained action (nonempty `begin_point`) | `commit_action` → `False` | T02 invalid-transitions |
-| Threaded action (`to_thread=True`) | `commit_action` → `False` | T02 invalid-transitions |
-| Commit when not started / after stop | `commit_action` → `False` (silent rejection, no raise) | F-03, T10 |
+| Chained action (nonempty `begin_point`) | `commit_action` → `False` | Recorded regression `CountSchedulerContractTests.test_serial_action_success_failure_and_unsupported_actions` (`tests/test_thermal_example.py`; green within the recorded 306-test full discovery): chained commit rejected on a **started** thermal scheduler |
+| Threaded action (`to_thread=True`) | `commit_action` → `False` | Same recorded regression: threaded commit rejected on a **started** thermal scheduler |
+| Commit when not started / after stop | `commit_action` → `False` (silent rejection, no raise) | F-03, T02 (commit/join against a never-started scheduler), T10 |
 | Unknown or missing point in `wait_point` | return `False` — **not** `None`, not an exception | F-03, T10 |
-| Re-commit to an already-used point | `commit_action` → `False` | F-03 (`_CountScheduler.commit_action`) |
+| Re-commit to an already-used point | `commit_action` → `False` | Same recorded regression: second commit to the same point rejected on a started thermal scheduler |
 | Synchronous invocation inside a running event loop | caller-side preflight error before acquisition (carried from `execute`) | T08 thermal fixtures |
 | Borrowed/global scheduler as the owned executor | unsupported; never stop, drain or close resources the client did not create | T04, M02 plan |
+
+**Isolation caveat:** the T02 fixture also asserts chained and threaded
+rejections, but against a scheduler that was **never started**; those `False`
+results do not isolate the chained/threaded rejection modes from not-started
+rejection and are cited above only as not-started evidence. The isolating
+evidence for chained, threaded and re-commit rejection is the recorded
+regression cited in the table. W02 must additionally prove in its own suite
+that each rejection occurs **before any action side effect**; the recorded
+evidence establishes rejection outcomes, and no claim is made here that the
+T02 fixture independently proves side-effect ordering.
 
 Any widening (chains, threads, borrowed loops) requires separate
 justification and tests; it is not implicit in this boundary.
@@ -161,15 +179,39 @@ justification and tests; it is not implicit in this boundary.
 
 ### 3.5 Stop/reset/repeat policy
 
-- Cooperative stop: request is not acknowledgment; acknowledgment occurs only
-  at an acquisition boundary; a request before the first cycle yields zero
-  steps; a late request after completion changes nothing. No preemption of
-  running work is claimed. (T08)
-- Reset restores run eligibility only under documented terminal/drained
-  conditions and never rewrites terminal evidence; legacy count/scan repeat
-  **appends** rows (F-06) — the seam must not promise record clearing. (T10)
-- Fresh runs have fresh identities and deterministic traces excluding
-  timestamps. (T10)
+Three distinct behaviors are characterized under the word "reset". They are
+different contracts and must not be conflated:
+
+1. **Legacy `Process.reset()` — unchanged public compatibility.** It restores
+   process run eligibility; invoked while a body is running, it signals
+   cooperative abort **without preemption** (T08). It has **no
+   terminal/drained/closed precondition** and does not clear the record:
+   legacy count/scan repeat via `run_process`/`Process.reset()` **appends**
+   rows to the existing record (F-06; T03 reset/repeat-append; T10
+   append-versus-clear). The seam must preserve this contract verbatim — no
+   new guard, no record clearing, no behavior change.
+2. **Thermal caller-owned post-run model reset (`reset_after_run`) — caller
+   policy, not an executor contract.** This example helper requires
+   terminal/drained/closed execution evidence (it raises otherwise), resets
+   only the retained coordinator/model, and never rewrites the terminal
+   snapshot. It is **not** a `Scheduler.reset()` API: it does not restore
+   executor eligibility, and the executor itself carries no reset behavior.
+3. **Repeat = fresh-run construction.** Repeat runs in the thermal client are
+   achieved by constructing fresh executions — fresh group identities with
+   deterministic traces excluding `timestamp`, after both success and
+   interruption (T10) — not by resetting an executor.
+
+Cooperative stop is orthogonal to all three: a request is not an
+acknowledgment; acknowledgment occurs only at an acquisition boundary; a
+request before the first cycle yields zero steps; a late request after
+completion changes nothing. No preemption of running work is claimed. (T08)
+
+**W02 obligation:** the seam defines **no scheduler reset API**. W02 must keep
+legacy `Process.reset()`/abort and append-on-repeat semantics unchanged
+(obligation from item 1). Post-run model reset remains caller-owned policy
+(item 2 stays with the caller, as in the thermal example). Any scheduler-level
+reset or further lifecycle refinement is **W03 scope**, not a W02 acceptance
+behavior.
 
 ### 3.6 Baseline debt dispositions (AC06, unchanged)
 
