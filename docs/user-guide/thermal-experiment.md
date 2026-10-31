@@ -279,6 +279,13 @@ original exception chaining on operational failure. BaseException interruption
 is reraised after best-effort cleanup. Callbacks inspect live evidence and must
 not mutate group/configuration/lifecycle.
 
+Both adapter modes use `softlab.huo.process.run_count` for bounded execution
+and owned scheduler cleanup. Model setup, timing policy, persistence and plot
+remain example-owned. The stored manifest retains the DataGroup UUID; the
+runner's separate in-memory UUID does not replace it. If model construction,
+preparation or the initial write fails before runner invocation, no runner loop
+was created: drain and close flags are false and `reset_after_run` is ineligible.
+
 A model failure after row three retains three rows/tick three; a sampling failure
 after the next successful step retains three rows/tick four. Neither fabricates a
 row, retries, persists partial data nor resets during cleanup. Save/reload failure

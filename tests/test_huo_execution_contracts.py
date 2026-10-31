@@ -1,5 +1,7 @@
 """Legacy execution characterization for M01-W02; no new stop API promised."""
 
+from historical_count_scheduler import _CountScheduler, _make_scheduler
+
 import asyncio
 import importlib.util
 from pathlib import Path
@@ -26,7 +28,7 @@ class ProcessExecutionContracts(unittest.TestCase):
     """Exercise existing processes with the bounded W01 executor."""
 
     def setUp(self):
-        self.scheduler = thermal._make_scheduler()
+        self.scheduler = _make_scheduler()
         self.scheduler.start()
         self.addCleanup(self.scheduler._loop.close)
         self.addCleanup(self.scheduler.stop)
