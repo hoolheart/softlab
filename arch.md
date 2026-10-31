@@ -591,7 +591,7 @@ tracked as technical debt; correcting them is future
 work requiring its own approved change, not a silent follow-up.
 
 
-## M01-W01 thermal reference example — implemented candidate
+## M01-W01 thermal reference example — historical implementation
 
 Updated 2026-10-21. This describes the task-branch candidate, not dev integration,
 main promotion or release acceptance. Implementation `6f8b26d`, cleanup correction
@@ -848,8 +848,8 @@ The serial scheduler rejects chained and threaded actions and closes its owned
 loop via `close()`. Its timeout can interrupt a cooperative awaitable, not a
 synchronous blocking action. The runner rejects invocation inside an already
 running event loop and has no borrowed scheduler or loop mode. Existing `count`,
-`scan`, scheduler and process behavior is unchanged. The thermal CLI still owns
-its existing executor; migration is scheduled for M02-W04. The distinct
+`scan`, scheduler and process behavior is unchanged. The thermal CLI now uses
+the shared runner in both adapter modes. The distinct
 [synthetic signal monitor](examples/signal_monitor.py) uses the shared runner;
 [usage guidance](docs/user-guide/bounded-count.md) describes the contract.
 
@@ -865,3 +865,18 @@ model reset on terminal, drained and closed evidence without changing legacy
 `Process.reset()` or enabling executor reuse. No retry or durable resume is
 introduced. Cleanup remains owned by the run and never disposes global or
 borrowed execution resources.
+
+
+## M02-W04 thermal integration
+
+Both thermal adapter modes now pass their existing count process and record to
+`run_count`, which owns the scheduler, dispatch loop and cleanup. The example
+still owns model preparation, command, timing/read policy, persistence, reload
+verification and plotting. Coordinated measurements use the previous boundary;
+direct measurements use the current boundary and its existing pure observation.
+The existing manifest run ID remains the DataGroup UUID and is independent of
+the bounded result's in-memory UUID. If setup fails before the runner is called,
+no runner loop exists, so drain/close flags are false and model reset is
+ineligible; this is the explicitly approved W04 compatibility change. The
+[thermal guide](docs/user-guide/thermal-experiment.md) describes usage and
+limitations.

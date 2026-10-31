@@ -38,14 +38,15 @@ class ThermalExecutionTests(unittest.TestCase):
         self.figures = set(plt.get_fignums())
         self.addCleanup(self.close_figures)
         self.schedulers = []
-        original_make = thermal._make_scheduler
+        from softlab.huo.process import bounded
+        original_make = bounded.SerialScheduler
 
-        def make():
-            scheduler = original_make()
+        def make(**kwargs):
+            scheduler = original_make(**kwargs)
             self.schedulers.append(scheduler)
             return scheduler
 
-        scheduler_patch = mock.patch.object(thermal, "_make_scheduler", side_effect=make)
+        scheduler_patch = mock.patch.object(bounded, "SerialScheduler", side_effect=make)
         scheduler_patch.start()
         self.addCleanup(scheduler_patch.stop)
 
@@ -370,23 +371,16 @@ class ThermalExecutionTests(unittest.TestCase):
                     self.record(runs[1]).table[columns], rtol=0, atol=1e-10)
 
     def test_stop_cleanup_obstruction_preserves_cause_and_closes_owned_loop(self):
-        scheduler = thermal._make_scheduler()
-        cause = ValueError("primary acquisition")
-        try:
-            with mock.patch.object(thermal, "_make_scheduler", return_value=scheduler), \
-                    mock.patch.object(thermal, "_acquire", side_effect=cause), \
-                    mock.patch.object(scheduler, "stop", side_effect=RuntimeError("stop blocked")):
-                result = thermal.execute(self.config, self.root / "cleanup")
-            self.assertFalse(result.overall_success)
-            self.assertIs(result.cause, cause)
-            self.assertTrue(any("stop blocked" in e for e in result.cleanup_errors))
-            self.assertTrue(result.work_drained)
-            self.assertTrue(result.loop_closed)
-            self.assertTrue(scheduler._loop.is_closed())
-        finally:
-            scheduler.stop()
-            if not scheduler._loop.is_closed():
-                scheduler._loop.close()
+        from softlab.huo.scheduler import SerialScheduler
+        cause = ValueError("primary acquisition failure")
+        with mock.patch.object(thermal.MockMeasurement, "read", side_effect=cause), \
+                mock.patch.object(SerialScheduler, "stop", side_effect=RuntimeError("stop blocked")):
+            result = thermal.execute(self.config, self.root / "cleanup")
+        self.assertFalse(result.overall_success)
+        self.assertIs(result.cause, cause)
+        self.assertTrue(any("stop blocked" in error for error in result.cleanup_errors))
+        self.assertTrue(result.work_drained)
+        self.assertTrue(result.loop_closed)
 
     def test_borrowed_scheduler_loop_and_figure_unchanged(self):
         borrowed_scheduler = impl_scheduler._scheduler

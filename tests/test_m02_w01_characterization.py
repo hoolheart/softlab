@@ -15,6 +15,8 @@ test fixture exactly like the existing thermal tests.  No production code
 is modified; observed defects are recorded as findings, not guarantees.
 """
 
+from historical_count_scheduler import _CountScheduler, _make_scheduler
+
 import asyncio
 import importlib.util
 from pathlib import Path
@@ -142,7 +144,7 @@ for item in trace:
 
 def make_scheduler_case(test):
     """Caller-owned thermal serial scheduler; released by test cleanup."""
-    scheduler = thermal._make_scheduler()
+    scheduler = _make_scheduler()
     test.assertTrue(scheduler.start())
     test.addCleanup(scheduler._loop.close)
     test.addCleanup(scheduler.stop)
@@ -209,7 +211,7 @@ class CountCompatibility(unittest.TestCase):
         with self.assertRaises(TypeError):
             run_process(object(), scheduler, verbose=False)
         # commit/join against a not-started (borrowed) scheduler
-        borrowed = thermal._CountScheduler()
+        borrowed = _CountScheduler()
         try:
             process = count("idle", None, None, reading, times=1)
             self.assertFalse(process.commit(borrowed))
@@ -333,7 +335,7 @@ class SchedulerIsolation(unittest.TestCase):
         borrowed = asyncio.new_event_loop()
         asyncio.set_event_loop(borrowed)
         try:
-            scheduler = thermal._make_scheduler()
+            scheduler = _make_scheduler()
             self.assertTrue(scheduler.start())
             events = []
             point = scheduler.acquire_point()
@@ -763,28 +765,17 @@ class ThermalFaultFixtures(unittest.TestCase):
         self.assertEqual(result.stage, "acquisition")
 
     def test_primary_failure_with_obstructed_cleanup_records_both(self):
-        scheduler = thermal._make_scheduler()
+        from softlab.huo.scheduler import SerialScheduler
         cause = ValueError("primary acquisition failure")
-        try:
-            with mock.patch.object(thermal, "_make_scheduler",
-                                   return_value=scheduler), \
-                    mock.patch.object(thermal, "_acquire",
-                                      side_effect=cause), \
-                    mock.patch.object(scheduler, "stop",
-                                      side_effect=RuntimeError("stop blocked")):
-                result = thermal.execute(self.CONFIG, self.root / "cleanup")
-            self.assertFalse(result.overall_success)
-            self.assertIs(result.cause, cause)
-            self.assertTrue(any("stop blocked" in error
-                                for error in result.cleanup_errors))
-            # other cleanup actions still attempted and evidenced
-            self.assertTrue(result.work_drained)
-            self.assertTrue(result.loop_closed)
-            self.assertTrue(scheduler._loop.is_closed())
-        finally:
-            scheduler.stop()
-            if not scheduler._loop.is_closed():
-                scheduler._loop.close()
+        with mock.patch.object(thermal.MockMeasurement, "read", side_effect=cause), \
+                mock.patch.object(SerialScheduler, "stop", side_effect=RuntimeError("stop blocked")):
+            result = thermal.execute(self.CONFIG, self.root / "cleanup")
+        self.assertFalse(result.overall_success)
+        self.assertIs(result.cause, cause)
+        self.assertTrue(any("stop blocked" in error for error in result.cleanup_errors))
+        self.assertTrue(result.work_drained)
+        self.assertTrue(result.loop_closed)
+
 
 
 class StopResetCancellation(unittest.TestCase):

@@ -85,13 +85,8 @@ class ThermalMetadataContracts(unittest.TestCase):
 
     def test_legacy_text_hydration_numeric_schema_and_source_integrity(self):
         coordinator, heater, probe = thermal._build_simulation(thermal.ThermalConfig())
-        scheduler = thermal._make_scheduler()
-        try:
-            original = thermal._acquire(thermal.ThermalConfig(), coordinator,
-                                        heater, probe, scheduler)
-        finally:
-            scheduler.stop()
-            scheduler._loop.close()
+        original = thermal._acquire(thermal.ThermalConfig(), coordinator,
+                                    heater, probe)
         # Explicitly construct legacy context without selecting a future schema key.
         original.meta = {key: original.get_meta(key)
                          for key in ("example", "configuration", "timing")}
