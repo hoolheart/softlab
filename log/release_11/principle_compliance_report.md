@@ -1,8 +1,8 @@
 # M02-W04 principle inspection
 
 Inspector: Product Owner | 2026-10-31 Asia/Shanghai
-Verdict: **INCOMPLETE — applicable local implementation and review evidence is
-present; the required fresh-environment and release gates remain open**.
+Verdict: **PASS for applicable implementation and local evidence**; candidate CI,
+integration, promotion and final closure remain pending.
 
 The reviewed design maintains `huo` execution and caller-owned model, storage
 and plotting responsibilities. W01–W03 compatibility evidence is carried
@@ -14,10 +14,10 @@ No real instrument, new dependency or generic scheduler repair is claimed.
 Known baseline debt and actual warnings remain recorded in
 [test results](test/execution-results.md).
 
-The mandatory fresh isolated environment walkthrough and repeat are **not
-run**: dependency installation failed or stalled as documented by Tester.
-Product acceptance, candidate freeze and exact CI, integration, promotion and
-promoted-state checks, final scope/diff hygiene and clean worktree are also
-pending. The local-only W03 closure record must be accurately represented and
-its requested push disposition respected. This inspection is not a release or
-milestone PASS. Reinspect affected items when missing evidence is available.
+The fresh isolated Python 3.13 environment walkthrough and independent repeats
+passed for both modes after the earlier documented installation failures.
+Product acceptance is recorded; candidate freeze and exact CI, integration,
+promotion and promoted-state checks, final scope/diff hygiene and clean worktree
+remain pending. W03 closure is published on `origin/main` at `80701da`. This
+inspection does not mark the release or milestone CLOSED. Reinspect affected
+items if behavior or evidence changes.
