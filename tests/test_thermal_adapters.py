@@ -113,7 +113,7 @@ class AdapterContractTests(unittest.TestCase):
             self.assertEqual(result.completed_rows, 0)
             self.assertEqual(result.final_tick, 0)
             self.assertFalse(result.overall_success)
-            self.assertTrue(result.work_drained and result.loop_closed)
+            self.assertFalse(result.work_drained or result.loop_closed)
             read.assert_not_called()
 
     def test_direct_manifest_rejects_mixed_version_and_timing(self):

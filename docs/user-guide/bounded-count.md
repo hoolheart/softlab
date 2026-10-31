@@ -45,8 +45,8 @@ standard error. Caller setup failures before invocation are caller-owned.
 Standalone `SerialScheduler` users must call `close()` on every terminal path.
 Only unchained, nonthreaded actions are supported. A timeout can interrupt a
 cooperative awaitable, but cannot preempt a blocking synchronous action.
-Legacy `count` and `scan` APIs retain their existing behavior; the thermal CLI
-has not yet migrated to this execution seam.
+Legacy `count` and `scan` APIs retain their existing behavior. Both thermal
+adapter modes use this execution seam; see the [thermal guide](thermal-experiment.md).
 
 Each accepted bounded run has an in-memory `result.run_id` UUID. Use a fresh
 Counter, record, model and stop request for each run. A Counter already used by

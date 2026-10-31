@@ -151,7 +151,7 @@ class ThermalAcceptanceTests(unittest.TestCase):
         for index, (field, value) in enumerate(invalid):
             with self.subTest(field=field, value=value), \
                     mock.patch.object(thermal, '_build_simulation') as build, \
-                    mock.patch.object(thermal, '_make_scheduler') as scheduler:
+                    mock.patch('softlab.huo.process.bounded.SerialScheduler') as scheduler:
                 target = self.root / str(index)
                 config = dataclasses.replace(self.config, **{field: value})
                 with self.assertRaises((TypeError, ValueError, RuntimeError)):
@@ -456,71 +456,48 @@ class ThermalAcceptanceTests(unittest.TestCase):
             self.assertEqual(set(plt.get_fignums()), self.figures)
 
     def test_primary_and_cleanup_errors_visible_other_cleanup_still_runs(self):
-        scheduler = thermal._make_scheduler()
-        with mock.patch.object(thermal, '_make_scheduler', return_value=scheduler), \
-                mock.patch.object(thermal, '_acquire', side_effect=ValueError('primary marker')), \
-                mock.patch.object(scheduler, 'stop', side_effect=OSError('cleanup marker')):
-            with self.assertRaises(RuntimeError) as caught:
-                self.run_fixture()
-        message = str(caught.exception)
-        self.assertIn('primary marker', message)
-        self.assertIn('cleanup marker', message)
-        # stop obstruction must not prevent the separately owned loop close.
-        self.assertTrue(scheduler._loop.is_closed())
+        from softlab.huo.scheduler import SerialScheduler
+        cause = ValueError('primary marker')
+        with mock.patch.object(thermal.MockMeasurement, 'read', side_effect=cause), \
+                mock.patch.object(SerialScheduler, 'stop', side_effect=OSError('cleanup marker')):
+            result = thermal.execute(self.config, self.root / 'cleanup')
+        self.assertIs(result.cause, cause)
+        self.assertTrue(any('cleanup marker' in error for error in result.cleanup_errors))
+        self.assertTrue(result.work_drained and result.loop_closed)
 
     def test_loop_drain_and_close_failures_preserve_other_cleanup(self):
-        """CR-01: drain failure cannot suppress independent loop/writer release."""
-        for drain_fails, close_fails in ((True, False), (True, True),
-                                         (False, True)):
+        # Inject failures at the shared loop owner; persistence is deliberately
+        # not started when execution cleanup fails.
+        from softlab.huo.process import bounded
+        real_factory = bounded.SerialScheduler
+        for drain_fails, close_fails in ((True, False), (True, True), (False, True)):
             with self.subTest(drain=drain_fails, close=close_fails):
-                scheduler = mock.Mock(spec=Scheduler)
-                owned_loop = mock.Mock()
-                scheduler._loop = owned_loop
-                if drain_fails:
-                    owned_loop.run_until_complete.side_effect = OSError(
-                        'drain marker')
-                if close_fails:
-                    owned_loop.close.side_effect = OSError('close marker')
-                pending = mock.Mock()
-                drain = object()
-                writer = mock.Mock(spec=HDF5DataBackend())
-                writer.connect.return_value = True
-                writer.connected = True
-                writer.errors = []
-                writer.save_group.side_effect = ValueError('primary marker')
-                original = mock.Mock()
-                original.record.return_value = []
-                # Isolate this synthetic cleanup fixture from pre-save schema work.
-                with mock.patch.object(thermal, '_make_manifest',
-                                       return_value={}), \
-                        mock.patch.object(thermal, '_encode_manifest',
-                                          return_value='{}'), \
-                        mock.patch.object(thermal, '_make_scheduler',
-                                       return_value=scheduler), \
-                        mock.patch.object(thermal, '_acquire',
-                                          return_value=original), \
-                        mock.patch.object(thermal, 'HDF5DataBackend',
-                                          return_value=writer), \
-                        mock.patch.object(thermal, '_disconnect') as disconnect, \
-                        mock.patch.object(thermal.asyncio, 'all_tasks',
-                                          return_value={pending}), \
-                        mock.patch.object(thermal.asyncio, 'gather',
-                                          return_value=drain) as gather:
-                    with self.assertRaises(RuntimeError) as caught:
-                        thermal.run(self.config, self.root /
-                                    f'loop-{drain_fails}-{close_fails}')
-                message = str(caught.exception)
-                self.assertIn('primary marker', message)
-                if drain_fails:
-                    self.assertIn('drain marker', message)
-                if close_fails:
-                    self.assertIn('close marker', message)
-                writer.save_group.assert_called_once_with(original)
-                pending.cancel.assert_called_once_with()
-                gather.assert_called_once_with(pending, return_exceptions=True)
-                owned_loop.run_until_complete.assert_called_once_with(drain)
-                disconnect.assert_called_once_with(writer)
-                owned_loop.close.assert_called_once_with()
+                scheduler = real_factory()
+                loop = scheduler._loop
+                real_close = loop.close
+                def close():
+                    if close_fails:
+                        raise OSError('close marker')
+                    return real_close()
+                try:
+                    with mock.patch.object(bounded, 'SerialScheduler', return_value=scheduler), \
+                         mock.patch.object(loop, 'close', side_effect=close), \
+                         mock.patch('softlab.huo.scheduler.serial.asyncio.all_tasks',
+                                    side_effect=OSError('drain marker') if drain_fails else None,
+                                    return_value=set()):
+                        result = thermal.execute(self.config, self.root /
+                                                 f'loop-{drain_fails}-{close_fails}')
+                    self.assertFalse(result.overall_success)
+                    self.assertFalse(result.data_path.exists())
+                    self.assertEqual(result.work_drained, not drain_fails)
+                    self.assertEqual(result.loop_closed, not close_fails)
+                    if drain_fails:
+                        self.assertTrue(any('drain marker' in x for x in result.cleanup_errors))
+                    if close_fails:
+                        self.assertTrue(any('close marker' in x for x in result.cleanup_errors))
+                finally:
+                    if not loop.is_closed():
+                        real_close()
 
     def test_owned_scheduler_loop_global_and_running_loop_rejection(self):
         import softlab.huo.scheduler.impl_scheduler as implementation
@@ -530,14 +507,15 @@ class ThermalAcceptanceTests(unittest.TestCase):
         asyncio.set_event_loop(borrowed_loop)
         self.addCleanup(asyncio.set_event_loop, None)
         schedulers = []
-        factory = thermal._make_scheduler
+        from softlab.huo.process import bounded
+        factory = bounded.SerialScheduler
 
-        def make():
-            scheduler = factory()
+        def make(**kwargs):
+            scheduler = factory(**kwargs)
             schedulers.append(scheduler)
             return scheduler
 
-        with mock.patch.object(thermal, '_make_scheduler', side_effect=make):
+        with mock.patch.object(bounded, 'SerialScheduler', side_effect=make):
             self.run_fixture('one')
             self.run_fixture('two')
         self.assertIs(implementation._scheduler, singleton)
@@ -586,7 +564,8 @@ class CountSchedulerContractTests(unittest.TestCase):
     """Public Action dispatch of the approved bounded example scheduler."""
 
     def setUp(self):
-        self.scheduler = thermal._make_scheduler()
+        from historical_count_scheduler import _make_scheduler
+        self.scheduler = _make_scheduler()
         self.addCleanup(self.scheduler._loop.close)
         self.addCleanup(self.scheduler.stop)
 

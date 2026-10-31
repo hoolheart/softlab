@@ -5,7 +5,6 @@ from contextlib import redirect_stdout
 import hashlib
 import asyncio
 from dataclasses import asdict, dataclass, field
-import inspect
 import json
 import math
 from numbers import Real
@@ -31,8 +30,7 @@ import h5py
 
 import softlab
 
-from softlab.huo.process import count
-from softlab.huo.scheduler import Action, Scheduler
+from softlab.huo.process import StopRequest, count, run_count
 from softlab.jin.vis import plot_record
 from softlab.shui.data import DataGroup, DataRecord, HDF5DataBackend
 from softlab.tu.simulation import (
@@ -52,18 +50,6 @@ class ThermalConfig:
     dt: float = 1.0
     power: float = 10.0
     points: int = 8
-
-
-@dataclass
-class StopRequest:
-    """Cooperative software request; acknowledgment belongs to the executor."""
-
-    requested: bool = False
-    acknowledged: bool = False
-
-    def request(self) -> None:
-        """Request termination at the next acquisition boundary."""
-        self.requested = True
 
 
 @dataclass
@@ -140,97 +126,6 @@ class _AcquisitionEnd(Exception):
     def __init__(self, result: RunResult) -> None:
         self.result = result
         super().__init__(_diagnostic(result))
-
-
-class _CountScheduler(Scheduler):
-    """Owned serial Action executor for this count; no chains or threads."""
-
-    def __init__(self) -> None:
-        self._loop = asyncio.new_event_loop()
-        self._running = False
-        self._points: Dict[str, Optional[Action]] = {}
-        self._done: Dict[str, Optional[bool]] = {}
-        self.last_error = ''
-        self.last_exception: Optional[Exception] = None
-
-    def start(self) -> bool:
-        """Enable commits without changing the thread's event loop."""
-        self._running = True
-        return True
-
-    def stop(self) -> None:
-        """Disable commits and discard owned action references."""
-        self._running = False
-        self._points.clear()
-        self._done.clear()
-
-    def is_running(self) -> bool:
-        """Return whether commits are enabled."""
-        return self._running
-
-    def acquire_point(self) -> str:
-        """Allocate a fresh serial completion key."""
-        point = str(uuid.uuid4())
-        self._points[point] = None
-        return point
-
-    def commit_action(self, action: Action) -> bool:
-        """Accept one unchained, nonthreaded action for an unused endpoint."""
-        if (not self._running or not isinstance(action, Action)
-                or action.begin_point or action.to_thread
-                or action.end_point not in self._points
-                or self._points[action.end_point] is not None):
-            return False
-        self._points[action.end_point] = action
-        return True
-
-    def wait_point(self, point: str,
-                   timeout: Optional[float] = None) -> Optional[bool]:
-        """Run once; return false on failure or None on timeout."""
-        if point in self._done:
-            return self._done[point]
-        action = self._points.get(point)
-        if not self._running or action is None:
-            return False
-
-        async def dispatch() -> None:
-            func, args, kwargs = action.body
-            result = func(*args, **kwargs)
-            if inspect.isawaitable(result):
-                await result
-
-        try:
-            coroutine = dispatch()
-            if timeout is not None:
-                coroutine = asyncio.wait_for(coroutine, timeout)
-            self._loop.run_until_complete(coroutine)
-            result = True
-        except asyncio.TimeoutError as exc:
-            self.last_exception = exc
-            self.last_error = str(exc) or 'Action timed out'
-            result = None
-        except Exception as exc:
-            self.last_exception = exc
-            self.last_error = f'{type(exc).__name__}: {exc}'
-            result = False
-        self._done[point] = result
-        return result
-
-    def clear_done_points(self) -> None:
-        """Discard completed endpoints without executing anything."""
-        for point in self._done:
-            self._points.pop(point, None)
-        self._done.clear()
-
-    def snapshot(self) -> Dict[str, Any]:
-        """Describe this bounded executor's current state."""
-        return {'type': '_CountScheduler', 'running': self._running,
-                'points': len(self._points), 'completed': len(self._done)}
-
-
-def _make_scheduler() -> _CountScheduler:
-    """Create a private executor with a separately owned event loop."""
-    return _CountScheduler()
 
 
 def _validate_config(config: ThermalConfig) -> None:
@@ -341,12 +236,12 @@ _META_KEYS = ('example', 'configuration', 'timing')
 
 
 def _acquire(config: ThermalConfig, coordinator: Coordinator,
-             heater: MockControl, thermometer: MockMeasurement,
-             scheduler: Scheduler, *, stop: Optional[StopRequest] = None,
+             heater: MockControl, thermometer: MockMeasurement, *,
+             stop: Optional[StopRequest] = None,
              after_row: Optional[Callable[[RunResult], None]] = None,
              result: Optional[RunResult] = None,
              delay: int = 1) -> DataGroup:
-    """Prepare and execute exactly one step per count getter row."""
+    """Run thermal acquisition through the owned bounded count seam."""
     stop = stop if stop is not None else StopRequest()
     if result is None:
         result = RunResult(config.points, Path('thermal.h5'), Path('thermal.png'), stop)
@@ -370,39 +265,48 @@ def _acquire(config: ThermalConfig, coordinator: Coordinator,
     getters = [(key, Parameter(key, settable=False,
                 before_get=lambda _, read=reader: read()))
                for key, reader in readers.items()]
+
+    def map_count(snapshot):
+        result.completed_rows = snapshot.completed_rows
+        if snapshot.boundary_observed:
+            result.final_tick, result.final_sim_time = snapshot.boundary
+
+    def after_count(snapshot):
+        map_count(snapshot)
+        if not np.isfinite(record.table.to_numpy(dtype=float)).all():
+            raise RuntimeError('Acquired nonfinite numeric values')
+        if after_row is not None:
+            after_row(result)
+
+    def terminal(snapshot):
+        map_count(snapshot)
+        result.acquisition = snapshot.acquisition
+        result.cause = snapshot.cause
+        result.cleanup_errors.extend(snapshot.cleanup_errors)
+        result.work_drained = snapshot.work_drained
+        result.loop_closed = snapshot.loop_closed
+
     try:
         coordinator.prepare()
         heater.write(config.power)
         process = count(name='thermal_trace', group=group, record=record,
                         getters=getters, times=config.points,
                         hook_before_get=coordinator.step)
-        if not scheduler.start():
-            raise RuntimeError('Scheduler did not start')
-        process.reset()
-        while True:
-            result.completed_rows = len(record)
-            result.final_tick = coordinator.tick
-            result.final_sim_time = coordinator.sim_time
-            if len(record) == config.points:
-                if coordinator.tick != config.points:
-                    raise RuntimeError('Acquisition boundary/row count mismatch')
-                result.acquisition = 'completed'
-                break
-            if stop.requested:
-                stop.acknowledged = True
-                result.acquisition = 'cancelled'
-                raise _AcquisitionEnd(result)
-            if not process.commit(scheduler) or process.join(scheduler) is not True:
-                raise (getattr(scheduler, 'last_exception', None) or
-                       RuntimeError(getattr(scheduler, 'last_error', '') or
-                                    'Count execution failed'))
-            result.completed_rows = len(record)
-            result.final_tick = coordinator.tick
-            result.final_sim_time = coordinator.sim_time
-            if not np.isfinite(record.table.to_numpy(dtype=float)).all():
-                raise RuntimeError('Acquired nonfinite numeric values')
-            if after_row is not None:
-                after_row(result)
+        try:
+            snapshot = run_count(process, config.points, lambda: len(record),
+                                 lambda: (coordinator.tick, coordinator.sim_time),
+                                 stop=stop, after_row=after_count)
+        except BaseException as exc:
+            snapshot = getattr(exc, 'count_result', None)
+            if snapshot is not None:
+                terminal(snapshot)
+            raise
+        terminal(snapshot)
+        if (result.acquisition != 'completed' or result.cleanup_errors
+                or not result.work_drained or not result.loop_closed):
+            raise _AcquisitionEnd(result)
+        if coordinator.tick != config.points:
+            raise RuntimeError('Acquisition boundary/row count mismatch')
     except _AcquisitionEnd:
         raise
     except Exception as exc:
@@ -902,7 +806,6 @@ def execute(config: ThermalConfig, output_dir: Path, *,
     data_path, plot_path = _prepare_output(output_dir)
     stop = stop if stop is not None else StopRequest()
     result = RunResult(config.points, data_path, plot_path, stop)
-    scheduler = None
     coordinator = None
     writer = None
     original = None
@@ -911,14 +814,13 @@ def execute(config: ThermalConfig, output_dir: Path, *,
     errors = []
     stage = 'setup'
     try:
-        scheduler = _make_scheduler()
         coordinator, heater, thermometer = _build_simulation(config)
         if adapter == 'direct':
             heater = _ControlAdapter(heater)
             thermometer = _DirectMeasurement(coordinator.station.object('body'))
         result._coordinator = coordinator
         stage = 'acquisition'
-        original = _acquire(config, coordinator, heater, thermometer, scheduler,
+        original = _acquire(config, coordinator, heater, thermometer,
                             stop=stop, after_row=after_row, result=result, delay=delay)
         result.group = original
         result.acquisition = 'completed'
@@ -954,46 +856,47 @@ def execute(config: ThermalConfig, output_dir: Path, *,
         result.cause = exc.primary
     except BaseException as exc:
         primary = exc
-        result.cause = exc
+        if result.cause is None:
+            result.cause = exc
         if stage == 'acquisition':
             result.acquisition = 'failed'
     finally:
-        # Inspection only: teardown never advances or resets the graph.
-        if coordinator is not None and coordinator.prepared:
-            result.final_tick = coordinator.tick
-            result.final_sim_time = coordinator.sim_time
-        if result.group is not None:
-            result.completed_rows = len(result.group.record('thermal_trace'))
-        if scheduler is not None:
-            try:
-                scheduler.stop()
-            except Exception as exc:
-                errors.append(f'Scheduler stop: {exc}')
-            try:
-                pending = asyncio.all_tasks(scheduler._loop)
-                for task in pending:
-                    task.cancel()
-                if pending:
-                    scheduler._loop.run_until_complete(
-                        asyncio.gather(*pending, return_exceptions=True))
-                result.work_drained = True
-            except Exception as exc:
-                errors.append(f'Owned loop drain: {exc}')
-            try:
-                scheduler._loop.close()
-                result.loop_closed = scheduler._loop.is_closed()
-            except Exception as exc:
-                errors.append(f'Owned loop close: {exc}')
-        if writer is not None and (writer.file is not None or writer.connected):
-            try:
+        # Independent inspections and caller-owned cleanup must not mask the
+        # first interruption or suppress later cleanup attempts.
+        try:
+            if (result.final_tick is None and coordinator is not None
+                    and coordinator.prepared):
+                result.final_tick = coordinator.tick
+                result.final_sim_time = coordinator.sim_time
+        except BaseException as exc:
+            errors.append(f'Boundary inspection: {exc}')
+            if not isinstance(exc, Exception) and (
+                    primary is None or isinstance(primary, Exception)):
+                primary = exc
+        try:
+            if result.group is not None:
+                result.completed_rows = len(result.group.record('thermal_trace'))
+        except BaseException as exc:
+            errors.append(f'Row inspection: {exc}')
+            if not isinstance(exc, Exception) and (
+                    primary is None or isinstance(primary, Exception)):
+                primary = exc
+        try:
+            if writer is not None and (writer.file is not None or writer.connected):
                 _disconnect(writer)
-            except Exception as exc:
-                errors.append(f'Writer cleanup: {exc}')
-    result.cleanup_errors = errors
+        except BaseException as exc:
+            errors.append(f'Writer cleanup: {exc}')
+            if not isinstance(exc, Exception) and (
+                    primary is None or isinstance(primary, Exception)):
+                primary = exc
+    result.cleanup_errors.extend(errors)
     result.stage = stage
     result.terminal = True
     if primary is not None and not isinstance(primary, Exception):
-        print(_diagnostic(result), file=sys.stderr)
+        try:
+            print(_diagnostic(result), file=sys.stderr)
+        except BaseException:
+            pass
         raise primary
     return result
 
