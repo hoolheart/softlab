@@ -43,12 +43,18 @@ until frozen, then assert the frozen literals verbatim:
 - the exact required/optional field lists of the common envelope and of both
   client payloads;
 - conservative encoded size and nesting-depth limits;
-- the exact exception types raised per failure class.
+- the exact exception types raised per failure class;
+- the availability/unavailable state literal, the bounded
+  unavailable-reason string vocabulary, and the per-field reason bound —
+  these are owned by the detailed design (decision §6 item 1 requires the
+  design to freeze "unavailable-reason rules"), and this plan asserts
+  whatever the frozen design states for them.
 
 ## S1 — Valid round-trips
 
-**Requirement basis:** decision §6 items 1, 2, 5; PRD M03-AC02 ("valid
-supported values round-trip"); plan evidence matrix item 2.
+**Requirement basis:** decision §1.1 availability row, §6 items 1, 2, 5;
+PRD M03-AC02 ("valid supported values round-trip"); plan evidence matrix
+item 2.
 
 1. **Minimal valid envelope, thermal profile.** Encode the smallest envelope
    the design marks valid (all required common fields, thermal payload with
@@ -76,6 +82,11 @@ supported values round-trip"); plan evidence matrix item 2.
    populates one from the other (decision §6 item 5). A synthetic envelope
    where both UUIDs are equal must fail the identity cross-check, not pass as
    a degenerate success, if the design mandates distinctness at validation.
+   **Freeze note:** this is provisional only until design freeze — at
+   freeze it becomes a **hard assertion** (a hard rejection assertion if
+   the frozen design mandates distinctness, or an explicitly recorded
+   "not mandated" statement if it does not), never a conditional in the
+   executable suite.
 5. **Sample schema/ordering/units/counts relations.** Valid thermal and
    signal envelopes declare ordered column schemas with a truthful unit for
    every stored column, plus requested/completed row counts. Tests assert:
@@ -92,10 +103,21 @@ supported values round-trip"); plan evidence matrix item 2.
    `cleanup`, `overall` all `not_yet_established`. Round-trip preserves
    these verbatim; an envelope claiming any later-stage success is rejected
    (S2).
+7. **Availability facts truthful and explicit.** Valid envelopes carry the
+   observed software/source/environment availability facts decided in
+   §1.1. Tests assert the frozen semantics verbatim: a captured fact
+   carries its observed value; an **uncaptured** fact is **explicitly
+   unavailable** — it carries the frozen unavailable-state literal plus a
+   reason string from the frozen bounded vocabulary — never a value copied
+   from another client and never a success-like stand-in (decision §1.1
+   availability row; §6 items 1 and 5). Both states round-trip verbatim
+   through encode→decode, and the reason string stays inside the frozen
+   per-field bound (its rejection side is F16; its count bound is S4.3).
 
 ## S2 — Failure matrix
 
-**Requirement basis:** decision §6 items 2, 3, 4, 6; PRD M03-AC02 ("Tests
+**Requirement basis:** decision §1.1 availability row, §6 items 1, 2, 3, 4,
+5, 6; PRD M03-AC02 ("Tests
 reject duplicate keys, unsupported values and nonfinite numbers without
 implicit stringification"); plan evidence matrix item 2.
 
@@ -113,7 +135,7 @@ persistence side effects** occurred (S5).
 | F2 | Wrong root type (top-level array, string, number, bool, null instead of object) | Rejected: root must be a JSON object. |
 | F3 | Duplicate object keys in the raw JSON text | Rejected via strict duplicate detection (the design's `object_pairs_hook`-class technique); the duplicate key name appears in the error. Nested duplicates (inside client payload) rejected equally. |
 | F4 | Unsupported value types: Python object, set, bytes, complex, NumPy scalar/array, callable, arbitrary class instance | Encode rejects **without** `str`/`repr` fallback (decision §6 item 3); the error names the field and the unsupported type. NumPy values are rejected unless the client constructor normalized them first — test the un-normalized path reaching the codec directly. |
-| F5 | Nonfinite numbers: `NaN`, `+Inf`, `-Inf` at any nesting depth, including inside nested arrays/objects inside the client payload | Rejected on encode (and rejected on decode of text containing `NaN`/`Infinity` tokens); NaN inside a *nested container three levels down* is covered explicitly, since shallow-only checks are a known gap class. |
+| F5 | Nonfinite numbers: `NaN`, `+Inf`, `-Inf` at any nesting depth, including inside nested arrays/objects inside the client payload | Rejected on encode, and rejected on decode of text containing `NaN`/`Infinity` tokens. **Decode requires more than token rejection:** `parse_constant` alone does not fire on overflow literals — `json.loads('1e999')` yields `inf` through ordinary float parsing — so the design must mandate (and tests must exercise) a **recursive post-parse finiteness sweep** over the decoded value at any nesting depth, in addition to the token-level `parse_constant` rejection. Tests probe both classes: token probes (`NaN`, `Infinity`, `-Infinity`) and `1e999`-class overflow literals, each at top level and inside a *nested container three levels down* (shallow-only checks are a known gap class). The encode side is covered by the NaN/±Inf encode probes in this row plus the design's finite check before `allow_nan=False` serialization. |
 | F6 | Missing required common field (each required field, one test or parametrized equivalent) | Rejected; error names the missing field. Absence of an optional field is **not** an error (S3). |
 | F7 | Missing required client-payload field (per profile, per the frozen required list) | Rejected by the owning profile's validator; common layer's dispatch is exercised so the error attributes the payload to the profile. |
 | F8 | Unsupported common-format version (e.g. version+1, version 0, version as string) | Rejected as unsupported-version error; message states the supported version. |
@@ -122,6 +144,9 @@ persistence side effects** occurred (S5).
 | F11 | **Unknown/extra fields — policy per design.** The decision mandates **closed** records: "unknown fields ... are errors rather than silently ignored extensions" (§1.1 namespace row, §6 item 4). Tests therefore assert **rejection** of any key not in the frozen allowlist, at the common layer and inside each client payload, including keys that differ only by case or by a trailing/leading underscore. For traceability, the results file also records the **rejected alternative** (unknown-fields-preserved) and cites the mandating decision text, so a future boundary change is an explicit decision revision, not a silent test relaxation. |
 | F12 | Type errors on present fields (string where integer required, float where exact integer required, object where array required) | Rejected per field with the field named; `1.0` where an exact integer is required is a type error, not a success. |
 | F13 | Profile-specific semantic violations at the client validator (thermal: six-column ordering, clock/delay policy, v1/v2 source-tick distinction; signal: declared source columns, derived `difference` smuggled into stored columns) | Rejected by the owning client validator with profile-attributed errors; the common layer does not reinterpret payload internals. |
+| F14 | Present `null` on a field to which the frozen schema assigns **no null meaning** (one test per such field, or parametrized equivalent) | Rejected per field, with the field named; distinct from absent (F6) and from an invalid present value (F12) — the frozen policy pins exactly which fields, if any, accept explicit `null` (decision §6 item 6). Fields whose schema assigns a null meaning are **not** fed through this row; their acceptance side is asserted in S3.5. |
+| F15 | Uncaptured software/source/environment availability fact presented as a success-like value (e.g. an invented version string, copied value from another client, or empty/zero stand-in for an observation that was not captured) | Rejected by the owning validator: uncaptured facts must be explicitly unavailable, never copied from another client or inferred as success (decision §1.1 availability row; §6 items 1 and 5). |
+| F16 | Availability reason string outside the frozen bounded vocabulary, or missing where the frozen schema requires one with the unavailable state (and vice versa: reason present without the unavailable state) | Rejected with the offending field named; the unavailable state and its reason are bound together per the frozen unavailable-reason rules (decision §6 items 1 and 6). The reason string exceeding the frozen per-field bound is rejected at the count-boundary side (S4.3). |
 
 ## S3 — Boolean-vs-number and type strictness
 
@@ -145,6 +170,36 @@ numbers").
    where it requires exact integers, `1.0` is rejected (F12) — both variants
    pinned by the frozen schema and asserted, not assumed.
 
+### S3.5 — Null versus absent (frozen policy)
+
+**Requirement basis:** PRD M03-AC02 ("absent versus null"); decision §6
+item 6 ("Define required, optional, absent, explicit-null, unavailable, and
+invalid-present behavior explicitly. Optional absence never implies success,
+zero, empty, or not-applicable"). The frozen schema pins exactly which
+fields, if any, assign a meaning to explicit `null`; these checks assert the
+frozen policy verbatim, one defect per negative test, distinct from F6
+(absent), F12 (invalid present value) and F14 (present null where no null
+meaning is assigned).
+
+1. **Rejection side.** For every field the frozen schema classifies as
+   no-null-meaning, a present `null` is rejected with the field named (F14).
+   The set of such fields is taken from the frozen schema, not assumed.
+2. **Acceptance side.** For every field the frozen schema **assigns** a
+   null meaning (e.g. availability facts mirroring the legacy manifest's
+   `digest: None` + bounded reason pattern, per decision §1.1), an explicit
+   `null` is **accepted** and round-trips verbatim through encode→decode,
+   preserving its assigned semantics.
+3. **Distinctness.** For an optional field with an assigned null meaning,
+   the three states — absent, present-null, present-valid-value — are
+   asserted to decode to three semantically distinct results; in
+   particular, absent never collapses to null, and neither absent nor
+   null is ever reported as success, zero, empty, or not-applicable
+   (decision §6 item 6 verbatim).
+4. **Whole-record edge.** Absence of the whole additive key means only "no
+   additive common record"; a present non-text, malformed, invalid, or
+   unsupported-version value is an error, never legacy absence (decision
+   §6 item 6; the legacy-absence side is covered in S6.5).
+
 ## S4 — Size/depth limits
 
 **Requirement basis:** decision §6 item 1 ("conservative encoded size/depth
@@ -158,8 +213,14 @@ limits ... frozen in the reviewed Phase 2 design").
    test). Tests construct the oversize input programmatically so no large
    literal is committed.
 3. **Count bounds:** arrays/objects whose element counts exceed frozen
-   bounds (e.g. column-declaration arrays, reason strings) are rejected;
-   at-boundary counts are accepted.
+   bounds (e.g. column-declaration arrays, availability reason strings) are
+   rejected; at-boundary counts are accepted. The reason-strings bound
+   applies to the availability/unavailable-reason facts of S1.7/F16: its
+   numeric value and the reason vocabulary it bounds are **owned by the
+   detailed design** (decision §6 item 1 requires the design to freeze
+   "unavailable-reason rules"), and the test asserts whatever bound the
+   frozen design states — read from the module's exported constant where
+   one exists (S4.4).
 4. Limits are asserted to be **the design's frozen values**, not test-local
    guesses: the test reads the limit from the module's own exported constant
    (if the design exports one) and asserts both sides of it, so a design
