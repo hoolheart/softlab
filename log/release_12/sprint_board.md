@@ -23,7 +23,7 @@ one closure at release end ([release checklist](../templates/release-checklist.m
 
 | Task | Description | Assigned | Status |
 | --- | --- | --- | --- |
-| P3 — Storage and inspection | Storage test plan written (`f25c497`); next: developer plan review → detailed design → architecture review → implementation → code review → tests | sw-mike → sw-tom → sw-celeste → sw-jerry → sw-tom → sw-celeste → sw-mike | Branch `codex/m03-p3-storage` from `dev` (`81f269c`) |
+| P3 — Storage and inspection | Storage test plan approved (`30f48a9`, reviewer closure `b31d687`); detailed design added (this commit, all seven P3P placeholders frozen); next: architecture review (sw-jerry) → implementation → code review → tests | sw-mike → sw-tom → sw-celeste → sw-jerry → sw-tom → sw-celeste → sw-mike | Branch `codex/m03-p3-storage` from `dev` (`81f269c`) |
 
 ## Phase plan (from PRD; four serial gated phases, one release)
 
