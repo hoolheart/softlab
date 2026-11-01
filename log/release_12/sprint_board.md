@@ -25,15 +25,15 @@ one closure at release end ([release checklist](../templates/release-checklist.m
 
 | Task | Description | Assigned | Status |
 | --- | --- | --- | --- |
-| P2 — Schema and encoding | Bounded field/type, version, missing/null/unknown and failure contract; justified codec/construction seam only | sw-celeste → sw-tom → sw-mike | Awaiting P1 integration, then branch `codex/m03-p2-schema` from `dev` |
+| P3 — Storage and inspection | Selected evidenced storage paths, snapshot stages, fault/original-byte evidence, fresh-process inspection | sw-mike → sw-celeste → sw-tom | Awaiting P2 integration, then branch `codex/m03-p3-storage` from `dev` |
 
 ## Phase plan (from PRD; four serial gated phases, one release)
 
 | Phase | Status |
 | --- | --- |
 | 1 — Characterize and decide | DONE — decision: minimal common JSON-text envelope on HDF5, acquisition-snapshot-only, HDF5-only, thermal v1/v2 preserved (`design/p1-boundary-decision.md`, PO concurrence, independent review ACCEPTED). |
-| 2 — Schema and encoding | NEXT: detailed design per boundary decision binding constraints → architecture review → implement → code review → tests. |
-| 3 — Storage and inspection | NOT STARTED |
+| 2 — Schema and encoding | DONE — codec + group seam implemented, reviewed, tested (459 tests OK). |
+| 3 — Storage and inspection | NEXT: storage integration per decision: owned HDF5 writes, disposable-copy preflight/hydration reads, snapshot stages, fault/original-byte evidence, fresh-process inspection. |
 | 4 — Reference comparison and acceptance | NOT STARTED |
 
 ## Done
@@ -42,6 +42,7 @@ one closure at release end ([release checklist](../templates/release-checklist.m
 | --- | --- | --- |
 | RG — Requirements gate | Candidate `08c0858` CI [41256246749](https://github.com/hoolheart/softlab/actions/runs/41256246749) passed; `dev` merge `8cdea23` | 2026-11-01 |
 | P1 — Characterize and decide | Candidate `f6797cd` CI [41263124079](https://github.com/hoolheart/softlab/actions/runs/41263124079) passed 3.9+3.13; principle inspection PASS; boundary decision option (a) concurred; independent review ACCEPTED | 2026-11-01 |
+| P2 — Schema and encoding | Candidate `77af542` CI passed 3.9+3.13; design APPROVED (10 findings closed); plan APPROVED; code review zero defects; 459 tests OK; principle inspection PASS | 2026-11-01 |
 
 ## Gate log
 
