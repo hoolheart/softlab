@@ -265,3 +265,99 @@ edits plus the two placeholder extensions), after which no further
 developer input is anticipated for findings 6–8. The executable suite
 remains gated on the reviewed Phase 3 detailed design freezing
 **[P3P-01…07]** (as extended) per the plan's own gate-linkage section.
+
+## Re-review (2026-11-01, commit `30f48a9`)
+
+Reviewer: sw-tom (Developer) | Method: diff of `f25c497` → `30f48a9`
+against this review's findings, plus source spot-checks of the new
+verified claims (`softlab/shui/data/base.py:577`,
+`softlab/shui/data/hdf5.py`, `softlab/shui/run_group.py`).
+
+### Finding-by-finding status
+
+1. **[High] A1 record source of record — CLOSED.** The plan now opens
+   A1 with a dedicated "Record source of record" paragraph: the
+   reviewer-verified fact that `build_run_group` returns an empty
+   `DataGroup` (confirmed against `run_group.py` this revision — the
+   seam constructs no records/rows), and branch (a) attaches fixture
+   datasets via the existing public `DataGroup.add_record(record)`
+   (`base.py:577`, re-verified: docstring "Add or update a record",
+   `ValueError` for non-`DataRecord`), with branch (b) carried as the
+   **[P3P-01]** extension and an explicit "one of the two must hold
+   before test code" gate. A1.2's row-count/sample oracle assertions
+   are now implementable end-to-end.
+2. **[High] A4 failure-stage verification — CLOSED.** A new binding
+   "Failure-stage verification mandate" paragraph states the verified
+   source facts (existing-directory target raises at connect
+   `hdf5.py:39`; removed parent is a vacuous POSIX probe; idempotent
+   `File.close()`), marks A4.2/A4.3 parentheticals as unverified
+   candidates, mandates empirical stage verification on **both**
+   interpreters (3.9 and 3.13) before design freeze, defines the
+   wrong-stage reclassification rule, and cites one seam verified
+   today (externally closed handle → `save_impl` (`hdf5.py:65`)
+   failure via `catch_error`, line re-verified). A new connect-class
+   row **A4.9** exists with a verified candidate mechanism, and A4.2/
+   A4.3 now assert the *actually observed* stage rather than the
+   row-name stage. **[P3P-05]** extension recorded in both the body
+   and the placeholder table.
+3. **[Medium] "No artifact" universal assertion scoping — CLOSED.**
+   Universal assertion (b) now scopes non-existence explicitly to
+   pre-connect faults (A4.1), explains *why* (`'a'`-mode connect
+   creates the target at connect), and requires every post-connect row
+   (A4.2, A4.3, A4.9 candidates) to pin and assert its artifact state
+   per-row via the frozen **[P3P-03]/[P3P-05]** — with concrete
+   examples and an explicit "never left unasserted" rule. **[P3P-03]**
+   placeholder table row updated to carry the per-row artifact-state
+   freeze.
+4. **[Medium] Example dual-write row — CLOSED.** New **A1.6** runs
+   `thermal_experiment.execute()` on a synthetic temp-dir config and
+   asserts via the A2 safe path: coexistence of `thermal_manifest` and
+   `run_record`, legacy bytes/version/eleven-field equality against a
+   legacy-only reference run, codec decode cross-check, the call-site
+   completed-acquisition gate (the only place it is observable), and
+   original-byte sha256 stability. The row is planned (not deferred)
+   with an explicit recorded fallback if the design assigns example
+   wiring to Phase 4 — no ambiguity remains.
+5. **[Low] Signal-profile coverage — CLOSED.** New **A2.8** constructs
+   a `PROFILE_SIGNAL` run group, saves and inspects it, positively
+   asserts `profile == 'signal'` and hydration carrying `run_record`
+   with the **empty** legacy-key set as a frozen literal, and records
+   the applicability decision verbatim: deferred to Phase 4 if the
+   design keeps signal owned-persistence deferred, with decision §1's
+   conditional clause cited either way.
+
+### Placeholder extensions — CONFIRMED
+
+**[P3P-01]** extension present (body and placeholder table): (a)
+sample/record attachment mechanism (branch a/b with confirmation
+required), (b) per-profile hydration key sets (thermal: three
+`_META_KEYS` + `thermal_manifest`; signal: empty set as frozen
+literal), (c) "legacy context still available" meaning for A3.3 with
+the **[P3P-06]** interaction noted. **[P3P-05]** extension present:
+mandatory empirical failure-stage verification on both interpreters
+with the wrong-stage reclassification rule. No new placeholder added
+beyond the two extensions — consistent with this review's assessment.
+
+### Minor observations (non-blocking) — ADDRESSED IN PASSING
+
+6. A1.1 reworded: the gate is now stated as a call-site property
+   asserted at the example layer (A1.6), with A1.1 asserting only what
+   the save entry point can observe (envelope rejected before connect).
+   Matches the review's wording suggestion.
+7. A5.2 reworded: the recorder assertion is now "no `set_meta` call on
+   **any** key after the save's attribute write", with the explicit
+   note that no separate outcome metadata key exists. Matches the
+   review's wording suggestion.
+8. No action required; still verified.
+
+### New findings
+
+None.
+
+### Verdict
+
+**APPROVED** — all five findings closed in plan text; placeholder
+freeze set confirmed; no new findings. The executable suite remains
+gated on the reviewed Phase 3 detailed design freezing **[P3P-01…07]**
+(as extended) and the plan's quote-check alignment before test code
+per the gate-linkage section.
