@@ -939,30 +939,45 @@ class BackendCallers(unittest.TestCase):
 
     def test_runtime_caller_instrumentation_of_thermal_execute(self):
         """Record which backend entry points the thermal example exercises,
-        with which arguments (test-harness doubles only, no source change)."""
+        with which arguments (test-harness doubles only, no source change).
+
+        OBSERVED HARNESS FACT: explicit recording spies are used instead of
+        ``mock.patch.object(..., autospec=True, wraps=original)`` because on
+        Python 3.9 the autospec'd mock does NOT delegate to ``wraps``
+        (CPython gh-75988, fixed in 3.11.9+/3.12/3.13, never backported to
+        3.9): the patched ``connect`` returned a child MagicMock without
+        running the real connect, so ``writer.connected`` stayed False and
+        the example's own guard failed the run with
+        ``RuntimeError('HDF5 writer connect failed: ')``.  Plain delegation
+        spies record identically on every supported version; plain
+        ``execute()`` (all other tests here) is unaffected on 3.9."""
         self.temp = tempfile.TemporaryDirectory(prefix="softlab-m03-p1-c4c-")
         self.addCleanup(self.temp.cleanup)
         root = Path(self.temp.name)
-        calls = {"connect": None, "save_group": None, "load_group": None}
-        originals = {
-            "connect": HDF5DataBackend.connect,
-            "save_group": HDF5DataBackend.save_group,
-            "load_group": HDF5DataBackend.load_group,
-        }
-        patches = {name: mock.patch.object(HDF5DataBackend, name,
-                                           autospec=True, wraps=original)
-                   for name, original in originals.items()}
-        mocks = {name: patch.start() for name, patch in patches.items()}
+        calls = {"connect": [], "save_group": [], "load_group": []}
+
+        def make_spy(name, original):
+            def spy(instance, *args, **kwargs):
+                calls[name].append(mock.call(instance, *args, **kwargs))
+                return original(instance, *args, **kwargs)
+            return spy
+
+        spies = {name: make_spy(name, getattr(HDF5DataBackend, name))
+                 for name in calls}
+        patches = [mock.patch.object(HDF5DataBackend, name, spy)
+                   for name, spy in spies.items()]
+        for patch in patches:
+            patch.start()
         try:
             result = thermal.execute(thermal.ThermalConfig(),
                                      root / "instrumented")
         finally:
-            for patch in patches.values():
+            for patch in patches:
                 patch.stop()
         self.assertTrue(result.overall_success)
-        connects = mocks["connect"].call_args_list
-        saves = mocks["save_group"].call_args_list
-        loads = mocks["load_group"].call_args_list
+        connects = calls["connect"]
+        saves = calls["save_group"]
+        loads = calls["load_group"]
         # writer connect on the output file + reader connect on the copy
         self.assertEqual(len(connects), 2)
         self.assertEqual(connects[0].args[1], {"path": str(result.data_path)})
@@ -1188,7 +1203,8 @@ class Hygiene(unittest.TestCase):
             "h5py": h5py.__version__,
             "libhdf5": h5py.version.hdf5_version,
             # observed: reading sqlite3.version emits a DeprecationWarning
-            # on this Python; captured and asserted here as evidence
+            # on Python >= 3.13 (attribute deprecated there, removal 3.14);
+            # on older Pythons (e.g. 3.9) the read is silent
             "sqlite3_module": None,
             "sqlite3_library": sqlite3.sqlite_version,
             "matplotlib": __import__("matplotlib").__version__,
@@ -1198,8 +1214,14 @@ class Hygiene(unittest.TestCase):
             versions["sqlite3_module"] = sqlite3.version
         deprecations = [item for item in caught
                         if issubclass(item.category, DeprecationWarning)]
-        self.assertEqual(len(deprecations), 1)
-        self.assertIn("version is deprecated", str(deprecations[0].message))
+        # both observations asserted as facts, conditional on the
+        # interpreter actually running (not skipped)
+        if sys.version_info >= (3, 13):
+            self.assertEqual(len(deprecations), 1)
+            self.assertIn("version is deprecated",
+                          str(deprecations[0].message))
+        else:
+            self.assertEqual(deprecations, [])
         for name, value in versions.items():
             self.assertTrue(value, name)
 
