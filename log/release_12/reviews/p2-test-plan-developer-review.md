@@ -388,3 +388,58 @@ a small additive extension of F13/S1.5; once the counts-relation and
 cross-layer count-drift negatives are added with their frozen messages,
 this plan is executable as written and I expect to approve without
 further iterations.
+
+---
+
+## Closure (2026-11-01, after sw-mike fix `25a0c2e`)
+
+Method: quote-check of the revised plan text
+(`log/release_12/test/schema-test-plan.md` @ `25a0c2e`) against the
+approved design (`p2-schema-design.md` @ `c058ec1`) §8.4 freeze table and
+§3 class table. Source-level inspection only.
+
+**Finding 1 (count-mismatch negative probes) — CLOSED:**
+
+1. **F13 count-mismatch probes (a/b/c) — correct and verbatim.** All
+   three probes assert the frozen messages character-for-character
+   against design §8.4:
+   - (a) `outcome.completed_rows != outcome.requested_rows` ⇒
+     `RecordValidationError`,
+     `outcome.completed_rows: differs from outcome.requested_rows`
+     — verbatim the §8.4 "Counts relation" row template.
+   - (b) thermal `configuration.points != outcome.requested_rows` ⇒
+     `configuration.points: inconsistent with outcome.requested_rows`
+     — the §8.4 "Cross-layer count drift" template with `<path>`
+     correctly instantiated to the thermal layer, matching the §1.6
+     frozen equality `configuration.points == outcome.requested_rows`.
+   - (c) signal `payload.points != outcome.requested_rows` ⇒
+     `payload.points: inconsistent with outcome.requested_rows`
+     — same template instantiated to the signal layer, matching §1.7's
+     `payload.points == outcome.requested_rows`.
+   Each probe is one-defect with all other counts left consistent, per
+   the finding's fix instruction; the "each frozen message asserted
+   verbatim" clause is stated in the row text. The positive-side
+   relations in S1.5 are untouched and remain asserted.
+2. **S1.5 negative-side pointer — correct.** The S1.5 bullet now carries
+   the negative side explicitly, names F13's count-mismatch probes as
+   the asserting location, quotes both frozen messages verbatim, and is
+   traced to the §8.4 "Counts relation" / "Cross-layer count drift"
+   rows. No duplication, no divergence from the F13 row text.
+3. **Leaf-class `isinstance` note — correct and complete.** The
+   executable-suite note added to the frozen-literals bullet records
+   exactly the disposition of this review's observation: assert
+   `isinstance(exc, ValueError)` only for the leaf classes
+   `RecordDecodeError`/`RecordValidationError`; never for
+   `RunRecordError` itself, whose class-table base (design §3) is
+   `Exception` only. The note also explains that the plan's "all
+   subclass `ValueError`" phrasing mirrors design §8.4's closing
+   sentence and applies to the leaf classes — consistent with the
+   approved design text.
+
+No other plan text changed in `25a0c2e` (diff reviewed: +18/−2, single
+file). All literals previously verified at the final re-review remain
+verbatim consistent; no new findings.
+
+**Overall verdict: APPROVED.** The plan is executable as written,
+gated on the reviewed Phase 2 detailed design freezing the listed
+placeholders per the plan's own gate-linkage section.
