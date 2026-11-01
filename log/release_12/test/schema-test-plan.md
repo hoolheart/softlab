@@ -1,9 +1,10 @@
 # Release 12 (M03 Phase 2) — Schema/Codec Test Plan
 
 Owner: Tester (sw-mike) | 2026-11-01 Asia/Shanghai
-Status: **REVISED per revised detailed design (commit `c15f9e8`), §8.7
-revisions 1–12 applied — awaiting developer re-review, then architect/design
-re-review per the project gate order; no test code and no source changes
+Status: **DELTA-REVISED per design `4b4b6db` §8.8 — pending developer
+re-review**; supersedes the fc42bf9 alignment (§8.7 revisions 1–12
+applied — awaiting developer re-review, then architect/design
+re-review per the project gate order); no test code and no source changes
 before approval**
 Branch: `codex/m03-p2-schema`
 PRD: [log/release_12/prd.md](../prd.md) (Phase 2 row, **M03-AC02**)
@@ -12,10 +13,11 @@ Plan: [plan/milestone-03.md](../../../plan/milestone-03.md)
 Binding input: [p1-boundary-decision.md](../design/p1-boundary-decision.md)
 (option (a), section 1.1 exact boundary, **section 6 binding constraints**)
 Design basis: [p2-schema-design.md](../design/p2-schema-design.md)
-(revised per architecture review, commit `c15f9e8`; all literals below are
-frozen there — §1.1, §1.4–§1.7, §2.2–§2.3, §3, §4, §8). Every literal in
-this plan is quote-checked against that design; discrepancies are flagged,
-never guessed.
+(second revision per architecture re-review, commit `4b4b6db`; all
+literals below are frozen there — §1.1, §1.4–§1.7, §2.2–§2.3, §3, §4,
+§7.2, §8). Every literal in this plan is quote-checked against that
+design; discrepancies are flagged, never guessed. The §8.8 delta table
+(6 items) is applied by direct diff in this revision.
 Format conventions follow
 [characterization-test-plan.md](characterization-test-plan.md) and its executed
 results in [characterization-results.md](characterization-results.md).
@@ -67,7 +69,10 @@ the design exports them (S4.4):
   directly), `RecordDecodeError` (text/parse stage, decode only),
   `RecordValidationError` (contract stage, encode and decode); all subclass
   `ValueError`. `TypeError` (builtin) for a non-`str` `decode` argument or
-  a non-`dict` `encode` argument (design §2.1, [R7]).
+  a non-`dict` `encode` argument (design §2.1, [R7]). Unpaired-surrogate
+  input text at the decode size pre-check ⇒ `RecordDecodeError`,
+  `run_record: input text is not encodable as UTF-8 (unpaired surrogate)`,
+  identical on Python 3.9 and 3.13 (design §2.2 step 2, §8.4; S2 F17).
 - Module placement: codec at `softlab/shui/run_record.py` (standard library
   only), group seam at `softlab/shui/run_group.py` (design "Module
   placement"). Export surface per S6.3 (design §8).
@@ -194,6 +199,21 @@ item 2; design §1, §2.2, §8.6.
      group is constructed — no partially populated group can escape; the
      recorder double asserts zero group-construction calls on the failure
      path.
+   - **Name-contract probes (frozen, design §4 step 0, [R10], §8.8
+     delta 6):** the seam enforces an exact nonempty `str` name itself,
+     first — it never relies on `DataGroup`'s inherited `str()` coercion
+     (`DataGroup.name`'s setter stringifies a non-text name instead of
+     rejecting it). A non-`str` name (an integer name is the probe —
+     rejected, never stringified) ⇒ builtin `TypeError`,
+     `run_group: name must be an exact str`; an empty name ⇒ builtin
+     `ValueError`, `run_group: name must be nonempty`. Both are raised
+     by the seam's own step-0 pre-check **before** any `DataGroup`
+     construction, and the recorder double asserts **zero**
+     constructor calls on both failure paths. These argument failures
+     are builtin `TypeError`/`ValueError` — matching `DataGroup`'s own
+     convention — not `RunRecordError` subclasses (the group name is a
+     `DataGroup` construction argument, not part of the record
+      contract).
 
 ## S2 — Failure matrix
 
@@ -230,7 +250,8 @@ occurred (S5).
 | F13 | Profile-specific semantic violations at the client validator, **including frozen-model/offsets drift probes (design §1.6, §1.7, §8.7 revision 3)**: thermal six-column ordering, clock/delay policy (coordinated ⇒ delay 1 + `'tick-1'`; direct ⇒ delay 0 + `'tick'`), v1/v2 source-tick distinction, configuration physical validity (`heat_capacity`, `conductance`, `dt` > 0 and `0 < dt*conductance/heat_capacity <= 1`), boundary cross-checks (`final_tick == completed_rows`; `\|final_sim_time - points*dt\| <= 1e-10`); signal declared source columns (exact three, no fourth column, no rename; derived `difference` smuggled into stored columns rejected); **drift probes:** any alteration of the `model` object versus the frozen `THERMAL_MODEL` — a different equation, method, or validity string, any altered or renamed unit — is `RecordValidationError`, `payload.model: unsupported model semantics or units`; any alteration of `read_policy.offsets` versus the frozen `SIGNAL_OFFSETS = {'signal': 5, 'reference': 2}` — changed values, zero/negative offsets, extra keys, renamed channels — is `RecordValidationError`, `payload.read_policy.offsets: unsupported read offsets (supported: {'signal': 5, 'reference': 2})`. Also asserted: thermal `record.name == 'thermal_trace'` / signal `record.name == 'signal'` (frozen record names, design §1.6/§1.7). | `RecordValidationError` with the profile-attributed frozen messages of design §8.4 F13 row; the common layer does not reinterpret payload internals. |
 | F14 | Present `null` on a field to which the frozen schema assigns **no null meaning** (one test per such field class, parametrized) | `RecordValidationError`, `<path>: explicit null has no assigned meaning`. Only availability-fact `value` (iff unavailable) and `reason` (iff available) carry an assigned null meaning (design §1.4, §2.4, §8.5); those two are **not** fed through this row — their acceptance side is S3.5.2. |
 | F15 | **REVISED (design §1.4 [R6], §8.7 revision 4): structurally** invalid availability representation — malformed `digest`/`git_revision` (non-hex, wrong length, uppercase), wrong value type for the fact, empty text where nonempty is required, invalid state literal (not `'available'`/`'unavailable'`), and any state/value/reason binding violation | `RecordValidationError`, `<path>: invalid available value` (design §8.4 F15 row). **Structural validation only:** the codec does **not** — and cannot — reject a well-formed but invented, copied-from-another-client, or assumed observation; a well-formed fabricated digest is indistinguishable from a well-formed observed one. Capture-truthfulness (facts actually captured for this run) is a **client capture/construction integration-seam responsibility** (the Phase 3/4 caller of `build_run_group`, wired where capture evidence exists), explicitly **not** claimed by this codec suite. The previous draft's expectation that the codec rejects "invented/copied/assumed" well-formed values is removed. |
-| F16 | Availability reason string outside the frozen bounded vocabulary `('capture_failed', 'source_mismatch')`, or missing where the unavailable state requires one (and vice versa: reason present without the unavailable state); also the git binding (`git_dirty.state != git_revision.state`) | `RecordValidationError` with the frozen templates `<path>: reason outside bounded vocabulary` / `<path>: unavailable state requires null value and bounded reason` / `<path>: available state requires value and null reason` (design §8.4 F16 row); the unavailable state and its reason are bound together per the frozen unavailable-reason rules (decision §6 items 1 and 6). The reason string exceeding the frozen bound `MAX_UNAVAILABLE_REASON_LENGTH = 64` is rejected at the count-boundary side (S4.3). |
+| F16 | Availability reason string outside the frozen bounded vocabulary `('capture_failed', 'source_mismatch')`, or missing where the unavailable state requires one (and vice versa: reason present without the unavailable state); also the git binding (`git_dirty.state != git_revision.state`) | `RecordValidationError` with the frozen templates `<path>: reason outside bounded vocabulary` / `<path>: unavailable state requires null value and bounded reason` / `<path>: available state requires value and null reason` (design §8.4 F16 row); the unavailable state and its reason are bound together per the frozen unavailable-reason rules (decision §6 items 1 and 6). The reason string exceeding the frozen bound `MAX_UNAVAILABLE_REASON_LENGTH = 64` is rejected at the count-boundary side (S4.3, contract layer per §8.8 delta 3). |
+| F17 | **NEW (§8.8 delta 5, design §2.2 step 2, §3, §8.4):** unpaired-surrogate decode input — a Python `str` carrying an unpaired surrogate, which the decode size pre-check's UTF-8 length computation cannot encode (the builtin `UnicodeEncodeError` is mapped, never escapes the frozen taxonomy) | `RecordDecodeError`, `run_record: input text is not encodable as UTF-8 (unpaired surrogate)` — asserted **identical on Python 3.9 and 3.13** (both reject unpaired surrogates at UTF-8 encoding). |
 
 ## S3 — Boolean-vs-number, type strictness, container types, huge integers
 
@@ -269,25 +290,46 @@ numbers"); design §2.1 [R7], §2.2 [R2], §8.7 revisions 6–7.
    - Signatures annotate `Dict[str, Any]` / `List[...]` (never abstract
      `Mapping`/`Sequence`), asserted by inspection so the annotation never
      promises an input the sweep rejects.
-6. **Huge-integer probes (frozen, [R2], §8.7 revision 7) — identical on
-   Python 3.9 and 3.13, with no `autospec=True` combined with `wraps`
-   anywhere in these tests (S7.3).** The contract freezes
-   `MAX_INTEGER_DIGITS = 1024` decimal digits and the derived private encode
-   bound `_MAX_INTEGER_BITS = 3398` (`bit_length()` check, no string
-   conversion, so the check itself cannot trip the 3.13 interpreter guard):
-   - **Encode, exact-integer field at/over the bound:** an exact-integer
-     field (e.g. `outcome.requested_rows` with all matching counts) with
-     **1024 decimal digits is accepted** and encodes/decodes; **1025 digits
-     is rejected** with `RecordValidationError`,
-     `<path>: integer digit count exceeds limit 1024`. Digits are counted
-     via a programmatically constructed value (no committed large literal).
+6. **Huge-integer probes (frozen, [R2], §8.7 revision 7; mechanism and
+    sign rule corrected per §8.8 delta 1) — identical on Python 3.9 and
+    3.13, with no `autospec=True` combined with `wraps` anywhere in
+    these tests (S7.3).** The contract freezes
+    `MAX_INTEGER_DIGITS = 1024` decimal digits and the derived private
+    bound `_MAX_INTEGER_ABS = 10 ** MAX_INTEGER_DIGITS` (a module
+    constant computed once at import; pure integer comparison, no string
+    or float conversion, so the check itself cannot trip the 3.13
+    interpreter guard). One magnitude policy applies identically on
+    encode and decode: an exact integer is accepted **iff**
+    `abs(v) < 10 ** MAX_INTEGER_DIGITS`, i.e. at most 1024 decimal
+    digits; a leading `-` is a sign, never counted as a digit, so
+    positive and negative values behave identically (design §2.2,
+    §7.2):
+   - **Encode, exact-integer field at/over the bound:** pinned to the
+     **signal** profile per §8.8 delta 1 — an exact-integer field
+     (`outcome.requested_rows`, with matching `completed_rows` and
+     `payload.points`, pure integer equality) with **1024 decimal
+     digits is accepted** and encodes/decodes; **1025 digits is
+     rejected** with `RecordValidationError`,
+     `<path>: integer digit count exceeds limit 1024`. (Thermal counts
+     at that magnitude are rejected by the `final_sim_time` float
+     cross-relation, design §1.6, so the at-limit valid-envelope probe
+     cannot use the thermal profile.) Acceptance includes `10**1023`
+     (the smallest 1024-digit positive value — which the first
+     revision's `_MAX_INTEGER_BITS = 3398` mechanism wrongly rejected
+     on encode while decode accepted it; that mechanism is withdrawn).
+     Values are constructed programmatically (no committed large
+     literal).
    - **Decode, long integer token at/over the bound:** raw text whose
      integer token has 1024 digits round-trips; a 1025-digit token is
      rejected by the `parse_int` bound **before any conversion** with
      `RecordDecodeError`, `run_record: integer digit count exceeds limit
-     1024`. (The optional leading `-` counts as one character — the bound
-     is conservative; a `-` plus 1024 digits is therefore rejected. This is
-     the frozen decode-side rule, design §2.2.)
+     1024`. The optional leading `-` is **stripped before the digit
+     count** (design §2.2 second revision), so a `-` plus 1024 digits
+     is **accepted** by the bound — matching encode exactly. JSON
+     integer tokens have no leading zeros, so the token digit count
+     equals the value's decimal digit count: the decode accepted set is
+     precisely the encode accepted set, and a decoded 1024-digit value
+     re-encodes without error (the round-trip boundary holds).
    - **Finite-real field fed a huge int:** an `int` whose `float()`
      conversion raises `OverflowError` (beyond float range) fed to a
      finite-real field is mapped to `RecordValidationError`,
@@ -377,24 +419,41 @@ the contract layer, proving the sweep accepted it).
      recursion never exceeds ~10 frames); tests assert the public behavior
      only.
 2. **Size (`MAX_ENCODED_BYTES = 131072`; encode: ASCII bytes; decode: UTF-8
-   bytes — design §2.3 [R5]):** the previous draft's "largest accepted input
-   is exactly at the limit" assertion is **unsatisfiable** under the closed
-   schema (the derived worst-case legitimate envelope is ≤ 65,448 bytes) and
-   is replaced by the frozen boundary pair:
-   - **Decode pre-check boundary pair:** exactly **131,072 bytes** of input
-     **passes the size gate** — probe: syntactically valid but
-     contract-invalid text (`'{}'` plus whitespace padding) fails later at
-     contract validation (`RecordDecodeError`, `run_record: root must be an
-     object`), proving the gate accepted the size; **131,073 bytes** is
-     rejected by the gate with `RecordDecodeError`,
+    bytes — design §2.3 [R5]; bound, fixture, and probe corrected per
+    §8.8 delta 2):** the previous draft's "largest accepted input is
+    exactly at the limit" assertion is **unsatisfiable** under the closed
+    schema (the derived worst-case legitimate envelope is ≤ 66,472 bytes
+    — the derivation now includes the omitted `payload.timing.dt`, the
+    eighth finite real, design §2.3) and is replaced by the frozen
+    boundary pair:
+   - **Decode pre-check boundary pair:** exactly **131,072 bytes** of
+     input **passes the size gate** — probe: syntactically valid but
+     contract-invalid text (`'{}'` plus whitespace padding) —
+     `'{}'` **is** an object, so it passes the root-type check and
+     fails later at contract validation with `RecordValidationError`,
+     `<path>: missing required field ...`, proving the gate accepted
+     the size (the first revision's expectation of `RecordDecodeError`
+     / `run_record: root must be an object` is withdrawn); **131,073
+     bytes** is rejected by the gate with `RecordDecodeError`,
      `run_record: encoded size exceeds limit 131072 bytes`. Inputs are
      constructed programmatically (no committed large literals).
-   - **Maximal-valid-envelope assertion:** a constructed envelope with every
-     variable field at its cap (four free-text fields at 1024 code points
-     with worst-case non-BMP escaping, five exact integers at 1024 digits,
-     seven finite reals at worst case) encodes to **≤ 65,448 bytes** and
-     round-trips — proving ≥ 2× headroom of the limit over the largest
-     legitimate envelope (design §2.3 derivation).
+   - **Maximal-valid-envelope assertion:** the constructible maximal
+     valid envelope of design §2.3 (the first revision's
+     all-variable-fields-at-cap fixture was impossible — 1,024-digit
+     integers in finite-real fields overflow the required float
+     normalization, and thermal's huge-count/`final_sim_time`
+     cross-relation cannot be satisfied at that magnitude): the four
+     free-text fields at the 1,024-code-point cap with worst-case
+     non-BMP escaping (`software.softlab_version`,
+     `software.python_version`, `source.reference`,
+     `source.digest_scope`), signal-profile counts at the 1,024-digit
+     cap (`requested_rows`, `completed_rows`, `payload.points`), and
+     finite reals at ordinary float values. Such an envelope encodes
+     well under the **66,472-byte** ceiling and round-trips — proving
+     **≈ 1.97× headroom** (131,072 / 66,472 ≈ 1.97, just under 2×) of
+     the limit over the largest legitimate envelope (design §2.3
+     derivation). The design's derivation is a deliberately loose
+     sweep-level ceiling; the attainable maximum lies far below it.
    - **Encode-side size check:** defense-in-depth, provably unreachable for
      valid envelopes; asserted by the maximal-envelope bound above, not by a
      dedicated oversize-encode probe.
@@ -413,16 +472,22 @@ the contract layer, proving the sweep accepted it).
      a **valid** envelope with a 1024-code-point `digest_scope` (or
      `reference`, `software.*`) is **accepted**; 1025 is rejected by the
      sweep (`<path>: string length exceeds limit 1024`).
-   - **Unavailable-reason length (64/65), probed at the proper field:** a
-     64-character reason passes the length gate and then fails **vocabulary**
-     validation (`RecordValidationError`, `<path>: reason outside bounded
-     vocabulary`) — proving the length gate accepted 64; 65 characters fail
-     at the sweep (`<path>: reason length exceeds limit 64`). The numeric
-     value is read from the module's exported constant (S4.4).
-   - **Integer digits (1024/1025):** probed at the public valid-envelope
-     boundary per S3.6 (a 1024-digit `requested_rows` with matching counts
-     encodes/decodes; 1025 digits rejected — encode `RecordValidationError`,
-     decode `RecordDecodeError`), identical on 3.9 and 3.13.
+   - **Unavailable-reason length (64/65), probed at the proper field,
+     both checks at the contract layer ([R5], §8.8 delta 3 — the
+     path-specific reason-length check is **not** part of the generic
+     §7.2 sweep):** a 64-character reason passes the length gate and
+     then fails **vocabulary** validation (`RecordValidationError`,
+     `<path>: reason outside bounded vocabulary`) — proving the length
+     gate accepted 64; 65 characters fail the contract-layer length
+     check with `RecordValidationError` (`<path>: reason length exceeds
+     limit 64`) on **both** encode and decode. The numeric value is
+     read from the module's exported constant (S4.4).
+   - **Integer digits (1024/1025):** pinned to the **signal** profile
+     per §8.8 delta 1 — probed at the public valid-envelope boundary
+     per S3.6 (a 1024-digit `requested_rows` with matching
+     `completed_rows` and `payload.points` encodes/decodes; 1025 digits
+     rejected — encode `RecordValidationError`, decode
+     `RecordDecodeError`), identical on 3.9 and 3.13.
 4. **Constant-sourced limits (S4.4, updated per §8.7 revision 11).** Limits
    are asserted to be **the design's frozen values**, not test-local guesses:
    the test reads each limit from the module's own exported constant and
@@ -430,10 +495,13 @@ the contract layer, proving the sweep accepted it).
    detected by the test suite rather than silently passing. The constant set
    is exactly: `MAX_ENCODED_BYTES = 131072`, `MAX_DEPTH = 8`,
    `MAX_ARRAY_LENGTH = 64`, `MAX_OBJECT_ENTRIES = 64`,
-   `MAX_STRING_LENGTH = 1024`, `MAX_UNAVAILABLE_REASON_LENGTH = 64`,
-   `MAX_INTEGER_DIGITS = 1024`. All seven numeric limits are importable from
-   **both** `softlab.shui` and `softlab.shui.run_record` (design §8 export
-   table); the dual-import assertion is part of S6.3.
+    `MAX_STRING_LENGTH = 1024`, `MAX_UNAVAILABLE_REASON_LENGTH = 64`,
+    `MAX_INTEGER_DIGITS = 1024`. All seven numeric limits are importable
+    from `softlab.shui.run_record` **only** (§8.8 delta 4, [R8]: the
+    first revision's dual-package import assertion is withdrawn — S4.4
+    requires the limits readable from the owning module's exported
+    constants, never package-level names); the module-only import
+    assertion is part of S6.3.
 
 ## S5 — Side-effect-free failure
 
@@ -497,24 +565,29 @@ export table ([R8], §8.7 revision 12).
    public import paths used by the suites in S6.1 (including
    `softlab.thermal`-adjacent example modules and `softlab.shui` exports)
    resolve identically; a probe imports the legacy manifest machinery by its
-   current names and asserts presence. **Export-surface assertion (new,
-   §8.7 revision 12):** the package-level re-export list of
+   current names and asserts presence. **Export-surface assertion (updated
+   per §8.8 delta 4, [R8]):** the package-level re-export list of
    `softlab/shui/__init__.py` for this feature is **exactly** the design §8
    frozen table — no additional names from this feature, no wildcard
    imports: `RunRecordCodec`, `JsonRunRecordCodec`, `encode_envelope`,
    `decode_envelope`, `build_envelope`, `build_thermal_payload`,
    `build_signal_payload`, `build_run_group`, `RunRecordError`,
-   `RecordDecodeError`, `RecordValidationError`, and the seven numeric
-   limits (`MAX_ENCODED_BYTES`, `MAX_DEPTH`, `MAX_ARRAY_LENGTH`,
+   `RecordDecodeError`, `RecordValidationError`. **No numeric limit is
+   re-exported at package level:** the seven `MAX_*` names
+   (`MAX_ENCODED_BYTES`, `MAX_DEPTH`, `MAX_ARRAY_LENGTH`,
    `MAX_OBJECT_ENTRIES`, `MAX_STRING_LENGTH`,
-   `MAX_UNAVAILABLE_REASON_LENGTH`, `MAX_INTEGER_DIGITS`). Everything else
-   — `NAMESPACE`, `METADATA_KEY`, `FORMAT_VERSION`, profile identifiers,
+   `MAX_UNAVAILABLE_REASON_LENGTH`, `MAX_INTEGER_DIGITS`) are asserted to
+   be **absent** from `softlab.shui` — importing each from the package
+   raises `ImportError` — and importable from `softlab.shui.run_record`
+   directly (the S4.4 constant source). Everything else —
+   `NAMESPACE`, `METADATA_KEY`, `FORMAT_VERSION`, profile identifiers,
    payload versions, outcome/availability literals, `UNAVAILABLE_REASONS`,
    `THERMAL_MODEL`, `SIGNAL_OFFSETS` — stays on `softlab.shui.run_record`
    only and is imported from the module directly by tests that need it.
    Assert both directions: every listed name is importable from
-   `softlab.shui`; no feature name outside the list leaks into
-   `softlab.shui`. The pre-existing `softlab.shui` exports
+   `softlab.shui`; no feature name outside the reduced §8 table (the
+   seven `MAX_*` names included) leaks into `softlab.shui`. The
+   pre-existing `softlab.shui` exports
    (`DatabaseBackend`, `catch_error`, `data`, `profile`) are unchanged.
    Package-import and direct-module import smoke checks both apply.
 4. **Full suite green.** `python -m unittest discover -s tests -p 'test_*.py'`
@@ -622,9 +695,10 @@ failure closure"); AGENTS.md verification conventions; design §2.2 [R2]/[R4]
 Per-area verdicts in `schema-test-results.md` are the test-side evidence for
 **M03-AC02** and for plan evidence-matrix item 2. Phase 2 **does not** claim
 any M03-AC03/AC04 evidence (persistence and inspection integration are
-Phase 3) and does not alter the Phase 1 decision. This revision aligns the
-plan with the revised detailed design (commit `c15f9e8`, §8.7 revisions
-1–12); all literals are frozen design values, quote-checked against the
-design text. If the design is revised again before freeze, this plan is
-updated by direct diff check and re-reviewed; the executable tests are not
-written against unreviewed literals.
+Phase 3) and does not alter the Phase 1 decision. This revision applies
+the second-round delta (design §8.8, six items, commit `4b4b6db`) on top
+of the fc42bf9 alignment (§8.7 revisions 1–12); all literals are frozen
+design values, quote-checked against the design text. If the design is
+revised again before freeze, this plan is updated by direct diff check
+and re-reviewed; the executable tests are not written against unreviewed
+literals.
