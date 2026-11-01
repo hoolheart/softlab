@@ -174,3 +174,76 @@ characterization evidence for the defect disposition).
 - No executable test may be written until the corrected plan passes this
   developer re-review and the subsequent architect/design review per the gate
   order.
+
+## Re-review (sw-tom, 2026-11-01) — commit de239e0
+
+Focused re-check of F1–F4 against the revised plan text and the current
+baseline source. Every citation below was re-verified by direct source
+inspection on this branch.
+
+### F1 — CLOSED
+
+C5b item 2 now characterizes the example's reads as deterministic and
+**non-consumptive**: `read(channel, offset)` returns `state['tick'] + offset`
+with no queued value consumed, rerun inputs are `points` + the example-owned
+offsets + scheduler/loop ownership (`run_count` fresh `SerialScheduler`,
+`bounded.py:142`), and the M02 `_MonitorSource` `pop(0)` consumptive semantics
+are cited as test-double context only, explicitly not a property of
+`examples/signal_monitor.py`. C5b item 5 now defines the oracle against the
+example's actual values: signal `[6, 7, 8]` (`tick + 5`), reference
+`[3, 4, 5]` (`tick + 2)`, differences `[3, 3, 3]`, with the M02 double's
+`[10, 13, 17]` / `[1, 2, 4]` → `[9, 11, 13]` correctly attributed to the
+test-local client. Re-verified at `examples/signal_monitor.py:25-33`
+(`return state['tick'] + offset`, offsets 5/2 at L31/L33) and
+`tests/test_m02_w01_characterization.py:491-522` (the double). Fix is correct
+in substance and citation.
+
+### F2 — CLOSED
+
+Class name corrected to `Sqlite3DataBackend` everywhere in the plan (grep for
+the old `SQLiteDataBackend` name returns no matches); the actual class is at
+`softlab/shui/data/sqlite3.py:25` and is exported from `softlab.shui.data`.
+C4.1 now includes the production entry points `softlab/shui/data/io.py`
+(`get_data_backend` L24, `get_data_backend_by_info` L60, `load_groups` L80,
+`reload_group` L104, `save_group` L126 — all present, all instantiate both
+backends via type dispatch) and `tests/test_compatibility.py` (L111-112
+iterates `Sqlite3DataBackend` and `HDF5DataBackend`), and explicitly records
+what `reload_group`/`save_group` read/write from `group.backend`. The
+"complete ownership map" promise of C4.4 is now supportable.
+
+### F3 — CLOSED
+
+C1.5 now names the reachable observation path verbatim: the `after_row`
+callback of the public `run_count` seam receives the `CountResult` (the
+example's `after_count` wrapper, `thermal_experiment.py:274-279` and L298)
+whose `run_id` is the execution UUID (`softlab/huo/process/bounded.py:38`),
+with harness call instrumentation as the alternative. It also records
+verbatim that the example-local `RunResult` (`thermal_experiment.py:56-77`)
+does **not** retain the execution UUID. Re-verified: `run_id` field at
+`bounded.py:38`; `after_count(snapshot)` at `thermal_experiment.py:274-279`
+receiving the `CountResult`, passed as `after_row` to `run_count` at L298;
+`RunResult` (L56-77) carries no run-identity field. The probe instruction no
+longer points at a dead end.
+
+### F4 — CLOSED
+
+C2.3 now exercises **both** load paths verbatim and records each separately:
+the plain backend path (`backend.py:39` → `hdf5.py:54`, expected empty-meta
+outcome attributed to R4-BASE-META-01 plus the reserved-attr pops at
+`hdf5.py:137-142`) and the example hydration path (`_load_group` L674-693 /
+`_reload_group` L696+, re-hydrating meta via `set_meta`). C2.4 names the
+plain `Sqlite3DataBackend.load_group` path with its
+`{'sample', 'run_id'}` reconstruction (`sqlite3.py:159-162`) and notes the
+divergence from any example-side hydration. Re-verified: `load_impl` at
+`hdf5.py:54-55`; `meta = hdf5_data_grp.attrs` at `hdf5.py:137` with pops at
+L138-141; `_load_group` at `thermal_experiment.py:674-693`; SQLite meta
+reconstruction at `sqlite3.py:159-162`. The ambiguity that would have produced
+misattributed evidence is resolved.
+
+### Verdict
+
+**APPROVED.** All four findings (F1 material, F2 moderate, F3/F4 minor) are
+correctly closed by commit `de239e0`; no new findings. The plan is now
+executable as written. Per the gate order, this corrected plan may proceed to
+the architect/design review; no executable test may be written until that
+review also passes.
