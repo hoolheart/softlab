@@ -363,6 +363,69 @@ lock — the manifest's key set is exactly the eleven closed fields.
 | F-C (C4) | `reload_group`/`save_group` depend on `group.backend` | dependency confirmed, but `reload_group` returns `None` on BOTH backends even with valid backend info (UUID id vs str id; errors swallowed) | recorded as-is; scoped-decision input |
 | F-D (C4) | `load_groups` is a production entry point | `load_groups('sqlite3', ...)` returns `[]` on non-empty DBs (row-tuple ids); hdf5 works only on untouched files (F-A chain) | recorded as-is; scoped-decision input |
 
+## Corrections — CI (Python 3.9) failure closure
+
+CI run `41261184866` (Python 3.9 job) failed with 2 failures in this suite;
+Python 3.13 passed. Both were test-harness defects (environment-sensitive
+assertions/probes), **not product defects** — no `softlab/` source was
+changed. Corrections landed in commit `1522857`
+(`test: make phase 1 characterization suite version-robust`).
+
+### Correction 1 — `BackendCallers.test_runtime_caller_instrumentation_of_thermal_execute`
+
+- **Observed on 3.9 (reproduced locally on CPython 3.9.23):**
+  `AssertionError: False is not true` on `result.overall_success`; the run's
+  stage was `persistence` with cause `RuntimeError('HDF5 writer connect failed: ')`.
+- **Root cause:** the probe patched `HDF5DataBackend.connect/save_group/
+  load_group` with `mock.patch.object(..., autospec=True, wraps=original)`.
+  On Python 3.9 an autospec'd mock does **not** delegate to `wraps`
+  (CPython gh-75988, "autospec=True conflicts with wraps"; fixed in
+  3.11.9+/3.12/3.13 via gh-115223, never backported to 3.9): the patched
+  `connect` returned a child MagicMock without running the real connect, so
+  `writer.connected` stayed `False` and the example's own guard failed the
+  run. Plain `execute()` is unaffected on 3.9 — every other execute-based
+  test passed in the same CI job.
+- **Fix:** the probe now uses explicit recording spies (plain functions that
+  append `mock.call(instance, *args, **kwargs)` and delegate to the
+  original), patched without autospec. Call inventory and arguments are
+  recorded identically on 3.9 and 3.13; the `overall_success` assertion is
+  truthful on both. The harness fact is documented in the test docstring.
+
+### Correction 2 — `Hygiene.test_environment_actually_observed`
+
+- **Observed on 3.9:** `AssertionError: 0 != 1` on `len(deprecations)`.
+- **Root cause:** reading `sqlite3.version` emits exactly one
+  `DeprecationWarning` ("version is deprecated ... removed in Python 3.14")
+  only on Python >= 3.13, where the attribute was deprecated; on 3.9 the
+  read is silent (0 deprecations). The original assertion hard-coded the
+  3.13 observation.
+- **Fix:** the deprecation expectation is now conditional on
+  `sys.version_info >= (3, 13)` (exactly one warning, text asserted) vs.
+  older interpreters (silent, empty list asserted). The test still runs —
+  not skipped — and asserts what was actually observed on each interpreter.
+
+### Environment notes (recorded, not waived)
+
+- The stderr line `Exception in reloading group ...:
+  ValueError('Backend type is empty')` seen in the CI log is the EXPECTED
+  output of the deliberate empty-backend probe in C4
+  (`test_save_and_reload_group_depend_on_group_backend_info`), already
+  recorded above; it is unrelated to either failure.
+- On Python 3.9 with pandas 2.x, the pre-existing production code
+  `softlab/shui/data/base.py:314` (`pd.concat` in `DataRecord.add_rows`)
+  emits a `FutureWarning: The behavior of DataFrame concatenation with
+  empty or all-NA entries is deprecated` during the run. This is a baseline
+  library-version warning from unchanged production code, outside this
+  suite's scope; it does not fail any test (the `-W error` CLI probes run in
+  child processes that do not hit that path). On Python 3.13 with pandas
+  3.0.6 the warning no longer exists.
+- Cross-version re-verification: full suite 405 tests OK on Python 3.13.15
+  (project venv, pandas 3.0.6); on a local CPython 3.9.23 scratch env
+  (pandas 2.3.3, h5py 3.14.0, numpy 2.0.2) this suite's 47 tests plus the 5
+  compatibility tests all pass. The scratch env lacked `pyvisa-sim`
+  (optional `notebooks` extra), so `test_tu_visa_contracts` was not part of
+  that 3.9 scratch run; CI installs the extra.
+
 ## Phase 1 decision inputs (Product/Architect)
 
 Two-client inventory in one view: the **thermal client** persists a closed,
