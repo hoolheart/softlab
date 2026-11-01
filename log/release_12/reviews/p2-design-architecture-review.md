@@ -299,3 +299,204 @@ the already approved test plan must be an explicit, traceable diff with the
 applicable tester/developer review; it must not silently weaken the joint
 boundary. This review is not implementation authorization, test evidence, or
 M03 acceptance.
+
+## Re-review — revised design at `c15f9e8`
+
+- **Reviewer**: sw-jerry (Software Architect)
+- **Date**: 2026-11-01 Asia/Shanghai
+- **Reviewed design**: `log/release_12/design/p2-schema-design.md` at
+  `c15f9e8`
+- **Associated test-plan diff reviewed**: `schema-test-plan.md` at
+  `fc42bf9`; its own header still awaits developer re-review, which remains
+  a separate required gate.
+- **Method**: static contract, boundary, source-fidelity, arithmetic, and
+  Python 3.9/3.13 portability review. No implementation files were changed
+  and no runtime tests were executed.
+
+### Re-review verdict
+
+**CHANGES REQUESTED.** Original findings 1, 3, 4, 6, and 7 are closed in
+substance. Findings 2, 5, and 8 are not correctly closed, and two new
+contract defects are recorded below. The group seam remains within the
+joint decision, the pinned client declarations match their legacy sources,
+and the F15 responsibility split is now correct. Approval is nevertheless
+blocked by the inconsistent integer boundary, an incomplete size
+derivation/probe contract, and the still-broad package exports. This
+re-review does not waive the test plan's pending developer re-review and is
+not implementation authorization.
+
+### Per-finding closure
+
+#### 1. High — CLOSED: bounded in-memory group construction is now designed
+
+Design §4 now provides `build_run_group` in the separate
+`softlab/shui/run_group.py` module. It encodes and validates before
+construction, creates `DataGroup(name=name, id=...)` without `meta=`, and
+calls only `set_meta(METADATA_KEY, text)` with successfully encoded text.
+It has no backend/file handle or save/connect/disconnect operation and
+leaves persistence, hydration, and inspection in Phase 3. This satisfies
+boundary decision §6 item 1 and the D1 construction conditions without
+coupling the pure codec to `DataGroup`. The revised plan's S1.8 covers the
+same order and boundary. The unrelated name-contract inaccuracy is new
+finding 10, not a reopening of this core seam finding.
+
+#### 2. High — OPEN: the 1024-digit contract and the bit-length guard disagree
+
+The finite-real overflow guard and pre-conversion decode token check are
+correct additions, and bounding tokens below 4300 digits avoids the
+Python-3.13 interpreter guard. However, `_MAX_INTEGER_BITS = 3398` does not
+implement the stated 1024-decimal-digit encode contract:
+
+- every accepted value has `bit_length() <= 3398`, hence is `< 2**3398`
+  and has at most 1023 decimal digits;
+- `10**1023`, the smallest 1024-digit positive integer, has bit length
+  3399 and is therefore rejected by the encode sweep;
+- decode accepts a positive 1024-digit token through `_bounded_int`, so a
+  signal envelope with matching 1024-digit counts can decode successfully
+  and then fail when the normalized envelope is encoded again.
+
+Thus design §2.3/§7.2 and revised plan S3.6/S4.3 cannot satisfy their claim
+that a 1024-digit `requested_rows` encodes and round-trips. The asymmetry
+would be reproducible on both interpreters; guard safety alone does not
+make the public encode/decode contracts identical.
+
+**Required correction**: freeze one magnitude policy and apply it
+consistently on encode and decode. For a true decimal-digit contract, an
+integer comparison against a precomputed power-of-ten bound avoids string
+conversion; alternatively, explicitly freeze a bit-length contract and use
+it after the safe token conversion on decode as well. Correct the constant
+names/messages, reachability table, and plan probes to the actual boundary,
+including positive and negative values and decode→encode round-trips on
+Python 3.9 and 3.13.
+
+#### 3. High — CLOSED: thermal model and signal offsets are pinned to legacy semantics
+
+Design §1.6's `THERMAL_MODEL` is value-for-value identical to legacy
+`_MODEL`, including equation, method, validity, and all seven units. Design
+§1.7 freezes exactly `{'signal': 5, 'reference': 2}`, matching
+`examples/signal_monitor.py`. Both builders treat caller declarations as
+evidence and reject drift. Revised plan F13 now includes the required
+model/unit and offset/key negative probes. This stays within decision §1.2
+and §6 item 9.
+
+#### 4. Medium — CLOSED: depth accounting and parser recursion failure are contained
+
+Design §7.2 now checks depth only on container entry; scalar children at a
+container depth of 8 are not rejected as depth 9. The sweep stops at depth
+9, and `json.loads` parser `RecursionError` is mapped to
+`RecordDecodeError` while hook exceptions and `JSONDecodeError` retain
+their own channels. Revised plan S4.1 includes the scalar-at-limit,
+depth-9, and parser-recursion probes on both supported interpreters.
+
+#### 5. Medium — OPEN: the layered approach is sound, but the frozen limits/probes are not yet valid
+
+The per-limit reachability table and the direct plan revision correctly
+replace blanket valid-envelope acceptance at unreachable generic limits.
+The following defects prevent closure:
+
+1. The integer row is unreachable as written for the reason in finding 2.
+2. The size derivation omits serialized `payload.timing.dt`, a finite real
+   equal to `configuration.dt`. The table accounts for only seven reals;
+   the thermal envelope contains eight. Using the document's own
+   conservative 1024-byte-per-real accounting, including the omitted field
+   changes the subtotal from 65,448 to 66,472 bytes, so the asserted
+   65,448-byte bound and at-least-2× headroom under 131,072 are not
+   established by this derivation.
+3. The proposed "all-variable-fields-at-cap valid envelope" is not a valid
+   fixture: 1024-digit integers in finite-real fields overflow the required
+   float normalization, the encode bit guard rejects 1024-digit integers,
+   and thermal's huge-count/final-simulation-time cross-relations cannot be
+   satisfied by that construction. A conservative bound is acceptable, but
+   the plan must use an actually constructible valid envelope rather than
+   calling this impossible fixture valid.
+4. Revised plan S4.2 says `'{}'` plus whitespace at exactly 131,072 bytes
+   fails with `RecordDecodeError`/`root must be an object`. `{}` is an
+   object and passes the root check; it must fail contract validation with
+   `RecordValidationError` for missing required fields, as the design's
+   decode stages require.
+5. The design and plan say a 65-character unavailable reason fails in the
+   generic sweep, but §7.2 implements only the generic 1024-code-point
+   string check. Either specify the path-specific 64-character check in
+   that sweep or assign the 64/65 pair to the contract-validation layer in
+   the required order.
+
+**Required correction**: derive the defensive byte bound from every
+serialized variable field, recompute or rejustify `MAX_ENCODED_BYTES`, use
+reachable valid fixtures, and make the design/plan exception and layer
+assertions identical. Then re-review the direct diffs.
+
+#### 6. Medium — CLOSED: F15 now separates structural validity from capture truthfulness
+
+Design §§1.4/2.4/8.4 now limit the codec to malformed values, invalid state
+literals, and state/value/reason binding violations. They expressly assign
+invented/copied/assumed but well-formed observations to the client capture
+integration seam. The direct plan revision at `fc42bf9` makes the same
+correction in S1.7 and F15 and removes the impossible codec rejection
+claim. The plan's pending developer re-review remains required before
+implementation, but the architectural contradiction itself is resolved.
+
+#### 7. Low — CLOSED: public signatures match exact built-in container behavior
+
+The codec and builders now use `Dict`/`List`, root arguments must be exact
+`dict`, nested dict/list subclasses and other `Mapping`/`Sequence` inputs
+are rejected rather than implicitly normalized, and the exception split is
+explicit. Revised plan S3 item 5 covers representative root and nested
+cases. The advertised annotations and sweep semantics now agree.
+
+#### 8. Low — OPEN: all numeric limits are still unnecessarily re-exported from `softlab.shui`
+
+The explicit table and prohibition on wildcard imports are improvements,
+but the table still re-exports all seven `MAX_*` constants from
+`softlab.shui`. Its rationale repeats the misunderstanding corrected by the
+original finding: S4.4 requires constants readable from the owning module,
+not package-level names. No concrete client need justifies seven new
+package compatibility commitments.
+
+**Required correction**: keep the numeric limits on
+`softlab.shui.run_record`; limit package-level exports to the reviewed
+codec/builders/group seam and exceptions. Reconcile design §8, §8.7 item
+11, and revised plan S4.4/S6.3 by removing the dual-package import
+assertions while retaining direct-module constant checks and both import
+smoke checks.
+
+### New findings
+
+#### 9. Medium — Decode size pre-check can leak `UnicodeEncodeError` outside the frozen taxonomy
+
+**Location**: design §2.2 decode step 2 and §3 "No escaping builtins".
+
+`len(text.encode('utf-8'))` is evaluated outside the parse `try` block. A
+Python `str` containing an unpaired surrogate raises `UnicodeEncodeError`
+at that pre-check. That exception is a builtin `UnicodeError`/`ValueError`,
+not a `RecordDecodeError` or other `RunRecordError`, contrary to the frozen
+public failure contract.
+
+**Required fix**: map UTF-8 encoding failure at the decode boundary to
+`RecordDecodeError` with the `run_record:` message discipline, without
+catching unrelated contract exceptions. Add the same unpaired-surrogate
+probe on Python 3.9 and 3.13.
+
+#### 10. Low — `build_run_group` overstates `DataGroup`'s name validation
+
+**Location**: design §4 `build_run_group` docstring;
+`softlab/shui/data/base.py:449-454`.
+
+The design says `DataGroup` raises `ValueError` for an empty/**non-text**
+name. The actual setter first performs `name = str(name)` and rejects only
+an empty converted string; non-text values such as integers are accepted
+and converted. The documented exception behavior is therefore not
+source-faithful and introduces an unreviewed implicit-coercion path.
+
+**Required fix**: preferably enforce exact nonempty `str` at the narrow
+seam before constructing the group and freeze its exception type/message;
+otherwise document the inherited coercion explicitly and justify it. Add
+the corresponding empty/non-text name probes to the plan.
+
+### Re-review approval condition
+
+Resolve original findings 2, 5, and 8 and new findings 9–10 in the design
+and affected test plan, then complete the applicable developer review and
+architecture re-review of those direct diffs. Findings 1, 3, 4, 6, and 7
+need no further architectural rework unless those corrections change their
+contracts. No implementation or test execution is authorized by this
+review.
