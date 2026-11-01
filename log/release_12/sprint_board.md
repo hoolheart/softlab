@@ -17,15 +17,13 @@ one closure at release end ([release checklist](../templates/release-checklist.m
 
 | Task | Description | Assigned | Gate before start |
 | --- | --- | --- | --- |
-| P2 — Schema and encoding | Bounded field/type, version, missing/null/unknown and failure contract; justified codec/construction seam only | sw-celeste → sw-tom → sw-mike | Phase 1 boundary decision approved |
-| P3 — Storage and inspection | Selected evidenced storage paths, snapshot stages, fault/original-byte evidence, fresh-process inspection | sw-celeste → sw-tom → sw-mike | Phase 2 integrated |
-| P4 — Reference comparison and acceptance | Both thermal modes + second client, oracles/tolerances, walkthroughs, acceptance, single closure | sw-mike → sw-camille | Phase 3 integrated |
+| P4 — Reference comparison and acceptance | Both thermal modes + second client, oracles/tolerances, fresh-environment + clean-process walkthroughs, product acceptance, single release closure (candidate CI → `dev` → promote `main`) | sw-mike → sw-camille | Phase 3 integrated |
 
 ## In progress
 
 | Task | Description | Assigned | Status |
 | --- | --- | --- | --- |
-| P3 — Storage and inspection | Selected evidenced storage paths, snapshot stages, fault/original-byte evidence, fresh-process inspection | sw-mike → sw-celeste → sw-tom | Awaiting P2 integration, then branch `codex/m03-p3-storage` from `dev` |
+| P3 — Storage and inspection | Storage test plan written (`f25c497`); next: developer plan review → detailed design → architecture review → implementation → code review → tests | sw-mike → sw-tom → sw-celeste → sw-jerry → sw-tom → sw-celeste → sw-mike | Branch `codex/m03-p3-storage` from `dev` (`81f269c`) |
 
 ## Phase plan (from PRD; four serial gated phases, one release)
 
@@ -42,7 +40,7 @@ one closure at release end ([release checklist](../templates/release-checklist.m
 | --- | --- | --- |
 | RG — Requirements gate | Candidate `08c0858` CI [41256246749](https://github.com/hoolheart/softlab/actions/runs/41256246749) passed; `dev` merge `8cdea23` | 2026-11-01 |
 | P1 — Characterize and decide | Candidate `f6797cd` CI [41263124079](https://github.com/hoolheart/softlab/actions/runs/41263124079) passed 3.9+3.13; principle inspection PASS; boundary decision option (a) concurred; independent review ACCEPTED | 2026-11-01 |
-| P2 — Schema and encoding | Candidate `77af542` CI passed 3.9+3.13; design APPROVED (10 findings closed); plan APPROVED; code review zero defects; 459 tests OK; principle inspection PASS | 2026-11-01 |
+| P2 — Schema and encoding | Candidate `cb2c8ca` CI [41302911516](https://github.com/hoolheart/softlab/actions/runs/41302911516) passed 3.9+3.13; design APPROVED (10 findings closed); plan APPROVED; code review zero defects; 459 tests OK; principle inspection PASS; `dev` merge `81f269c` | 2026-11-01 |
 
 ## Gate log
 
@@ -52,3 +50,6 @@ one closure at release end ([release checklist](../templates/release-checklist.m
 - 2026-11-01: Phase 1 complete — 47 characterization tests (405 total suite OK),
   boundary decision concurred (option a), independent review ACCEPTED, CI green
   on 3.9+3.13 after tester-owned failure closure; principle inspection PASS.
+- 2026-11-01: Phase 2 complete — codec + group seam (`a437dc3`), design and plan
+  APPROVED after review loops, code review zero defects, 459 tests OK, CI green
+  on 3.9+3.13 at `cb2c8ca`; integrated to `dev` (`81f269c`); Phase 3 started.
