@@ -500,3 +500,134 @@ architecture re-review of those direct diffs. Findings 1, 3, 4, 6, and 7
 need no further architectural rework unless those corrections change their
 contracts. No implementation or test execution is authorized by this
 review.
+
+## Final re-review — revised design at `4b4b6db`
+
+- **Reviewer**: sw-jerry (Software Architect)
+- **Date**: 2026-11-01 Asia/Shanghai
+- **Reviewed design**: `log/release_12/design/p2-schema-design.md` at
+  `4b4b6db`, including the second-revision change list in §8.8.
+- **Method**: static contract, source-fidelity, layer-consistency, and
+  arithmetic review. The integer boundaries, byte total, and headroom ratio
+  were checked arithmetically. `DataGroup.name` was rechecked at
+  `softlab/shui/data/base.py:449-454`. No codec implementation or runtime
+  test suite was executed.
+
+### Final verdict
+
+**APPROVED.** Findings 2, 5, 8, 9, and 10 are closed by the revised design;
+findings 1, 3, 4, 6, and 7 remain closed and their contracts were not
+weakened. **All ten architecture findings are CLOSED, with no new findings.**
+
+This is approval of the Phase 2 detailed design, not implementation
+authorization, test evidence, or release acceptance. Design §8.8 accurately
+enumerates the still-required direct test-plan deltas; those deltas and their
+applicable tester/developer reviews remain separate pre-implementation gates.
+
+### Final per-finding closure
+
+| Finding | Status | Final basis |
+| --- | --- | --- |
+| 1 | CLOSED | The bounded in-memory group seam remains present and unchanged in scope. |
+| 2 | CLOSED | One decimal-magnitude policy now governs encode and decode, with contained real-conversion and thermal-product overflow. |
+| 3 | CLOSED | Thermal model and signal offsets remain pinned to their authorized legacy declarations. |
+| 4 | CLOSED | Container-only depth accounting and parser recursion mapping remain intact. |
+| 5 | CLOSED | The size ceiling includes every serialized real, the probes name the correct layers, and the valid fixture is constructible. |
+| 6 | CLOSED | Structural validation remains correctly separated from client capture truthfulness. |
+| 7 | CLOSED | Public container annotations and exact-type behavior remain aligned. |
+| 8 | CLOSED | Numeric limits now live only on the owning module; package exports are limited to the reviewed seam. |
+| 9 | CLOSED | Decode UTF-8 pre-check failure is mapped to `RecordDecodeError` with a frozen message. |
+| 10 | CLOSED | The group seam itself rejects non-exact-`str` and empty names before encoding or group construction. |
+
+### Closure evidence for the revised findings
+
+#### 2. High — CLOSED: encode/decode integer acceptance is identical and overflow is contained
+
+Design §§2.2/7.2 now define `_MAX_INTEGER_ABS = 10 ** MAX_INTEGER_DIGITS`
+and reject `value >= _MAX_INTEGER_ABS or value <= -_MAX_INTEGER_ABS` before
+serialization. With `MAX_INTEGER_DIGITS = 1024`, this is exactly
+`abs(value) < 10**1024`: zero through `10**1024 - 1`, and their negative
+counterparts, are accepted; `±10**1024` are rejected. The check uses integer
+comparisons only and does not invoke the interpreter digit guard.
+
+The decode `_bounded_int` hook strips only the optional leading `-` before
+counting token digits and rejects more than 1024 digits before `int(token)`.
+JSON's prohibition on leading zeroes makes that token count equal the value's
+decimal digit count. Consequently the accepted sets are identical on both
+paths. In particular, `10**1023` and `-(10**1023)` have 1024 digits and are
+accepted, while the first rejected positive value has 1025 digits. The signal
+profile's three matching count fields provide a valid 1024-digit
+encode→decode→encode probe without thermal's float cross-relation.
+
+Finite-real conversion retains its `OverflowError`/`ValueError` mapping.
+Design §1.6 now also places thermal `points * dt` and its comparison under an
+`OverflowError` guard mapped to `RecordValidationError`, so a huge thermal
+count cannot leak the builtin. The taxonomy, reachability table, implementation
+notes, and §8.8 plan delta consistently use the corrected signal-profile
+boundary and sign rule.
+
+#### 5. Medium — CLOSED: the defensive size bound and boundary probes are now coherent
+
+Design §2.3 includes `payload.timing.dt` as the eighth serialized finite real.
+Its conservative arithmetic is internally correct:
+
+- four maximally escaped free-text fields: `4 × 12,290 = 49,160` bytes;
+- five capped exact integers: `5 × 1,024 = 5,120` bytes;
+- eight conservatively accounted finite reals: `8 × 1,024 = 8,192` bytes;
+- fixed skeleton allowance: `4,000` bytes;
+- total: `49,160 + 5,120 + 8,192 + 4,000 = 66,472` bytes.
+
+`131,072 / 66,472 = 1.971837...`, so the stated **≈1.97×** ratio to the
+conservative ceiling is accurate; the document no longer claims at-least-2×
+headroom or that the loose ceiling is an attainable exact maximum. Retaining
+128 KiB is justified as a simple defensive bound over that ceiling.
+
+The maximal-valid-envelope probe is now constructible: it combines four
+1024-code-point free-text fields with matching 1024-digit signal counts and
+does not depend on huge integers in finite-real fields or an impossible
+thermal `final_sim_time` relation. The exact-131,072-byte `'{}'` plus
+whitespace probe correctly passes size, parsing, and root-object checks, then
+fails required-field contract validation with `RecordValidationError`;
+131,073 bytes fails the size gate with `RecordDecodeError`. Finally, the
+64/65-character reason pair is assigned to contract validation on both paths:
+64 passes the length gate and fails vocabulary, while 65 fails the reason
+length check. Design §§2.2/2.3/3/7.2/8.4 and §8.8 now agree on these layers
+and exception types.
+
+#### 8. Low — CLOSED: package compatibility surface is narrowed appropriately
+
+Design §§2.3/8 remove all seven numeric limits from `softlab.shui` and retain
+them as exported constants only on `softlab.shui.run_record`. The package
+re-export table now contains only the codec, convenience functions, builders,
+group seam, and exceptions. The justification is sound: S4.4 needs constants
+readable from the owning module, and no concrete client need was established
+for additional package-level limit names. Direct-module constant checks and
+both import smoke checks remain required by §8.8.
+
+#### 9. Medium — CLOSED: unpaired-surrogate decode input stays inside the frozen taxonomy
+
+Design §2.2 decode step 2 evaluates `text.encode('utf-8')` inside
+`try/except UnicodeEncodeError` and raises
+`RecordDecodeError('run_record: input text is not encodable as UTF-8 (unpaired surrogate)')`
+from the builtin. The same exact type and message appear in §8.4, and §8.8
+requires the corresponding Python 3.9/3.13 plan probe. Catching only
+`UnicodeEncodeError` preserves unrelated exception channels and removes the
+previously identified escape from the public codec taxonomy.
+
+#### 10. Low — CLOSED: the seam owns an exact, source-faithful name contract
+
+The source check confirms that `DataGroup.name` performs `name = str(name)`
+and rejects only an empty converted string; it does not reject non-text input.
+Design §4 now accurately describes that behavior rather than attributing
+strict validation to `DataGroup`. `build_run_group` performs its own step-0
+checks before encoding or construction: `type(name) is not str` raises
+`TypeError('run_group: name must be an exact str')`, and `name == ''` raises
+`ValueError('run_group: name must be nonempty')`. Thus integer and other
+non-text names cannot reach the inherited coercion, and §8.8 requires recorder
+assertions that construction is never called on either failure path.
+
+### Final review scope
+
+No architecture finding remains open. The design may proceed to the remaining
+reviewed test-plan alignment and implementation gates; those gates must not be
+represented as completed by this design approval.
