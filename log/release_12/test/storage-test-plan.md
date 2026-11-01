@@ -1,8 +1,11 @@
 # Release 12 (M03 Phase 3) — Storage and Inspection Test Plan
 
 Owner: Tester (sw-mike) | 2026-11-01 Asia/Shanghai
-Status: **DRAFT — awaiting developer review, then detailed design freeze;
-no test code and no source changes before approval**
+Status: **DRAFT — revised per developer review (commit `6c842fd`,
+[p3-test-plan-developer-review.md](../reviews/p3-test-plan-developer-review.md));
+all five findings closed in plan text; awaiting developer re-review,
+then detailed design freeze; no test code and no source changes before
+approval**
 Branch: `codex/m03-p3-storage`
 PRD: [log/release_12/prd.md](../prd.md) (Phase 3 row, **M03-AC03**,
 **M03-AC04**)
@@ -92,7 +95,16 @@ section at the end.
 
 - **[P3P-01]** The Phase 3 module path(s) and public entry points: the owned
   save function, the safe inspection function, and their exact names and
-  signatures.
+  signatures. Extensions per the developer review: (a) the sample/record
+  attachment mechanism (the plan's branch (a) uses the existing public
+  `DataGroup.add_record(...)`; branch (b) freezes a sample-attachment
+  argument/seam in the owned save signature — one must be confirmed);
+  (b) the per-profile hydration key set A2.4 asserts — thermal: the three
+  `_META_KEYS` plus `thermal_manifest`; signal: the empty set, which is
+  a frozen literal too; (c) what "legacy context still available" means
+  for A3.3's absence outcome at the chosen seam placement (raw manifest
+  text vs decoded legacy envelope — manifest decoding currently lives
+  only in the example layer, so this interacts with **[P3P-06]**).
 - **[P3P-02]** The storage-layer error taxonomy: exception class names,
   inheritance, and frozen message templates for save/connect/disconnect/
   inspection failures (the Phase 2 codec taxonomy is frozen; the storage
@@ -107,7 +119,12 @@ section at the end.
 - **[P3P-05]** Real-seam fault-injection points: the exact supported
   mechanism by which each A4 fault is injected without mocks that skip the
   real code path (e.g. read-only target directory, pre-removed scratch file,
-  corrupt-bytes fixture written through `h5py` itself).
+  corrupt-bytes fixture written through `h5py` itself). Extension per the
+  developer review: every frozen mechanism must be **empirically verified
+  to fail at the named stage on both supported interpreters (3.9 and
+  3.13)** before design freeze — a seam failing at the wrong stage
+  reclassifies its row (e.g. to connect-class A4.9); a seam that does not
+  fail is vacuous and invalidates the row.
 - **[P3P-06]** Whether the Phase 3 write/read seam lives in `softlab/shui/`
   or in the example layer, and the export-surface consequence for
   `softlab/shui/__init__.py` (Phase 2 froze the §8 table; any Phase 3
@@ -127,15 +144,35 @@ environment availability, sample ordering/schema and identity relations"),
 M03-AC04 ("chosen backend and storage ownership are explicit"); plan
 evidence-matrix item 3; design §4, §9 (first deferral item).
 
+**Record source of record (datasets input — developer review finding 1).**
+`build_run_group` returns an **empty** `DataGroup` — the Phase 2 seam
+constructs no `DataRecord` and no rows (verified against
+`softlab/shui/run_group.py` this revision). A1 fixtures therefore
+attach the record datasets themselves via the existing public
+`DataGroup.add_record(record: DataRecord)` API (`softlab/shui/data/
+base.py:577`, verified — "Add or update a record", raises `ValueError`
+for a non-`DataRecord` argument): one `DataRecord` per envelope
+`record` block, columns taken from the envelope's `record.columns`,
+rows filled with synthetic fixture values known at construction time
+(the A1.2 oracle). This branch (a) is implementable today and keeps
+the Phase 3 save-path scope clean; branch (b) — freezing a
+sample-attachment argument/seam in the owned save entry signature —
+is the alternative under the **[P3P-01]** extension. One of the two
+must hold before test code is written.
+
 1. **End-to-end owned save on synthetic temp files.** Build a run group via
    the Phase 2 seam (`build_run_group`, envelope from the design §8.6
-   canonical fixtures with synthetic UUIDs), then persist it through the
+   canonical fixtures with synthetic UUIDs), attach the record fixture
+   per the source-of-record paragraph above, then persist it through the
    Phase 3 owned save entry point **[P3P-01]** backed by an owned
    `HDF5DataBackend` rooted in a `tempfile.TemporaryDirectory` with the
-   `softlab-m03-p3-*` prefix. Assert: save succeeds only after the
-   completed-acquisition gate; the file appears at the declared path; the
-   backend is connected during save and disconnected afterwards (owned
-   resource lifecycle asserted, not assumed).
+   `softlab-m03-p3-*` prefix. Assert: the save entry point rejects
+   failed/cancelled envelopes before connect (A5.2 reuse) — the
+   completed-acquisition gate itself is a **call-site** property and is
+   asserted at the example layer (A1.6), not here, because a `shui`-level
+   save function cannot observe it; the file appears at the declared
+   path; the backend is connected during save and disconnected
+   afterwards (owned resource lifecycle asserted, not assumed).
 2. **Verification from the stored artifact, not in-memory objects.** Every
    relation below is asserted by opening the stored file **directly with
    `h5py.File(path, 'r')`** (on a disposable byte copy per A2 — the write
@@ -176,6 +213,29 @@ evidence-matrix item 3; design §4, §9 (first deferral item).
    read back from disk; agreement with the in-memory object is incidental
    and never the sole evidence (decision §3 evidence row: "group/sample/
    schema facts are independently inspectable on disk").
+6. **Example dual-write integration (developer review finding 4 — planned,
+   not deferred).** Run `thermal_experiment.execute()` on a synthetic
+   temp-dir configuration (both adapters, synthetic UUIDs), then inspect
+   the stored artifact **via the A2 safe path** and assert:
+   - the stored group carries **both** `thermal_manifest` and
+     `run_record` — the legacy record is supplemented, not replaced;
+   - the legacy manifest bytes, version literals (1/2), timing meanings,
+     and the eleven-field closed contract are **unchanged** (equality
+     against a legacy-only reference run on an identical synthetic
+     config);
+   - the additive envelope decodes via the Phase 2 codec and cross-checks
+     against the stored artifact;
+   - **call-site gate:** the record is constructed and saved only after
+     `result.acquisition == 'completed'` (decision §2) — asserted here
+     at the example layer, the only place the gate is observable;
+   - the original legacy file's bytes are unchanged (sha256 before/
+     after).
+   This row is the plan's evidence for the scope paragraph's dual-write
+   claim and for design §9's example-wiring item; it is **not** deferred
+   to Phase 4. If the reviewed detailed design nonetheless assigns all
+   example wiring to Phase 4, this row is deferred verbatim at design
+   freeze and the scope paragraph narrows to match — the choice is
+   recorded explicitly, never left ambiguous.
 
 ## A2 — Safe read path (disposable-copy preflight and hydration)
 
@@ -240,6 +300,23 @@ design §9 (second and fourth deferral items).
    result (decision §2 step 4); the original remains byte-identical even
    when scratch cleanup itself fails (A4 row 4 interplay asserted here for
    the success path).
+8. **Signal-profile positive fixture (developer review finding 5 —
+   conditional per decision §1).** Construct a run group via the Phase 2
+   seam with `PROFILE_SIGNAL`, attach a synthetic record per the A1
+   source-of-record paragraph, persist through the owned save path, and
+   inspect via the safe path. Assert: the decoded envelope carries
+   `profile == 'signal'`; hydration carries `run_record` under the
+   additive key **and no legacy keys** — the signal profile's supported
+   hydration key set is the **empty set**, itself a frozen literal
+   (per-profile key sets per the **[P3P-01]** extension); no thermal
+   `_META_KEYS` or `thermal_manifest` is imposed on the signal record
+   (the A2.4 absence-assertion applied positively, against a real
+   fixture). Applicability is stated plainly: decision §1 makes signal
+   support conditional on its owned persistence path existing, so if the
+   design freeze keeps signal-monitor owned persistence deferred (design
+   §9 conditional item), **this row is deferred to Phase 4 verbatim**
+   with decision §1's conditional clause cited in the results file; the
+   applicability decision is recorded at design freeze either way.
 
 ## A3 — Fresh-process / separate-process inspection
 
@@ -308,12 +385,46 @@ appending `mock.call(...)` and delegating to the original), patched without
 (CPython gh-75988, fixed 3.11.9+/3.12/3.13 only) — a 3.13-only pass is not
 evidence (Phase 1 correction record).
 
+**Failure-stage verification mandate (binding — developer review finding
+2):** the example parentheticals in the A4.2/A4.3 rows below are
+*unverified candidates* against the real backend. Verified source facts
+this revision (`softlab/shui/data/hdf5.py`, `backend.py`): a target path
+that is an existing directory raises at **connect** (`h5py.File(path,
+'a')`, `hdf5.py:39`), not at save; a parent directory removed after a
+successful connect does **not** fail the save on POSIX — h5py writes
+through the open descriptor into the unlinked inode, so the save can
+succeed silently (vacuous probe); h5py `File.close()` is idempotent, so
+an externally closed handle or a removed scratch directory does not
+necessarily fail disconnect either. **[P3P-05]** therefore mandates that
+every frozen fault mechanism is **empirically verified to fail at the
+named stage on both supported interpreters (Python 3.9 and 3.13)**
+before design freeze and before any test freezes expectations: a seam
+failing at the wrong stage **reclassifies its row** (e.g. a connect-time
+candidate moves to the connect-class row A4.9); a seam that does not fail
+at all is vacuous and invalidates universal assertion (a). Each A4 row
+below asserts the stage actually observed for its frozen mechanism, not
+the stage the row name suggests. One verified save-failure seam exists
+today for reference: connect to a valid path, externally `close()` the
+h5py handle, then call the real save — `save_impl` (`hdf5.py:65`)
+operates on a closed file and fails through `catch_error`, with the
+error recorded in `backend.errors` (`backend.py:169-188`) — exactly the
+observable universal assertion (a) requires.
+
 **Universal assertions for every row:** (a) the frozen error type
 **[P3P-02]** is raised/surfaced (never logged-and-swallowed, never a
 `None`-means-absence result — the F-C lesson: a `None` helper result is not
 evidence of absence or successful inspection); (b) the original file's bytes
-remain intact (sha256 before/after) or, for pre-save faults, no artifact
-appears at the target path; (c) **primary and cleanup diagnostics are
+remain intact (sha256 before/after). The "no artifact appears at the target
+path" claim applies **only to pre-connect faults (A4.1)** — `connect_impl`
+opens `'a'` mode and creates the target at connect (`hdf5.py:39`), so any
+fault after a successful connect (A4.2 save, A4.3 disconnect, A4.9's
+candidates) leaves an artifact at the target path. For every post-connect
+row the artifact state is **pinned per row** by the frozen design
+**[P3P-03]/[P3P-05]** and asserted exactly — one of, e.g., "an empty
+connect-time file remains containing exactly the connect-time superblock
+and no group/dataset/record content" or "removed by cleanup" — whichever
+the design freezes, never left unasserted (developer review finding 3);
+(c) **primary and cleanup diagnostics are
 separately observable** — each retrievable independently of the other via
 the frozen container **[P3P-03]**, including the row where the cleanup
 diagnostic itself reports a failure; (d) no partial state is presented as
@@ -324,13 +435,14 @@ guaranteed).
 | # | Fault | Injection seam (real path) | Expected behavior |
 | --- | --- | --- | --- |
 | A4.1 | **Serialization failure** (envelope invalid at the call-site gate — e.g. a count drift the Phase 2 codec rejects) | Before any backend connect: the owned save's encode step | `RecordValidationError` (frozen Phase 2 type) propagates; **zero** HDF5 attribute or dataset writes occurred (recorder double + file non-existence/byte-equality at target); no backend resource remains connected. |
-| A4.2 | **Save failure** | Owned backend save against a failing real target (e.g. target path is an existing directory, or the parent directory is removed before save — mechanism frozen per [P3P-05]) | Frozen storage error **[P3P-02]**; the pre-existing target (if any) bytes unchanged; connect and disconnect state checked and reported; cleanup diagnostic present and truthful. |
-| A4.3 | **Close/disconnect failure** | Real seam where disconnect can genuinely fail (e.g. backend whose file handle was externally closed, or scratch removed before disconnect — [P3P-05]) | Primary result (inspection outcome) still delivered; cleanup failure reported in its **own** diagnostic slot **[P3P-03]** — neither diagnostic masks the other; original bytes unchanged. |
+| A4.2 | **Save failure** | Owned backend save against a failing real target — candidate mechanisms (existing-directory target, removed parent directory, externally closed handle) are **unverified candidates** pending the [P3P-05] empirical stage verification | Frozen storage error **[P3P-02]** surfaced at the **actually observed stage** (mandate above): if the frozen mechanism fails at save, save-stage error asserted; a candidate verified to fail at connect is reclassified to A4.9 and never asserted here. Pre-existing target (if any) bytes unchanged; post-connect artifact state pinned and asserted per-row [P3P-03]/[P3P-05]; connect and disconnect state checked and reported; cleanup diagnostic present and truthful. |
+| A4.3 | **Close/disconnect failure** | Real seam where disconnect can genuinely fail — candidate mechanisms (externally closed handle, scratch removed before disconnect) are **unverified candidates**: h5py `File.close()` is idempotent, so neither candidate is guaranteed to fail (verified fact, mandate above); mechanism frozen per [P3P-05] after empirical stage verification | Primary result (inspection outcome) still delivered; cleanup failure reported in its **own** diagnostic slot **[P3P-03]** — neither diagnostic masks the other; original bytes unchanged; post-connect artifact state pinned and asserted per-row [P3P-03]/[P3P-05]. If no real disconnect-failure seam verifies on both interpreters, this row is recorded as BLOCKED with the evidence, not faked with a mock. |
 | A4.4 | **Invalid reload — corrupt JSON** | Synthetic copy whose `run_record` text is replaced with `'not json'` via raw `h5py` on the copy | `RecordDecodeError` with the frozen `run_record: malformed JSON: ...` template; visible failure, never legacy absence; original untouched. |
 | A4.5 | **Invalid reload — wrong namespace** | Text carrying a foreign/`softlab.thermal-reference` namespace where the common envelope is expected | Frozen validation failure **[P3P-02]**/codec error per the frozen contract; never silently reinterpreted as a legacy record. |
 | A4.6 | **Invalid reload — unsupported version** | Text with `version` 2 under the common namespace | `RecordValidationError`, frozen `version: unsupported version (supported: 1)` template; never treated as legacy absence. |
 | A4.7 | **Invalid reload — over-size** | Text exceeding `MAX_ENCODED_BYTES` on disk | `RecordDecodeError`, frozen `run_record: encoded size exceeds limit 131072 bytes` template; rejected before full parse; original untouched. |
 | A4.8 | **Preflight failure** (reserved attribute missing/non-text on a malformed synthetic file) | Hand-built h5py fixture missing `id`/`backend` attrs | Frozen preflight error **[P3P-02]** raised **before** any legacy load (call inventory asserts zero loads); failure is visible and specific. |
+| A4.9 | **Connect failure** (lifecycle stage preceding save; the matrix's connect-class row — developer review finding 2) | Target path failing at connect per the mechanism frozen by **[P3P-05]** (verified candidate: existing directory at the target path — `h5py.File(path, 'a')` raises at connect, `hdf5.py:39`; any save-class candidate verified to fail at connect is reclassified here) | Frozen storage error **[P3P-02]** surfaced at the **connect** stage; save never attempted (recorder inventory: zero save calls); no artifact at the target path or artifact state pinned per-row [P3P-03]/[P3P-05]; connect/disconnect state checked and reported; primary and cleanup diagnostics independently observable [P3P-03]. |
 
 **Not claimed (recorded in results, not tested as a promise):** durability of
 failed/cancelled/partial runs, rollback, retry, atomic publication,
@@ -354,8 +466,10 @@ snapshot cannot certify save, plotting or cleanup"); design §1.5.
    success (or a failed/cancelled acquisition) is rejected before save
    (A4.1 reuse of the Phase 2 frozen codec behavior at the storage gate);
    the write path contains no code path that rewrites the outcome after
-   save/plot/cleanup (recorder double: no second `set_meta` on the outcome
-   key after persistence).
+   save/plot/cleanup (recorder double: no `set_meta` call on **any**
+   key after the save's attribute write — the outcome lives inside the
+   single `run_record` text; there is no separate outcome metadata key,
+   so an "outcome key" assertion would be unimplementable).
 3. **Post-persistence observation is outside the record.** Test comments
    and results explicitly record that save success proven by these tests is
    a test observation, not a claim stored inside the record; the record
@@ -511,11 +625,11 @@ written (each tagged **[P3P-nn]** in the body):
 
 | ID | Literal(s) to freeze |
 | --- | --- |
-| P3P-01 | Phase 3 module path(s) and public entry points: owned save function, safe inspection function — exact names and signatures. |
+| P3P-01 | Phase 3 module path(s) and public entry points: owned save function, safe inspection function — exact names and signatures; plus (a) the sample/record attachment mechanism (`DataGroup.add_record(...)` today vs a frozen save-signature seam), (b) the per-profile hydration key set (thermal: three `_META_KEYS` + `thermal_manifest`; signal: empty set — a frozen literal), (c) the meaning of "legacy context still available" for A3.3 per seam placement (raw manifest text vs decoded legacy envelope; interacts with P3P-06). |
 | P3P-02 | Storage-layer error taxonomy: exception class names, inheritance, frozen message templates for save/connect/disconnect/preflight/inspection failures (distinct from the frozen Phase 2 codec taxonomy). |
-| P3P-03 | Primary-vs-cleanup diagnostic container: type, shape, and the observable independence contract (each retrievable when the other is absent or itself failed). |
+| P3P-03 | Primary-vs-cleanup diagnostic container: type, shape, and the observable independence contract (each retrievable when the other is absent or itself failed); also the pinned per-row post-connect artifact state for A4.2/A4.3/A4.9 (empty connect-time file vs removed-by-cleanup — one must be chosen and asserted per row). |
 | P3P-04 | Fresh-process inspection entry point: subprocess bootstrap module, CLI surface, exit codes, JSON payload schema (modeled on `tests/thermal_cli_bootstrap.py`). |
-| P3P-05 | Real-seam fault-injection mechanism per A4 row (save-failure target, disconnect-failure seam, corrupt-fixture construction rule) — no mock that skips the real code path. |
+| P3P-05 | Real-seam fault-injection mechanism per A4 row (save-failure target, disconnect-failure seam, corrupt-fixture construction rule) — no mock that skips the real code path; **plus the mandatory empirical failure-stage verification on both interpreters (3.9 and 3.13) with the wrong-stage reclassification rule** (finding 2). |
 | P3P-06 | Seam placement (`softlab/shui/` vs example layer) and the exact export-surface delta for `softlab/shui/__init__.py`. |
 | P3P-07 | Unavailable-reason policy for storage-level facts not capturable by the frozen envelope vocabulary. |
 
