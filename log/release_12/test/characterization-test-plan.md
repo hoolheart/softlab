@@ -95,11 +95,18 @@ Procedures and expected evidence:
    bytes (C3), not from in-memory objects. Also probe `_make_manifest` raising
    when `result.acquisition != 'completed'` to characterize the gate.
 5. **Execution UUID vs persistent group UUID distinctness.** Record both the
-   in-memory bounded-execution identity used during the run (where available
-   via the M02 shared seam / `RunResult`) and the persisted `DataGroup.id`
-   used as manifest `run_id`. Evidence: the two UUID values in a single run
-   and an assertion of inequality (or, if equality is ever observed, that
-   fact recorded verbatim as a finding).
+   in-memory bounded-execution identity used during the run and the
+   persisted `DataGroup.id` used as manifest `run_id`. Observation path for
+   the execution UUID, without source changes: the `after_row` callback of
+   the public `run_count` seam receives the `CountResult` (the example's
+   `after_count` wrapper, `thermal_experiment.py:274-279` and L298), whose
+   `run_id` field is the execution UUID (`softlab/huo/process/bounded.py:38`);
+   alternatively record the call arguments via harness call instrumentation.
+   Record verbatim that the example-local `RunResult`
+   (`thermal_experiment.py:56-77`) does **not** retain the execution UUID —
+   it is not reachable via `RunResult`. Evidence: the two UUID values in a
+   single run and an assertion of inequality (or, if equality is ever
+   observed, that fact recorded verbatim as a finding).
 
 ## C2 — DataGroup / metadata characterization
 
@@ -121,19 +128,41 @@ Procedures and expected evidence:
    docstring ("will be removed"). Evidence: the observed implementation
    semantics, recorded as-is.
 3. **HDF5 metadata storage.** Save a synthetic group whose meta contains
-   text, integer, float, list, dict, None and non-ASCII text values;
-   reopen and record what comes back. Expected evidence: save writes
+   text, integer, float, list, dict, None and non-ASCII text values, then
+   exercise **both** load paths verbatim and record each separately (they
+   diverge observably):
+   - **Plain backend path:** `HDF5DataBackend.load_group` (public wrapper,
+     `backend.py:39` → `hdf5.py:54`). Expected: the returned group's `meta`
+     is **empty** — the live attrs proxy passed to `DataGroup(..., meta)`
+     (`hdf5.py:137`) is dropped by R4-BASE-META-01, compounded by the
+     reserved-attr pops of R4-BASE-HDF5-01. Record this empty-meta outcome
+     verbatim; it is itself characterization evidence for the defect
+     disposition.
+   - **Example hydration path:** `examples/thermal_experiment.py:_load_group`
+     (L674-693) / `_reload_group` (L696+), which re-hydrates meta from
+      captured disk attrs via `set_meta`.
+
+   Expected evidence: save writes
    `str(value)` (`hdf5.py:81-82`), so non-text values are lossy (e.g. `1`
    returns as `'1'`, a list as its `str(...)`); characterize exactly which
-   values round-trip as text and which are lossy. Also note `attrs[key]` for
-   a value whose `str()` is problematic, if any.
-4. **SQLite metadata capability.** Exercise `SQLiteDataBackend` on a
+   values round-trip as text and which are lossy, per load path. Also note
+   `attrs[key]` for a value whose `str()` is problematic, if any.
+4. **SQLite metadata capability.** Exercise `Sqlite3DataBackend` (the actual
+   class name, `softlab/shui/data/sqlite3.py:25`, exported from
+   `softlab.shui.data`) on a
    temporary synthetic database: inspect the actual schema (table columns)
    and record which meta keys are persisted (`sample`, `run_id` per
-   `sqlite3.py` save/load paths) and what happens to arbitrary extra
+   `sqlite3.py` save/load paths; note the schema quirk that `run_id` is
+   declared `integer` while the saved value is unconstrained) and what
+   happens to arbitrary extra
    metadata. Evidence: an explicit statement of which metadata SQLite
    actually stores vs drops, derived from observed reload content and the
    on-disk schema — no assumption that it persists arbitrary metadata.
+   For the reload-content evidence, state the load path verbatim: the plain
+   `Sqlite3DataBackend.load_group` path (whose observed meta is exactly the
+   `{'sample', 'run_id'}` reconstruction of `sqlite3.py:159-162`), noting
+   how that plain-path outcome diverges from any example-side hydration if
+   such a path is exercised.
 
 ## C3 — HDF5 on-disk metadata inspection (independent of DataGroup)
 
@@ -165,17 +194,23 @@ Procedures and expected evidence:
 
 ## C4 — Backend caller characterization
 
-**Object:** who actually calls `HDF5DataBackend` and `SQLiteDataBackend`
+**Object:** who actually calls `HDF5DataBackend` and `Sqlite3DataBackend`
 today.
 
 Procedures and expected evidence:
 
 1. Static caller inventory (source/document inspection, recorded in this
    plan's results): `examples/thermal_experiment.py` (writer in `execute`,
-   reader in `_reload_group`/`_load_group`, CLI inspect), `tests/` suites
-   (`test_thermal_example.py`, `test_thermal_manifest.py`,
+   reader in `_reload_group`/`_load_group`, CLI inspect), the production
+   entry points `softlab/shui/data/io.py` (`get_data_backend`,
+   `get_data_backend_by_info`, `load_groups`, `reload_group`, `save_group` —
+   instantiate **both** backends; record verbatim what `reload_group` and
+   `save_group` read/write from `group.backend`, since those paths depend on
+   `group.backend` being populated), `tests/` suites
+   (`test_compatibility.py`, which exercises both backends,
+   `test_thermal_example.py`, `test_thermal_manifest.py`,
    `test_thermal_metadata_contracts.py`, M02 characterization tests),
-   notebooks and any `__main__` examples; same for `SQLiteDataBackend`.
+   notebooks and any `__main__` examples; same for `Sqlite3DataBackend`.
 2. Runtime confirmation on synthetic temporary data: instrument (via test
    doubles / call recording in the test harness, not source changes) which
    backend entry points each caller exercises, with which arguments.
@@ -220,11 +255,19 @@ unavailable:
    manifest code exists for this client. State which future component would
    own construction (a Phase 1 design input, not an implementation).
 2. **Clean-session rerun inputs:** enumerate what a rerun would need to be
-   deterministic: source construction parameters (signal/reference value
-   sequences or generator spec), `points`, scheduler/loop ownership,
-   boundary count — and record that the consumptive source semantics (each
-   read consumes one queued value, per the M02 `_MonitorSource` double)
-   make input re-declaration a required rerun input.
+   deterministic: `points`, the read-policy offsets owned by the example
+   (signal 5, reference 2, `signal_monitor.py:25-33`), and scheduler/loop
+   ownership (`run_count` owns a fresh `SerialScheduler`,
+   `softlab/huo/process/bounded.py:142`). Record that the example's reads are
+   deterministic and **non-consumptive** — `read(channel, offset)` returns
+   `state['tick'] + offset` (no queued value is consumed) — so input
+   re-declaration for consumed values is **not** a required rerun input.
+   (The consumptive `pop(0)` queued-read semantics belong to the M02
+   `_MonitorSource` test double in `tests/test_m02_w01_characterization.py`,
+   used only by the test-local `run_monitor` client defined in that test
+   file — a different client from the example under inventory. Cite the
+   double's semantics as test-double context only, clearly attributed,
+   never as a property of `examples/signal_monitor.py`.)
 3. **Selected backend:** record that no backend is selected today; list the
    candidate evidenced in C2/C4 (HDF5 text-meta behavior, SQLite limited
    meta) as decision inputs with their characterized constraints.
@@ -232,12 +275,15 @@ unavailable:
    (DataRecord column definitions, derived `difference` computed by the
    caller, timing from the scheduler), marking which fields are computed
    in-memory only today.
-5. **Independent sample oracle:** define the analytic oracle to be used in
-   later phases — e.g. for queued signal values `[10, 13, 17]` and
-   references `[1, 2, 4]`, expected differences `[9, 11, 13]` computed
-   independently of any stored object — and record that self-comparison
-   (rerun vs rerun without an external oracle) is **not** accepted as
-   validation evidence.
+5. **Independent sample oracle:** define the analytic oracle against the
+   example's actual values — for `points=3` the example's readers yield
+   signal `[6, 7, 8]` (`tick + 5`), reference `[3, 4, 5]` (`tick + 2`),
+   so the expected differences are `[3, 3, 3]`, computed independently of
+   any stored object — and record that self-comparison (rerun vs rerun
+   without an external oracle) is **not** accepted as validation evidence.
+   (The M02 `_MonitorSource` double's sample values `[10, 13, 17]` /
+   `[1, 2, 4]` → `[9, 11, 13]` belong to the test-local client, not to
+   this example, and are not the oracle here.)
 
 ## C6 — Safety and hygiene
 
