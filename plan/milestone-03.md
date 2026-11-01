@@ -1,10 +1,11 @@
 # M03 — Proposed bounded reproducible run record
 
-Status: **PROPOSED — planning only**. M02 is CLOSED in the authoritative local
+Status: **RELEASE 12 KICKOFF — PRD confirmation hold**. M02 is CLOSED in the authoritative local
 `main` record at commit `e827e7f` (`git show e827e7f:log/release_11/closure.md`);
-this plan does not implement or accept M03. Four serial increments are planning
-envelopes, not calendar promises or package publications. Assign an unused
-`log/release_x/` namespace and agree a bounded PRD at each kickoff. If capacity,
+this plan does not implement or accept M03. One release (`log/release_12`)
+contains four serial gated phases; these are not separate releases, calendar
+promises or package publications. The user requested a hold for PRD confirmation
+before tests, design or implementation. If capacity,
 compatibility or evidence is insufficient, narrow scope through Product and
 Architect review or move the exit date.
 
@@ -19,11 +20,11 @@ physical accuracy or reproduce arbitrary experiments. Use the thermal reference
 and a distinct bounded count client as evidence before proposing any shared
 record API; a contract double alone does not prove reusable product value. The
 current signal-monitor client is in-memory only and does not persist or
-reconstruct its setup. W01 must identify who constructs its stored record and
+reconstruct its setup. Phase 1 must identify who constructs its stored record and
 rerun inputs, selected backend, field origins and an independent sample oracle
-before W03/W04 acceptance; none of those capabilities is assumed today. W01
+before Phases 3/4 acceptance; none of those capabilities is assumed today. Phase 1
 inventories reproducible inputs and observable fields for each client; each later
-PRD/design freezes independent expected sample/timing relationships, tolerances,
+phase design freezes independent expected sample/timing relationships, tolerances,
 excluded fields and a separate-process rerun procedure before implementation.
 Do not substitute unqualified self-comparison for an independent oracle.
 
@@ -38,7 +39,7 @@ constructor metadata defect R4-BASE-META-01, the `set_meta(None)` implementation
 R4-BASE-HDF5-01 remain tracked; current example uses explicit metadata hydration
 and disposable-copy reads. Current SQLite storage does not establish arbitrary manifest persistence; do not treat the two backends as equivalent. `Station`/`Device`/`Parameter` descriptions are structural and do not supply simulation graphs or runtime values. Characterize actual HDF5/SQLite callers, versions,
 missing metadata and clean-process inspection before choosing a persistence
-boundary. W01 must use disposable HDF5 copies and independently inspect on-disk
+boundary. Phase 1 must use disposable HDF5 copies and independently inspect on-disk
 metadata, not rely solely on a returned `DataGroup`; if no safe read path exists,
 record a blocker and make a scoped decision before claiming support. Do not silently change existing thermal v1/v2 interpretation or
 `Parameter` value types.
@@ -47,12 +48,12 @@ record a blocker and make a scoped decision before claiming support. Do not sile
 
 The roadmap calls for a versioned bounded manifest connecting procedure
 configuration, setup/model declarations, units, software/environment identity,
-outcome and samples. W01 must determine which fields the two actual clients can
+outcome and samples. Phase 1 must determine which fields the two actual clients can
 truthfully provide and which data can be reopened safely, then compare extending
 the existing example envelope, an additive shared text envelope, and retaining
 separate client-specific records. If demonstrated use does not justify a common
-schema, Product Owner and Architect must revise W02–W04 deliverables and the
-milestone exit before W02 starts, explicitly identifying any separate supported
+schema, Product Owner and Architect must revise Phases 2–4 deliverables and the
+milestone exit before Phase 2 starts, explicitly identifying any separate supported
 records and comparisons; rejection is not an automatic acceptance or permission
 to proceed with contradictory common-schema requirements. Any chosen format must state its namespace, supported value types,
 size/depth limits if needed, required/optional/unknown-field policy, version and
@@ -64,7 +65,7 @@ persistent group UUID, acquisition snapshot from later persistence/plot/cleanup
 outcomes, and unavailable source/environment facts from verified values. Never
 record future success at a pre-persistence snapshot. Decide explicitly whether
 and how later outcome updates are supported; atomic publication, audit logs,
-partial-result persistence and crash recovery are not assumed. W01 and W03 design
+partial-result persistence and crash recovery are not assumed. Phase 1 and Phase 3 design
 must enumerate supported stages, unavailable reasons and whether later outcomes
 are absent or updated. Before implementation define and test serialization, save,
 close/disconnect and malformed/unsupported reload failures: specify which original
@@ -80,19 +81,20 @@ implied. Preserve original stored data on all routine reads using temporary
 synthetic data and currently required safe copies. A storage/backend repair or
 schema migration requires its own scoped decision and compatibility evidence.
 
-## Proposed serial increments
+## Four serial gated phases in one release
 
-Each sub-release has its own bounded PRD, evidence and unused log namespace;
-close it under the project release checklist before starting the next. One active
-task at a time. W04 additionally accepts M03. Dates and boundaries may be
-revised through product review if safe implementation cannot be split.
+Release 12 has one PRD and one final release closure. Complete each phase gate
+before the next; Phase 1 must establish and independently review the evidence
+decision before any schema implementation. The user confirmation hold occurs
+before Phase 1 test planning, design and implementation. Phase boundaries are
+not separate releases or promotion cycles. One active task at a time.
 
 | Increment | Deliverable and decision | Acceptance and dependency |
 | --- | --- | --- |
-| M03-W01 — Characterize and decide | Map current thermal v1/v2, DataGroup and actual backend callers, sample/schema relations, lifecycle stages, source availability and a distinct count client. Create assertion-based legacy and fault characterization; select or reject a minimal common record boundary with ownership and compatibility rationale. Assess baseline debt and simulation-description need. | Independent review accepts source/round-trip evidence and the supported or explicitly deferred design; no unsupported shared API is assumed. Depends on M02 closure. |
-| M03-W02 — Bounded schema and encoding | Implement only the accepted smallest schema/codec and construction boundary for the supported clients, including explicit required and missing-field policies, identity, units, source availability and stage-qualified outcome. Preserve existing APIs and formats unless an expressly reviewed compatibility decision states otherwise. | Independent tests cover valid values, deterministic round-trip, missing/null/unknown fields, duplicate keys, nonfinite or unsupported values, version rejection and side-effect-free failure. Existing stored v1/v2 cases remain readable as specified. Depends on W01 decision. |
-| M03-W03 — Persistence and clean-session inspection | Integrate the accepted envelope with the chosen existing storage path(s), retain sample/column/identity relationships, expose an inspectable stored outcome snapshot and document ownership and failure behavior. Do not broaden backend support or claim atomicity without evidence. | Synthetic temporary-file round-trip and fresh-process inspection verify records, schema, units, identity and samples; malformed/unsupported context fails visibly and legacy absence is distinct. Faults preserve originals and diagnostics; unsupported backend behavior is explicit. Depends on W02. |
-| M03-W04 — Reference comparison and acceptance | Integrate both thermal modes and the second client only within the approved boundary; update guide and API documentation. Independently repeat the documented workflow in a fresh environment and a clean process, compare recorded configuration and deterministic sample relationships, and complete M03 acceptance. | Existing v1/v2 and legacy tests pass, both supported clients demonstrate the selected scope, independent reruns match specified numeric tolerances excluding timestamps/UUIDs, and required review, candidate CI, promotion and closure gates pass. Depends on W03. |
+| Phase 1 — Characterize and decide | Map current thermal v1/v2, DataGroup and actual backend callers, sample/schema relations, lifecycle stages, source availability and a distinct count client. Create assertion-based legacy and fault characterization; select or reject a minimal common record boundary with ownership and compatibility rationale. Assess baseline debt and simulation-description need. | Independent review accepts source/round-trip evidence and the supported or explicitly deferred design; no unsupported shared API is assumed. Depends on M02 closure. |
+| Phase 2 — Bounded schema and encoding | Implement only the accepted smallest schema/codec and construction boundary for the supported clients, including explicit required and missing-field policies, identity, units, source availability and stage-qualified outcome. Preserve existing APIs and formats unless an expressly reviewed compatibility decision states otherwise. | Independent tests cover valid values, deterministic round-trip, missing/null/unknown fields, duplicate keys, nonfinite or unsupported values, version rejection and side-effect-free failure. Existing stored v1/v2 cases remain readable as specified. Depends on Phase 1 decision. |
+| Phase 3 — Persistence and clean-session inspection | Integrate the accepted envelope with the chosen existing storage path(s), retain sample/column/identity relationships, expose an inspectable stored outcome snapshot and document ownership and failure behavior. Do not broaden backend support or claim atomicity without evidence. | Synthetic temporary-file round-trip and fresh-process inspection verify records, schema, units, identity and samples; malformed/unsupported context fails visibly and legacy absence is distinct. Faults preserve originals and diagnostics; unsupported backend behavior is explicit. Depends on Phase 2. |
+| Phase 4 — Reference comparison and acceptance | Integrate both thermal modes and the second client only within the approved boundary; update guide and API documentation. Independently repeat the documented workflow in a fresh environment and a clean process, compare recorded configuration and deterministic sample relationships, and complete M03 acceptance. | Existing v1/v2 and legacy tests pass, both supported clients demonstrate the selected scope, independent reruns match specified numeric tolerances excluding timestamps/UUIDs, and required review, candidate CI, promotion and closure gates pass. Depends on Phase 3. |
 
 ## Required evidence and compatibility matrix
 
@@ -148,7 +150,7 @@ applicable principle inspection, full relevant unittest/compile/import checks,
 frozen exact-candidate CI before `dev`, accepted promotion to `main`, verified
 promoted-state checks and clean worktree. State actual environment and warnings;
 reuse evidence only for unchanged content. One authoritative closure summary
-links each increment, revisions/CI URLs, debt and limitations. If a mandatory gate
+links each phase, revisions/CI URLs, debt and limitations. If a mandatory gate
 fails or is unavailable, leave the affected release and M03 OPEN; planning or
-local tests alone do not constitute acceptance. No implementation is authorized
-by this document.
+local tests alone do not constitute acceptance. The user has authorized this release but explicitly requires PRD confirmation
+before any tests, design or implementation.

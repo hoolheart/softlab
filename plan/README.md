@@ -1,6 +1,7 @@
 # Proposed development plan
 
-Status: **PROPOSED — planning only; no implementation authorization or release acceptance.**
+Status: **PROPOSED roadmap; individual release authorization and acceptance are recorded under `log/`.**
+M03 release 12 has started and is paused at the [reviewed PRD confirmation gate](../log/release_12/kickoff.md).
 Prepared 2026-10-18. Start date: **TBD**. Planning horizon: twelve development
 months, with a committed scope decision required before each implementation task.
 
@@ -17,7 +18,7 @@ preparation tool; agreement with physical reality requires separate validation.
 - [M01-W01 PRD](release-01-prd.md): detailed requirements for the first release.
 - [Milestone M02](milestone-02.md): proposed execution scope, four increments,
   acceptance gates and dispositions informed by M01.
-- [Milestone M03](milestone-03.md): proposed bounded run-record scope, four increments and acceptance gates.
+- [Milestone M03](milestone-03.md): bounded run-record scope, one release with four serial phases and acceptance gates.
 - [Hardware decision and pilot](hardware-pilot.md): M04 GO/DEFER/NO-GO and a
   separately scheduled conditional M05 pilot with distinct qualification claims.
 - [Recommended instruments](recommended-instruments.md): below-US$100 target rig,
