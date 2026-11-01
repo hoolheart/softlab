@@ -3,8 +3,8 @@
 Owner: Software Architect (sw-jerry), with Product Owner (sw-camille)
 concurrence | 2026-11-01 Asia/Shanghai
 Branch: `codex/m03-p1-characterize`
-Status: **ARCHITECT DECISION RECORDED — PRODUCT OWNER CONCURRENCE PENDING;
-PHASE 2 SCHEMA IMPLEMENTATION BLOCKED**
+Status: **JOINT DECISION RECORDED — PRODUCT OWNER CONCURRENCE RECORDED BELOW;
+PHASE 2 REQUIRES ITS OWN REVIEWED DETAILED DESIGN AND TEST GATES**
 
 Inputs: [PRD](../prd.md), [M03 plan](../../../plan/milestone-03.md),
 [executed characterization results](../test/characterization-results.md),
@@ -211,18 +211,18 @@ exact boundary.
 | Role | Record | State |
 | --- | --- | --- |
 | Software Architect | sw-jerry; architecture assessment `d2180a0`; this decision drafted 2026-11-01 | **CONCUR — option (a), subject only to the boundary stated here** |
-| Product Owner | sw-camille; product assessment `18f9c1e`; joint-decision countersignature and commit/date to be recorded below | **PENDING EXPLICIT CONCURRENCE** |
+| Product Owner | sw-camille; product assessment `18f9c1e`; countersignature recorded below on 2026-11-01 Asia/Shanghai | **CONCUR — option (a), subject to the boundary and binding Phase 2 constraints recorded here** |
 
 Product Owner concurrence record:
 
-> **PENDING.** sw-camille has not yet countersigned this joint boundary decision.
+> **RECORDED.** sw-camille countersigned this joint boundary decision on
+> 2026-11-01 Asia/Shanghai; see the "Product Owner concurrence" section below.
 
-Until that record is replaced with an explicit countersignature and the
-resulting revision is committed and pushed, **no Phase 2 schema/codec
-implementation may begin**. Phase 2 implementation additionally requires its
-own reviewed detailed design and applicable test gates. This concurrence does
-not constitute Phase 2 design approval, Phase 3/4 approval, or M03 release
-acceptance.
+With the countersignature recorded and pushed, the Phase 2 schema/codec gate is
+open **only** to the extent stated here: Phase 2 implementation additionally
+requires its own reviewed detailed design and applicable test gates. This
+concurrence does not constitute Phase 2 design approval, Phase 3/4 approval, or
+M03 release acceptance.
 
 ## 6. Binding Phase 2 input
 
