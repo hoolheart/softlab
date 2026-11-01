@@ -271,3 +271,42 @@ of the following:
 
 These constraints bind Phase 2 only after the section 5 concurrence gate opens;
 they do not authorize schema implementation by themselves.
+
+## Product Owner concurrence
+
+**CONCUR — option (a), subject to the boundary and binding Phase 2 constraints
+recorded in this decision. No additional product conditions are imposed.**
+
+Recorded by sw-camille, Product Owner, on 2026-11-01 Asia/Shanghai after review
+against the product assessment (commit `18f9c1e`) and the PRD's M03-AC01 and
+Limits/debt requirements.
+
+The decision preserves the approved product boundary:
+
+- one minimal common envelope with closed thermal and signal-monitor
+  client-owned payloads, without establishing a general provenance framework;
+- HDF5-only persistence, with thermal coordinated/v1, thermal direct/v2, and
+  the signal monitor as the supported clients; signal-monitor support remains
+  conditional on its future owned persistence and inspection path and is not a
+  claim that signal persistence exists today;
+- only the `completed_acquisition_before_persistence` snapshot with acquisition
+  `completed`, while persistence, plotting, cleanup, and overall remain
+  `not_yet_established`; no later-outcome updates or outcome history, and no
+  durable failed, cancelled, or partial-run persistence;
+- SQLite, atomic publication or transactional guarantees, recovery/resume,
+  generic metadata/`io.py` guarantees, and the other listed exclusions remain
+  unsupported;
+- D1, D2, F-A, F-B, F-C, and F-D retain the stated tracked-debt, open-finding,
+  or scoped-exclusion dispositions and mandatory path constraints; none is
+  repaired or waived;
+- the binding Phase 2 input preserves strict closed validation, separate
+  execution and persistent-group identities, ordered sample/schema/unit and
+  row-count relations, acquisition-only outcome semantics, thermal v1/v2
+  compatibility, and the prohibition on implicit scope broadening.
+
+This is the explicit Product Owner countersignature for the Phase 1 joint
+boundary only. It does not constitute Phase 2 detailed-design approval or,
+by itself, authorization to implement; Phase 2 still requires its own reviewed
+detailed design and applicable test gates. It also does not approve Phase 3 or
+Phase 4 and is not M03 release acceptance. Any implementation drift beyond the
+recorded boundary requires a revised joint decision.
