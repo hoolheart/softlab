@@ -157,3 +157,69 @@ This review closes when the plan text addresses findings 1–3 (additive
 edits), after which no further developer input is anticipated for findings
 4–7. The executable suite remains gated on the reviewed Phase 2 detailed
 design freezing the placeholders the plan correctly lists.
+
+## Re-review (2026-11-01, after sw-mike revision 21cf8f4)
+
+Method: per-finding verification of the revised plan text
+(`log/release_12/test/schema-test-plan.md` @ 21cf8f4) against this review's
+findings and the binding inputs (decision §6 quoted verbatim below for
+consistency; PRD M03-AC02). Source-level inspection only.
+
+1. **Null-vs-absent coverage (required) — CLOSED.** New S3.5 covers all
+   three mandated facts: (a) rejection side — S3.5.1 with per-field
+   parametrization, cross-referenced to failure-matrix row F14, field set
+   taken from the frozen schema, not assumed; (b) acceptance side — S3.5.2
+   for fields where the design assigns null meaning, with verbatim
+   round-trip; (c) distinctness — S3.5.3 pins absent/present-null/
+   present-valid-value as three semantically distinct decodes, with the
+   decision §6 item 6 "never implies success, zero, empty, or
+   not-applicable" clause asserted verbatim. S3.5.4 additionally pins the
+   whole-record edge exactly as decision §6 item 6 states it ("Absence of
+   the whole additive key means only 'no additive common record' …"). The
+   F14 row correctly partitions fields from the S3.5 acceptance side, so no
+   field is both fed to F14 and asserted accepted in S3.5. Requirement basis
+   cites both M03-AC02 ("absent versus null") and decision §6 item 6
+   verbatim. Consistent; complete.
+2. **Availability / unavailable-reason semantics (required) — CLOSED.**
+   S1.7 pins the valid-side semantics (captured fact = observed value;
+   uncaptured fact = frozen unavailable-state literal + reason from the
+   frozen bounded vocabulary; never copied from another client; never a
+   success-like stand-in) with verbatim round-trip, traced to decision §1.1
+   availability row and §6 items 1 and 5. F15 adds the negative probe for
+   success-like presentation of uncaptured facts; F16 adds the
+   vocabulary/binding probes (out-of-vocabulary reason, reason missing
+   where required, reason present without the unavailable state). The
+   vocabulary is explicitly design-owned: the placeholder list now freezes
+   "the availability/unavailable state literal, the bounded
+   unavailable-reason string vocabulary, and the per-field reason bound" as
+   detailed-design outputs, and S4.3 anchors the previously dangling
+   reason-strings count bound to the S1.7/F16 facts, read from the module's
+   exported constant where one exists. Semantics pinned; literals correctly
+   deferred to the design freeze.
+3. **F5 recursive decode-side finite sweep (required) — CLOSED.** F5 now
+   mandates a recursive post-parse finiteness sweep over the decoded value
+   at any nesting depth, explicitly noting that `parse_constant` alone does
+   not fire on overflow literals (`json.loads('1e999')` → `inf` through
+   ordinary float parsing). Probe classes are complete: token probes
+   (`NaN`, `Infinity`, `-Infinity`) and `1e999`-class overflow literals,
+   each at top level and inside a nested container three levels down — a
+   superset of the review's minimum ask. Encode side retains the NaN/±Inf
+   probes plus the design's finite check before `allow_nan=False`
+   serialization; the decode/encode asymmetry is closed.
+4. **S1.4 conditional distinctness check (minor) — CLOSED.** The freeze
+   note is added: provisional until design freeze, becoming either a hard
+   rejection assertion or an explicitly recorded "not mandated" statement,
+   never a conditional in the executable suite — exactly the closure
+   condition recorded.
+
+**Minor observation (non-blocking, no finding):** S4.3 houses the per-field
+reason-string length bound under "Count bounds"; the heading is element-count
+oriented but the section title "Size/depth limits" covers it, the text states
+the binding explicitly, and S4.4's read-from-exported-constant rule applies.
+No action needed; noted for the executable-suite step.
+
+**Overall verdict: APPROVED.** All 3 required fixes and the minor item are
+closed in plan text; no new findings. The plan remains gated on the reviewed
+Phase 2 detailed design freezing the listed placeholders (namespace, versions,
+required lists, limits, error types, availability literals/vocabulary) per the
+plan's own gate-linkage section.
