@@ -25,7 +25,7 @@ one closure at release end ([release checklist](../templates/release-checklist.m
 
 | Task | Description | Assigned | Status |
 | --- | --- | --- | --- |
-| RG — Requirements gate | PRD + kickoff + independent reviews + document validation; user confirmation obtained | sw-prod | On `codex/m03-reproducible-record`; awaiting push, candidate CI, integration to `dev` |
+| P1 — Characterize and decide | Characterization plan + executable characterization, HDF5 disposable-copy metadata inspection, two-client inventory, Product/Architect boundary decision, independent review | sw-mike → sw-camille/sw-jerry | Starting; branch `codex/m03-p1-characterize` from `dev` |
 
 ## Phase plan (from PRD; four serial gated phases, one release)
 
@@ -40,8 +40,10 @@ one closure at release end ([release checklist](../templates/release-checklist.m
 
 | Task | Integrated revision | Date |
 | --- | --- | --- |
+| RG — Requirements gate | Candidate `08c0858` CI [41256246749](https://github.com/hoolheart/softlab/actions/runs/41256246749) passed; `dev` merge `8cdea23` | 2026-11-01 |
 
 ## Gate log
 
 - 2026-11-01: Mode A confirmed by user; PRD hold lifted. No test/design/runtime
   result claimed yet; unrun gates remain pending.
+- 2026-11-01: Requirements gate integrated to `dev` (`8cdea23`); phase 1 starts.
