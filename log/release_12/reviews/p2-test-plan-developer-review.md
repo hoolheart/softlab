@@ -223,3 +223,168 @@ closed in plan text; no new findings. The plan remains gated on the reviewed
 Phase 2 detailed design freezing the listed placeholders (namespace, versions,
 required lists, limits, error types, availability literals/vocabulary) per the
 plan's own gate-linkage section.
+
+---
+
+## Re-Review — Final (delta revisions applied, design APPROVED)
+
+Reviewer: sw-tom (Developer) | 2026-11-01 Asia/Shanghai
+Input: [schema-test-plan.md](../test/schema-test-plan.md) at `523fd8e`
+(delta-revised per design §8.8) against
+[p2-schema-design.md](../design/p2-schema-design.md) at `4b4b6db`
+(second revision; architecture review findings all CLOSED, approval
+recorded at `c058ec1`).
+Method: source-level inspection only — no test code written, no source
+modified. Every frozen literal, boundary pair, error type/message, and
+layering assertion in the plan was quote-checked against the approved
+design text; the §8.7 revision table (12 items) and §8.8 delta table
+(6 items) were each traced to a concrete plan location.
+
+### Per-change verification
+
+**§8.7 revisions 1–12 (fc42bf9 alignment) — all applied and correct:**
+
+1. Scope paragraph includes the in-memory group seam `build_run_group`
+   while excluding HDF5/backend/inspection (Phase 3) — lines 33–43. ✓
+2. S1.8 group-construction assertions: encoded-before-constructed order,
+   empty group with `str(group.id) == envelope['group_id']`, exactly one
+   `set_meta('run_record', text)`, no `meta=`/`set_meta(key, None)`, no
+   I/O, failure atomicity, hand-held recorder double (never
+   `autospec=True` + `wraps`) — matches design §4 and §8.7 item 2's
+   assertability correction. ✓
+3. F13 drift probes: thermal `THERMAL_MODEL` and signal `SIGNAL_OFFSETS`
+   exact-equality negatives with frozen messages, plus frozen record
+   names. ✓
+4. F15 revised to structural-only validation with the [R6]
+   capture-truthfulness responsibility split (Phase 3/4 seam), removing
+   the codec-rejects-fabricated claim. ✓
+5. S1.7 carries the same [R6] responsibility split on the positive side. ✓
+6. S3.5 container-type probes: root `TypeError` (`run_record: expected
+   dict`), nested `RecordValidationError`, no normalization, annotation
+   inspection. ✓
+7. S3.6 huge-integer probes present (see delta 1 below for corrections). ✓
+8. S4.1 layered depth formulation, scalar-at-depth-8 acceptance, and
+   parser-recursion probe with the `RecursionError` mapping. ✓
+9. S4.2 replaced by the boundary pair + maximal-envelope assertion (see
+   delta 2 below for corrections). ✓
+10. S4.3 layered count/length formulation per the reachability table. ✓
+11. S4.4 mechanism and constant set correct. ✓
+12. S6.3 export-surface assertion present (see delta 4 below). ✓
+
+**§8.8 deltas 1–6 (523fd8e) — all applied and correct:**
+
+1. S3.6 now freezes `MAX_INTEGER_DIGITS = 1024` with the pure-integer
+   `_MAX_INTEGER_ABS = 10 ** MAX_INTEGER_DIGITS` comparison, the
+   sign-stripped decode token rule (`-` + 1024 digits accepted, matching
+   encode), and the signal-profile pinning of the at-limit valid-envelope
+   probe (`10**1023` acceptance, 1024/1025 boundary, round-trip boundary
+   argument). The withdrawn `_MAX_INTEGER_BITS = 3398` mechanism appears
+   only as an explicitly recorded withdrawal note — not as an asserted
+   value. ✓
+2. S4.2 uses the corrected ≤ 66,472-byte derivation (eighth finite real
+   `payload.timing.dt` included), the ≈ 1.97× headroom claim, the
+   constructible maximal fixture (four free-text fields at cap with
+   worst-case non-BMP escaping, signal-profile counts at the digit cap,
+   ordinary floats), and the corrected 131,072-byte probe expectation
+   (`'{}'` + padding passes the root-type check and fails contract
+   validation with `RecordValidationError`, not `RecordDecodeError`).
+   The stale 65,448 figure appears nowhere. ✓
+3. S4.3's reason-length 64/65 pair is assigned to the contract layer
+   (64 → vocabulary failure proving the length gate accepted; 65 →
+   `<path>: reason length exceeds limit 64` on both encode and decode),
+   matching design §7.2's "reason length is contract-layer, not sweep". ✓
+4. S4.4/S6.3: module-only constant imports; the seven `MAX_*` names are
+   asserted **absent** from `softlab.shui` (ImportError) and the package
+   re-export list is exactly the design §8 table's eleven names. The
+   withdrawn dual-package import assertion appears only as a withdrawal
+   note. ✓
+5. F17 (unpaired surrogate) with the frozen
+   `run_record: input text is not encodable as UTF-8 (unpaired
+   surrogate)` message, mapped at the decode size pre-check, asserted
+   identical on 3.9 and 3.13; mirrored in the frozen-literals bullet. ✓
+6. S1.8 name-contract probes: integer name → builtin `TypeError`
+   (`run_group: name must be an exact str`), empty name → builtin
+   `ValueError` (`run_group: name must be nonempty`), both at the seam's
+   step-0 pre-check with zero `DataGroup` constructor calls asserted by
+   the recorder double — matches design §4 step 0 / [R10]. ✓
+
+**Literal spot-checks beyond the delta tables:** namespace/key/version
+constants, profile identifiers, outcome/availability literals,
+`UNAVAILABLE_REASONS`, the seven limits, the error taxonomy, the F1–F16
+message templates, the `execution_id == group_id` hard rejection, the
+canonical-UUID rule, the THERMAL_MODEL equation string, SIGNAL_OFFSETS,
+the cross-layer count relations (thermal and signal), and the §8.6
+canonical envelopes (coordinated/direct distinction, signal three-column
+schema with `difference` absent) are all verbatim consistent with the
+approved design. The ten-key closed root, no-optional-fields policy, and
+null-only-in-fact-slots policy match §1.2/§2.4/§8.5.
+
+**Version portability (review question 3):** no assertion found that
+could pass on 3.13 and fail on 3.9 or vice versa. The integer probes use
+pure integer comparison / token-length checks with no `str()`/`float()`
+on unbounded values (accepted maximum 1024 digits is far below the 3.13
+default guard of 4300); the `RecursionError` mapping makes deep-nesting
+rejection interpreter-independent; F17's `UnicodeEncodeError` path is
+identical on both interpreters; `json` overflow literals (`1e999` →
+`inf`) behave identically; S1.3's byte-identical determinism follows
+from frozen `sort_keys`/`separators`/`ensure_ascii` and contains no
+hash-order, timestamp, or UUID-generation dependence. S7.3 retains the
+Phase 1 lessons (no `autospec=True` + `wraps`, no hardcoded environment
+facts, warnings discipline, 3.9 run before handoff).
+
+**Scope (review question 4):** no Phase 3 leakage — persistence, backend
+I/O, copy/preflight/hydration, storage-level absent-vs-invalid, and
+capture-truthfulness are all explicitly deferred, with the codec-side
+contributions (S3.5.4, S6.5/S6.6) correctly bounded. The group seam and
+the three builders are correctly in scope as Phase 2 deliverables.
+
+### Findings
+
+**Required fix (under-scope against the design's freeze table):**
+
+1. **Missing negative probes for the design §8.4 "Counts relation" and
+   "Cross-layer count drift" rows.** The design's test freeze table
+   (§8, "Concrete literals the approved test plan MUST assert verbatim")
+   freezes two message templates that no plan case asserts:
+   - `outcome.completed_rows: differs from outcome.requested_rows`
+     (§1.5 freezes `completed_rows == requested_rows`; plan S1.5 asserts
+     the relation only on the positive side).
+   - `<path>: inconsistent with outcome.requested_rows` (§1.6/§1.7
+     freeze the cross-layer count equalities; plan F13's negative probes
+     cover boundary cross-checks — `final_tick == completed_rows`,
+     `|final_sim_time - points*dt| <= 1e-10` — but not the counts
+     themselves, e.g. thermal `configuration.points ≠
+     outcome.requested_rows` or signal `payload.points ≠
+     outcome.requested_rows`).
+
+   The fix is additive plan text only: extend F13 (or add the probes
+   beside S1.5) to feed one-defect count mismatches — requested ≠
+   completed, and per-profile points ≠ requested_rows — and assert the
+   two frozen messages verbatim. This closes the last gap between the
+   design's §8.4 freeze table and the plan's failure matrix; everything
+   else in §8.4 maps to a named plan case.
+
+**Observations (non-blocking, no finding):**
+
+- The frozen-literals bullet phrases the taxonomy as "all subclass
+  `ValueError`". The design's class table gives `RunRecordError` the base
+  `Exception` (only the two leaf classes mix in `ValueError`); the
+  wording mirrors design §8.4's closing sentence and is acceptable in
+  plan text, but the executable suite must assert `isinstance(exc,
+  ValueError)` only for `RecordDecodeError`/`RecordValidationError`,
+  never for `RunRecordError` itself. No plan change required — record
+  for the implementation step.
+- Portability nit: the 3.13 guard assumption is the interpreter default
+  (4300); the plan correctly forbids mutating it (S5.5) and no test
+  depends on a non-default guard value. No action.
+
+### Overall verdict
+
+**CHANGES REQUESTED** — for finding 1 only. The two design revisions
+(§8.7 × 12, §8.8 × 6) are applied exactly, every checked literal is
+verbatim consistent with the approved design, no stale first-round value
+is asserted, portability and scope are clean. The single missing case is
+a small additive extension of F13/S1.5; once the counts-relation and
+cross-layer count-drift negatives are added with their frozen messages,
+this plan is executable as written and I expect to approve without
+further iterations.
