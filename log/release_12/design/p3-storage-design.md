@@ -3,7 +3,7 @@
 ## Design Information
 
 - **Designer**: sw-celeste
-- **Date**: 2026-11-01 Asia/Shanghai
+- **Date**: 2026-11-01 Asia/Shanghai (third revision 2026-11-02)
 - **Task**: Release 12 (M03) Phase 3 — storage and inspection
   ([PRD](../prd.md) Phase 3 row, **M03-AC03**, **M03-AC04**)
 - **References**:
@@ -34,15 +34,20 @@
     libhdf5 2.2.0) and Python 3.9.23 (scratch conda env, h5py 3.14.0,
     libhdf5 1.14.6): recorded in §6.2 (fault seams) and §4.1 (import
     warnings)
-- **Status**: REVISED per architecture review
-  ([p3-design-architecture-review.md](../reviews/p3-design-architecture-review.md),
-  commit `26a13b6`) — findings 1–6 resolved in §6.2/§6.3 (A4.3
-  re-frozen on a verified real seam with both-interpreter evidence),
-  §6.2 (3.9 evidence executed, not deferred), §2.2/§2.5/§3.1/§4.3/§6.1
-  (report population contract completed), §3.5/§10 (ordering
-  clarification with named follow-up deltas), §2.5/§2.2 (cleanup
-  templates frozen verbatim), §4.1/§4.4 (stdout redirection and full
-  warning-policy mirroring) — resubmitted for re-review by sw-jerry
+- **Status**: REVISED (third round) per architecture re-review at
+  `44c3d95`
+  ([p3-design-architecture-review.md](../reviews/p3-design-architecture-review.md))
+  — finding 3 closed by restructuring the inspection algorithm so every
+  post-scratch-creation failure passes through the cleanup/re-hash
+  `try/finally` before any exception escapes, narrowing R4 to genuinely
+  pre-resource raises, and freezing report-bearing re-hash-failure
+  handling (new rule R6; §3.1.1, §6.1); finding 4 closed by adding the
+  boundary-decision §2-step-3 read-side delta to the §3.5.1 follow-up
+  table; finding 7 closed by executing the withdrawn A4.3 candidate (b)
+  probe on Python 3.9.23 so the vacuous-seam evidence is genuinely
+  both-interpreter (§6.2). Findings 1–6 of the original review
+  (commit `26a13b6`) remain resolved as recorded in the previous
+  revision — resubmitted for re-review by sw-jerry
 
 ## Overview
 
@@ -268,7 +273,7 @@ entry. report bookkeeping begins BEFORE any raise can escape:
                                 "'<type>' (supported: 'hdf5')")
                               with .report attached (pre-connect rule:
                               cleanup_ok=True, cleanup=() — no cleanup
-                              obligations existed; §6.1 rule R4)
+                              obligations existed; §6.1 rule R4(a))
 1. text = group.get_meta(METADATA_KEY)
      type(text) is not str  → raise StorageSaveError(
                                 'run_record: additive key missing '
@@ -466,7 +471,7 @@ holding verbatim.
 | `RunStorageError` | `Exception` | Base; never raised directly. | — |
 | `StorageConnectError` | `RunStorageError, ValueError` | Connect-stage failure (A4.9); the save-never-attempted guard when connect status/error checks fail (A1.3). | `connect: HDF5 backend connect failed: <backend.last_error>` |
 | `StorageSaveError` | `RunStorageError, ValueError` | Missing additive key; pre-connect envelope↔group inconsistency (identity, attachment, columns, row count); save-stage failure (A4.2). | `run_record: additive key missing from group metadata`; `group_id: group identity '<a>' differs from envelope group_id '<b>'`; `record: missing declared record '<name>'`; `record.columns: differ from envelope declaration`; `record.rows: stored row count <n> differs from outcome.completed_rows <m>`; `save: HDF5 backend save failed: <backend.last_error>` |
-| `StorageInspectionError` | `RunStorageError, ValueError` | Preflight failure (A4.8, before any legacy load); group resolution/identity; present-non-text additive or legacy key; legacy-load failure; envelope↔artifact cross-check mismatch; original-byte safety violation. | `group_id: require exactly one stored group or explicit ID`; `group_id: stored group '<id>' not found`; `preflight: missing or nontext reserved attribute '<key>'`; `preflight: group identity mismatch: disk id '<a>' differs from requested '<b>'`; `run_record: present value is not text`; `<key>: present value is not text`; `load: HDF5 backend load failed: <backend.last_error>`; `cross-check: envelope group_id '<a>' differs from stored group identity '<b>'`; `cross-check: stored columns differ from envelope declaration`; `cross-check: stored row count <n> differs from outcome.completed_rows <m>`; `safety: original bytes modified during inspection` |
+| `StorageInspectionError` | `RunStorageError, ValueError` | Unreadable/unhashable original at baseline (pre-resource, R4(a)); scratch copy failure; preflight failure (A4.8, before any legacy load); group resolution/identity; present-non-text additive or legacy key; legacy-load failure; envelope↔artifact cross-check mismatch; original-byte safety violation or re-verification failure. | `read: original artifact unreadable: <exc>`; `group_id: require exactly one stored group or explicit ID`; `group_id: stored group '<id>' not found`; `preflight: missing or nontext reserved attribute '<key>'`; `preflight: group identity mismatch: disk id '<a>' differs from requested '<b>'`; `run_record: present value is not text`; `<key>: present value is not text`; `load: HDF5 backend load failed: <backend.last_error>`; `cross-check: envelope group_id '<a>' differs from stored group identity '<b>'`; `cross-check: stored columns differ from envelope declaration`; `cross-check: stored row count <n> differs from outcome.completed_rows <m>`; `safety: original bytes modified during inspection`; `safety: original bytes could not be re-verified after inspection: <exc>` |
 | `UnsupportedBackendError` | `RunStorageError, ValueError` | Any non-HDF5 backend passed to either entry point (A6.1). Raised at algorithm step 0, before any I/O. | `backend: unsupported backend type '<backend_type>' (supported: 'hdf5')` |
 
 Type assertions in tests use the exact leaf classes;
@@ -560,65 +565,118 @@ version-dependent inner text.
    equality — a mismatch raises
    `StorageInspectionError('safety: original bytes modified during
    inspection')` even when a primary result exists, because the
-   inspection's core guarantee failed. On success the post-inspection
-   hash is exposed as `InspectionResult.original_sha256` so tests can
-   assert it against their own pre/post hashes.
+   inspection's core guarantee failed; a re-hash that itself cannot
+   complete raises
+   `StorageInspectionError('safety: original bytes could not be
+   re-verified after inspection: <exc>')` — the guarantee is
+   unprovable, which is likewise a primary failure, never a silent
+   pass (exact ordering and report population: §3.1.1, rule R6). On
+   success the post-inspection hash is exposed as
+   `InspectionResult.original_sha256` so tests can assert it against
+   their own pre/post hashes.
 
 ### 3.1.1 Inspection algorithm and report/finally ordering (frozen)
 
 The same report-at-entry contract as the save path (§2.2, §6.1)
-governs the inspection; every escaping exception carries `.report`:
+governs the inspection; every escaping exception carries `.report`.
+The structural rule (frozen, re-review finding 3): **every operation
+from scratch creation onward executes inside the single
+cleanup/re-hash `try/finally`**, and final report population plus
+exception attachment happens only **after** that `finally` has merged
+its diagnostics. Only genuinely pre-resource raises — step 0 backend
+resolution and a baseline-hash failure before `TemporaryDirectory`
+creation — occur outside it, and for those the absence of cleanup
+obligations is provable (rule R4(a)).
 
 ```
 entry. report = StorageReport(operation='inspect', path=str(path),
                               primary_ok=False, primary=(),
-                              cleanup_ok=True, cleanup=())
+                              cleanup_ok=True, cleanup=())   (R1)
 0. Backend resolution — identical to save step 0
-   (UnsupportedBackendError with .report; pre-connect rule R4).
-1. sha256(original); create TemporaryDirectory
-   (prefix 'softlab-m03-p3-read-'); shutil.copy2.
-   — filesystem failures here raise StorageInspectionError with
-   .report; cleanup obligations (scratch) exist from copy creation.
-2. h5py preflight on the copy (before any backend connect):
-   enumerate groups; resolve group_id (exactly-one rule); reserved
-   attributes present and text; disk id == group_id; capture
-   run_record / requested legacy texts; collect StoredRecordFacts.
-   Any failure → StorageInspectionError with .report (preflight
-   templates §2.5); zero legacy loads (recorder inventory).
-3. Present non-text run_record → StorageInspectionError(
-   'run_record: present value is not text') with .report.
-4. try:
-     connect the owned backend on the copy (status/error checks →
-     StorageConnectError with .report);
-     loaded = backend.load_group(str(group_id))   — exactly once;
-     validate (isinstance DataGroup, just_succeeded, no new errors);
-     hydrate run_record + requested legacy keys (set_meta);
-     if run_record text present:
-         envelope = decode_envelope(text)   — codec errors propagate
-         with unchanged type/message and an additively attached
-         .report (rule R3); cleanup slots below are populated first
-         by the finally block, THEN the exception escapes, so the
-         attached report carries the complete cleanup diagnostics;
-         cross-checks (§3.4) → StorageInspectionError with .report;
-     else:
-         envelope = None                    — truthful legacy absence
-   finally:
-     verified reader disconnect + scratch removal (never raise;
-     failure diagnostics per the §2.6 frozen templates, appended in
-     the frozen order); re-hash the original.
-5. byte mismatch → StorageInspectionError(
-   'safety: original bytes modified during inspection') with
-   .report (primary_ok=False — the inspection's core guarantee
-   failed; cleanup slots populated); primary success → return
-   InspectionResult(..., report=replace(report, primary_ok=True,
-   primary=(), cleanup_ok=<bool>, cleanup=<tuple>))
+   (UnsupportedBackendError with .report; pre-resource, R4(a)).
+1. baseline = sha256(original)   — an unreadable/unhashable original
+   raises StorageInspectionError(
+   'read: original artifact unreadable: <exc>') with .report BEFORE
+   any owned resource exists: no scratch directory, no backend
+   connect (R4(a), provable by recorder inventory and §6.3 pins).
+2. body_exc = None; safety_diag = None
+   scratch = None; reader_connect_attempted = False
+   try:
+     3. scratch = TemporaryDirectory(prefix='softlab-m03-p3-read-');
+        shutil.copy2(original, copy)
+        — the scratch cleanup obligation exists from TemporaryDirectory
+        creation; a copy failure raises StorageInspectionError with
+        .report INSIDE the guarded region, so the owed scratch removal
+        (and re-hash) run before the exception escapes.
+     4. h5py preflight on the copy (before any backend connect):
+        enumerate groups; resolve group_id (exactly-one rule);
+        reserved attributes present and text; disk id == group_id;
+        capture run_record / requested legacy texts; collect
+        StoredRecordFacts. Any failure → StorageInspectionError
+        (preflight templates §2.5); zero legacy loads (recorder
+        inventory); the finally below still executes.
+     5. present non-text run_record → StorageInspectionError(
+        'run_record: present value is not text'); the finally below
+        still executes.
+     6. reader_connect_attempted = True
+        connect the owned backend on the copy (status/error checks →
+        StorageConnectError);
+        loaded = backend.load_group(str(group_id))  — exactly once;
+        validate (isinstance DataGroup, just_succeeded, no new errors);
+        hydrate run_record + requested legacy keys (set_meta);
+        if run_record text present:
+            envelope = decode_envelope(text)   — codec errors propagate
+            with unchanged type/message (R3);
+            cross-checks (§3.4) → StorageInspectionError;
+        else:
+            envelope = None                    — truthful legacy absence
+   except Exception as exc:
+     body_exc = exc    — escape is DEFERRED to step 7 so the finally
+     cleanup is merged into the attached report before the raise
+   finally:             — never raises (R6)
+     7a. if reader_connect_attempted and (backend.file is not None or
+         backend.connected): verified reader disconnect — §2.6 frozen
+         templates appended in the frozen order.
+     7b. if scratch is not None: best-effort scratch removal; failure
+         → 'Scratch cleanup at <scratch_dir>: <exc>' appended (§2.6).
+     7c. guarded original re-hash (the safety capture):
+         try: post = sha256(original)
+         except Exception as rehash_exc:
+             safety_diag = 'safety: original bytes could not be
+                 re-verified after inspection: <rehash_exc>'
+         else:
+             if post != baseline: safety_diag =
+                 'safety: original bytes modified during inspection'
+7. finalize — deterministic; every escape carries the fully populated
+   report (R1/R2/R5/R6):
+   - safety_diag is not None → the inspection's core guarantee is
+     void and DOMINATES: raise StorageInspectionError(safety_diag)
+     with .report; if body_exc exists it is chained
+     ('raise ... from body_exc', __cause__ = body_exc) and preserved
+     in the report — primary == (safety_diag, str(body_exc)) per R2's
+     coincident-failure rule; otherwise primary == (safety_diag,).
+     primary_ok=False; cleanup slots merged from 7a/7b.
+   - elif body_exc is not None → finalize report with
+     primary_ok=False, primary == (str(body_exc),); attach:
+     RunStorageError subclasses by construction, codec instances by
+     additive .report attachment (R3 — the finally has already run,
+     so the attached report carries complete cleanup diagnostics);
+     raise body_exc.
+   - else → return InspectionResult(..., original_sha256=post,
+     report = replace(report, primary_ok=True, primary=(),
+     cleanup_ok=<bool>, cleanup=<tuple>)).
 ```
 
-Deterministic outcomes for every payload (§6.1 rules R1–R5):
+Deterministic outcomes for every payload (§6.1 rules R1–R6):
 `primary_ok`/`cleanup_ok` booleans and the two message tuples are
 always present and populated per the contract — no path exists where
-`primary_ok=False` co-occurs with an empty `primary` tuple, and no
-escaping exception lacks `.report`.
+`primary_ok=False` co-occurs with an empty `primary` tuple, no
+escaping exception lacks `.report`, and no raise path exists where an
+empty `cleanup` tuple co-occurs with an unexecuted cleanup obligation:
+post-scratch-creation failures (copy failure, A4.8 preflight,
+present-non-text, connect/load/decode/cross-check) all pass through
+the `finally`, so their reports truthfully record either a clean
+cleanup or the frozen cleanup failure diagnostics.
 
 ### 3.2 Signature and result structures [P3P-01 freeze]
 
@@ -800,12 +858,27 @@ written; nothing here is silently re-interpreted:
 | `log/release_12/test/storage-test-plan.md` | **A2.5** ("ordered schema/units ... cross-checked against the stored artifact") | Same by-name/row-index wording for the read-side cross-check. |
 | `log/release_12/test/storage-test-plan.md` | **A3.1** ("ordered schema/units" in the fresh-process payload assertions) | Align with the §4.3 payload rule: `records[*].columns` in h5py enumeration order, envelope carries declared order, by-name comparison. |
 | `log/release_12/design/p1-boundary-decision.md` | **§1.1 sample-schema row** ("Envelope order must match stored column order and sample row order.") | Clarification note (not a silent edit): "stored column order" = the declared semantic order carried by the envelope and enforced pre-save; physical HDF5 enumeration is non-semantic; by-name association + row-index sample comparison realize the requirement. |
+| `log/release_12/design/p1-boundary-decision.md` | **§2 supported read/inspection discipline, step 3** ("decode, validate, and cross-check identity, ordered schema/units, row counts, and samples") | Read-side addendum to the same clarification set: "ordered schema/units" means the §3.5.1 by-name association (declared order is the envelope order; physical enumeration is non-semantic), and "samples" are compared by row index — so the boundary's write-side (§1.1) and read-side (§2 step 3) ordering rules share one interpretation and cannot diverge. |
 | `log/release_12/design/p2-schema-design.md` | **§1.3** ("Envelope column order must match stored column order; the cross-check against the actual stored datasets is …") | Addendum cross-referencing §3.5.1 here (the Phase 2 document stays historically intact; the deferral to Phase 3 already anticipated the stored-artifact cross-check definition). |
 
 The alternative — persisting physical creation order (e.g.
 `track_order`) — would be a separately reviewed storage change and is
 **not** introduced here; it would touch the legacy writer and break
 the no-repair discipline.
+
+**Scope of this delta list (frozen, third revision):** the table above
+is the complete set of approved-document wording affected by the
+ordering clarification, now including the boundary's read-side
+statement (re-review finding 4). The third-revision fixes for
+re-review findings 3 and 7 are design-internal freeze completions —
+the §3.1.1 ordering restructure, the R2 coincident-failure rule, R4's
+narrowing, the new R6 and its two §2.5 templates, and the §6.2
+candidate-(b) evidence completion change **no** approved-plan or
+boundary literal: plan A4 universal assertion (c) is satisfied by the
+two-entry coincident rule (both diagnostics remain independently
+retrievable), the new safety/read templates complete this design's
+own [P3P-02] freeze, and the plan's A1.2/A2.5/A3.1 ordering literals
+are covered by the rows above. No further delta rows are owed.
 
 ### 3.6 The F-A guard
 
@@ -960,8 +1033,10 @@ exit-1 payloads: for `RunStorageError` subclasses it serializes the
 raised `.report`; for unwrapped codec errors it serializes the
 additively attached `.report` (§6.1 rule R3) — the schema is uniform
 and the codec exception's type/message remain the Phase 2 frozen
-surface. `report.primary` carries the primary diagnostic (exactly one
-entry: the escaping exception's message, per §6.1 rule R2) and
+surface. `report.primary` carries the primary diagnostic (first entry: the
+escaping exception's message, per §6.1 rule R2; a second entry
+appears only in the R2 coincident-failure case — an in-flight body
+exception preserved alongside the dominating byte-safety failure) and
 `report.cleanup` the cleanup diagnostics; neither masks the other.
 
 ### 4.4 No-test-state guarantee (A3.2)
@@ -1023,11 +1098,17 @@ finding 3):
   preflight raises all carry `.report` — no raise path is
   report-less.
 - **R2 — primary diagnostics are never empty on failure.** When a
-  primary failure escapes, `report.primary == (str(exc),)` — exactly
-  one entry, the escaping exception's own message (a §2.5 frozen
-  template, or the Phase 2 codec template for codec errors). On
-  success `primary_ok=True` and `primary=()`. No path exists where
+  primary failure escapes, the **first** entry of `report.primary` is
+  the escaping exception's own message (a §2.5 frozen template, or
+  the Phase 2 codec template for codec errors). On success
+  `primary_ok=True` and `primary=()`. No path exists where
   `primary_ok=False` co-occurs with an empty `primary` tuple.
+  **Coincident-failure rule (inspection only):** when a byte-safety
+  failure (R6) coincides with an in-flight body exception, the safety
+  exception escapes with the body exception chained as `__cause__`,
+  and `report.primary == (safety_message, str(body_exc))` — both
+  diagnostics preserved, neither masks the other. Every other failure
+  has exactly one entry.
 - **R3 — codec errors carry the report additively.** Unwrapped
   `RecordDecodeError`/`RecordValidationError` keep their Phase 2
   frozen type and message; the seam attaches the assembled report to
@@ -1036,17 +1117,50 @@ finding 3):
   For the inspection path the finally-block cleanup runs **before**
   the exception escapes, so the attached report carries complete
   cleanup diagnostics (§3.1.1 ordering).
-- **R4 — pre-connect raises have no cleanup obligations.**
-  `cleanup_ok=True, cleanup=()` on a pre-connect/pre-preflight
-  failure means exactly "no cleanup stage was reached; no backend
-  was connected and no scratch was created" — separately provable by
-  recorder inventory (zero connect calls) and the §6.3 artifact pins,
-  so the empty cleanup tuple can never masquerade as a clean cleanup
-  of real resources.
+- **R4 — truthful empty-cleanup semantics.** `cleanup_ok=True,
+  cleanup=()` has exactly two truthful meanings, distinguishable by
+  construction:
+  - **(a) pre-resource raise** — the failure escaped before any owned
+    resource existed: save steps 0–3 (backend resolution, missing
+    key, codec rejection, cross-checks — all pre-connect) and
+    inspection steps 0–1 (backend resolution, baseline hash of the
+    original before `TemporaryDirectory` creation). No backend was
+    connected and no scratch directory exists — separately provable
+    by recorder inventory (zero connect calls) and the §6.3 artifact
+    pins, so the empty cleanup tuple can never masquerade as a clean
+    cleanup of real resources.
+  - **(b) cleanup ran clean** — the failure occurred after an owned
+    resource existed and therefore passed through the `finally`
+    (inspection §3.1.1 steps 3–6: copy failure, A4.8 preflight,
+    present-non-text, connect/load/decode/cross-check; save step 4):
+    the owed cleanup (scratch removal from `TemporaryDirectory`
+    creation; verified disconnect from connect) **was executed**
+    before the exception escaped, and `cleanup=()` means it found
+    nothing to report (`cleanup_ok=True` by R5). Had that cleanup
+    itself failed, the frozen §2.6 diagnostics would be present.
+  No raise path exists where an empty `cleanup` tuple co-occurs with
+  an unexecuted cleanup obligation.
 - **R5 — cleanup tuple holds failure diagnostics only.** `cleanup`
   contains only frozen-template failure diagnostics (§2.6), in the
   frozen append order; `cleanup_ok == (len(report.cleanup) == 0)`.
   Informational messages are never appended.
+- **R6 — the inspection `finally` never raises; safety outcomes are
+  captured, then decided.** Verified reader disconnect and scratch
+  removal append failure diagnostics per §2.6 and never raise. The
+  original-byte re-hash is the last `finally` action and is itself
+  guarded: a re-hash I/O failure is captured as the frozen safety
+  diagnostic `safety: original bytes could not be re-verified after
+  inspection: <exc>` (§2.5) instead of raising out of the `finally`;
+  a completed re-hash is compared against the baseline and a mismatch
+  is captured as `safety: original bytes modified during inspection`.
+  The finalize step (§3.1.1 step 7) then decides deterministically:
+  a captured safety failure dominates and escapes as
+  `StorageInspectionError` (chaining any in-flight body exception per
+  R2's coincident-failure rule); otherwise the in-flight body
+  exception escapes with its finalized report; otherwise success.
+  Every escape — including a re-hash failure — carries a fully
+  populated report; the save path is unaffected (its re-hash-free
+  cleanup already never raises).
 
 ### 6.2 Real-seam fault-injection mechanisms [P3P-05 freeze]
 
@@ -1077,7 +1191,7 @@ gate, but the pre-freeze evidence obligation is met by this table.
 | --- | --- | --- |
 | A4.1 Serialization | Hand-build a plain `DataGroup`, `set_meta('run_record', <defective text>)` (bypassing `build_run_group`), call `save_run_group`. The real codec decode at step 2 rejects before any connect. | Pre-connect, both interpreters. Probe: `decode_envelope('not json')` → `RecordDecodeError: run_record: malformed JSON: Expecting value: line 1 column 1 (char 0)`; count-drift envelope → `RecordValidationError: outcome.completed_rows: differs from outcome.requested_rows` (identical text on 3.9.23 and 3.13.15). Mechanism is the Phase 2 codec contract itself (459-test evidence on both interpreters); recorder double asserts zero connect calls and target-path non-existence. |
 | A4.2 Save | **Externally closed h5py handle:** a recording spy on `backend.connect` (plain function, no autospec) delegates to the real connect, then closes `backend.file` — an external environmental fault; the real `save_impl` then executes against the closed handle. | **Save stage, verified on both interpreters:** `save_group` returned `False`; `backend.errors == ["Failed to save group: ValueError('Unable to synchronously create group (invalid identifier type to function)')"]` (identical on 3.9.23/h5py 3.14.0 and 3.13.15/h5py 3.16.0); the target file existed after connect and after the failed save, opened read-only, and contained **zero groups** (pinned artifact state, §6.3). The inner h5py text is version-dependent — assertions target the frozen `StorageSaveError` and the report, never the inner text. |
-| A4.3 Disconnect | **External file-handle invalidation** (re-frozen per architecture-review finding 1 — the double-disconnect mechanism was disabled by the cleanup guard and is withdrawn): a recording spy wraps the primary backend call — `load_group` on the **inspection** path (the plan's stated primary outcome), `save_group` on the save path — delegates to the real method so primary success is genuinely established, then **detaches and retains the raw handle and clears `backend.file` to `None`** (an external environmental state fault on a backend object the harness legitimately holds — the same injection class as A4.2's externally closed handle). The owned cleanup guard `backend.file is not None or backend.connected` then passes (`connected` is still `True` — status `ActionSucceeded`), the owned cleanup's **real** `disconnect_impl` executes `None.close()`, and the failure is recorded by the real `catch_error`. The spy retains the detached handle; the test closes it in teardown and asserts the close (zero leaked handles, A8.3). | **Disconnect stage, verified on both interpreters, both paths:** after the fault, guard evaluates `True`; `disconnect()` recorded `["Failed to disconnect: AttributeError(\"'NoneType' object has no attribute 'close'\")"]` in `backend.errors` (identical text on both interpreters); status `NotConnected` after; **inspection variant**: primary load result already in hand (`isinstance DataGroup`, `just_succeeded`, no errors) before the fault — the primary inspection outcome is delivered with `cleanup_ok=False` and the failure in `report.cleanup`; original sha256 unchanged; scratch copy removed normally. **Save variant**: primary save succeeded before the fault; the complete artifact remains (§6.3). **Probed-and-vacuous candidates, rejected with both-interpreter evidence:** (a) externally closed handle then `disconnect()` — returned normally, error delta `[]` (h5py `File.close()` is idempotent; confirmed vacuous on 3.9.23 and 3.13.15); (b) scratch directory removed before disconnect — returned normally, `errors=[]` (POSIX: close on an unlinked open file succeeds; 3.13.15). Both documented so the choice is auditable rather than guessed. |
+| A4.3 Disconnect | **External file-handle invalidation** (re-frozen per architecture-review finding 1 — the double-disconnect mechanism was disabled by the cleanup guard and is withdrawn): a recording spy wraps the primary backend call — `load_group` on the **inspection** path (the plan's stated primary outcome), `save_group` on the save path — delegates to the real method so primary success is genuinely established, then **detaches and retains the raw handle and clears `backend.file` to `None`** (an external environmental state fault on a backend object the harness legitimately holds — the same injection class as A4.2's externally closed handle). The owned cleanup guard `backend.file is not None or backend.connected` then passes (`connected` is still `True` — status `ActionSucceeded`), the owned cleanup's **real** `disconnect_impl` executes `None.close()`, and the failure is recorded by the real `catch_error`. The spy retains the detached handle; the test closes it in teardown and asserts the close (zero leaked handles, A8.3). | **Disconnect stage, verified on both interpreters, both paths:** after the fault, guard evaluates `True`; `disconnect()` recorded `["Failed to disconnect: AttributeError(\"'NoneType' object has no attribute 'close'\")"]` in `backend.errors` (identical text on both interpreters); status `NotConnected` after; **inspection variant**: primary load result already in hand (`isinstance DataGroup`, `just_succeeded`, no errors) before the fault — the primary inspection outcome is delivered with `cleanup_ok=False` and the failure in `report.cleanup`; original sha256 unchanged; scratch copy removed normally. **Save variant**: primary save succeeded before the fault; the complete artifact remains (§6.3). **Probed-and-vacuous candidates, rejected with both-interpreter evidence:** (a) externally closed handle then `disconnect()` — returned normally, error delta `[]` (h5py `File.close()` is idempotent; confirmed vacuous on 3.9.23 and 3.13.15); (b) scratch directory removed before disconnect — returned normally, `errors=[]` (POSIX: close on an unlinked open file succeeds; **confirmed vacuous on 3.9.23/h5py 3.14.0 and 3.13.15/h5py 3.16.0** — probe executed during this third revision in the §6.2-preamble environments: connect, `shutil.rmtree` the scratch directory with the handle still open, then `disconnect()` completes with error delta `[]`, no exception, status `NotConnected`). Both documented so the choice is auditable rather than guessed. |
 | A4.4–A4.7 Invalid reload | **Corrupt-fixture construction rule:** produce a genuine artifact through the real owned save path; byte-copy it; mutate **only** the `run_record` attribute on the copy via raw `h5py` in `'r+'` mode (never through the backend), writing the one defect under test (`'not json'`, wrong-namespace text, version-2 text, over-`MAX_ENCODED_BYTES` text). The mutated copy becomes the test's delivered "original": sha256 before, inspect, sha256 after — inspection internally copies it again per §3.1, so the delivered fixture's bytes are never touched by a legacy load. | Decode/validate stage, both interpreters, per the Phase 2 frozen templates — probe through a real backend-saved artifact mutated via raw h5py: `RecordDecodeError: run_record: malformed JSON: Expecting value: line 1 column 1 (char 0)` (A4.4); `RecordValidationError: namespace: unsupported namespace (supported: softlab.run-record)` (A4.5); `RecordValidationError: version: unsupported version (supported: 1)` (A4.6); `RecordDecodeError: run_record: encoded size exceeds limit 131072 bytes` (A4.7) — identical on both interpreters; pristine original sha256 unchanged. |
 | A4.8 Preflight | Hand-built fixture written **directly with h5py** (never the backend): a group named `<uuid>` with the reserved attribute set missing `id`/`backend` (or carrying non-text values). | **Preflight stage, before any legacy load, both interpreters:** probe fixture enumerated read-only; missing reserved attributes `['id', 'backend']` detectable without creating any backend; the seam raises `StorageInspectionError` with the `preflight:` template; call inventory asserts zero `load_group` calls. |
 | A4.9 Connect | **Existing directory at the target path.** | **Connect stage, verified on both interpreters:** `backend.connect({'path': dir})` returned `False`, `connected == False`, and recorded `"Failed to connect: IsADirectoryError(21, ...)"` (h5py inner text version-dependent; prefix frozen by `catch_error`); the pre-existing directory and its contents byte-unchanged. `save_group` is never called (recorder inventory: zero save calls). |
@@ -1210,10 +1324,10 @@ it is called out explicitly.
 
 | Plan area | Frozen design facts |
 | --- | --- |
-| A1 — Owned write path | Seam: `build_run_group` (empty group) → attach via public `DataGroup.add_record(record)` (**[P3P-01](a): branch (a) selected**) → `save_run_group(group, path, backend=None)` (**[P3P-01]** module `softlab/shui/run_storage.py`; signature §2.2). Pre-connect rejection of invalid envelopes via `decode_envelope` at step 2 (A4.1 mechanism). Lifecycle asserted via `backend` injection + recorder: connect→save→verified disconnect; return `StorageReport` (**[P3P-03]**, §6.1). A1.2's "stored column order equals envelope `record.columns` order" is asserted per §3.5/§3.5.1: order-sensitive against the in-memory record pre-save; **by-name association** from disk (h5py enumeration is lexicographic, probe-verified on both interpreters) — **this reading changes the approved plan's literal wording and is submitted as an explicit clarification requiring the §3.5.1 follow-up deltas (plan A1.2/A2.5/A3.1, decision §1.1, Phase 2 §1.3), with sw-mike + sw-tom re-review; it is not a unilateral re-interpretation.** Identity facts: group name == `str(group_id)`, on-disk `id` attribute == envelope `group_id`; `execution_id` appears in **no** stored UUID slot. Error types per §2.5. A1.6 stays in Phase 3: integration point §2.4 (with the `RunResult.execution_id` additive field and the `_load_group` additive hydration noted as the F-B client seam). |
-| A2 — Safe read path | Entry: `inspect_run_group(path, group_id=None, legacy_keys=(), backend=None)` → `InspectionResult` (§3.2). sha256 before/after asserted by the test; the function additionally self-checks and raises `safety: original bytes modified during inspection` on violation. Exactly one `load_group` per copy with `str(group_id)` (recorder inventory); fresh copy per inspection. Hydration **[P3P-01](b)**: `run_record` always (when present) plus requested legacy keys; `THERMAL_HYDRATION_KEYS = ('example', 'configuration', 'timing', 'thermal_manifest')`; `SIGNAL_HYDRATION_KEYS = ()` (the empty set, a frozen literal); `PROFILE_HYDRATION_KEYS` maps both. No thermal keys on signal (A2.8 stays in Phase 3 per §2.3; the signal **example** wiring is Phase 4 per decision §1's conditional clause). |
+| A1 — Owned write path | Seam: `build_run_group` (empty group) → attach via public `DataGroup.add_record(record)` (**[P3P-01](a): branch (a) selected**) → `save_run_group(group, path, backend=None)` (**[P3P-01]** module `softlab/shui/run_storage.py`; signature §2.2). Pre-connect rejection of invalid envelopes via `decode_envelope` at step 2 (A4.1 mechanism). Lifecycle asserted via `backend` injection + recorder: connect→save→verified disconnect; return `StorageReport` (**[P3P-03]**, §6.1). A1.2's "stored column order equals envelope `record.columns` order" is asserted per §3.5/§3.5.1: order-sensitive against the in-memory record pre-save; **by-name association** from disk (h5py enumeration is lexicographic, probe-verified on both interpreters) — **this reading changes the approved plan's literal wording and is submitted as an explicit clarification requiring the §3.5.1 follow-up deltas (plan A1.2/A2.5/A3.1, decision §1.1 sample-schema row, decision §2 read-discipline step 3, Phase 2 §1.3), with sw-mike + sw-tom re-review; it is not a unilateral re-interpretation.** Identity facts: group name == `str(group_id)`, on-disk `id` attribute == envelope `group_id`; `execution_id` appears in **no** stored UUID slot. Error types per §2.5. A1.6 stays in Phase 3: integration point §2.4 (with the `RunResult.execution_id` additive field and the `_load_group` additive hydration noted as the F-B client seam). |
+| A2 — Safe read path | Entry: `inspect_run_group(path, group_id=None, legacy_keys=(), backend=None)` → `InspectionResult` (§3.2). sha256 before/after asserted by the test; the function additionally self-checks and raises `safety: original bytes modified during inspection` on violation (or `safety: original bytes could not be re-verified after inspection: <exc>` when the re-hash itself cannot complete — both primary failures with fully populated reports, §3.1.1 step 7 / R6). Exactly one `load_group` per copy with `str(group_id)` (recorder inventory); fresh copy per inspection. Hydration **[P3P-01](b)**: `run_record` always (when present) plus requested legacy keys; `THERMAL_HYDRATION_KEYS = ('example', 'configuration', 'timing', 'thermal_manifest')`; `SIGNAL_HYDRATION_KEYS = ()` (the empty set, a frozen literal); `PROFILE_HYDRATION_KEYS` maps both. No thermal keys on signal (A2.8 stays in Phase 3 per §2.3; the signal **example** wiring is Phase 4 per decision §1's conditional clause). |
 | A3 — Fresh-process inspection | Bootstrap: `tests/run_record_inspect_bootstrap.py` (**[P3P-04]**; CLI §4.2, exit codes 0/1/2, payload schema §4.3, no-test-state §4.4; stdout discipline and verbatim warning-policy mirroring §4.1 — `redirect_stdout(sys.stderr)` around the inspection call so stdout carries only the JSON payload). Three-way distinction §3.4: absent → `envelope_present: false` + `legacy_meta` raw texts (**[P3P-01](c)**: legacy context = raw text, decoding stays in the example layer); present non-text → `StorageInspectionError('run_record: present value is not text')`; malformed/wrong-namespace/version/over-size → unwrapped Phase 2 `RecordDecodeError`/`RecordValidationError` with the Phase 2 §8.4 templates and an additively attached `.report` (§6.1 R3 — the exit-1 payload's `report` field is always present, §4.3). Multi-group: `group_id: require exactly one stored group or explicit ID` / `group_id: stored group '<id>' not found`; discovery via read-only HDF5 keys on the copy (F-D condition). |
-| A4 — Fault matrix | Mechanisms **[P3P-05]** per §6.2 table — each verified at its frozen stage on **both** Python 3.13.15 and Python 3.9.23 during this design (pre-freeze gate satisfied; evidence and environments quoted in §6.2; CI matrix re-confirms on Ubuntu). Error taxonomy **[P3P-02]** per §2.5 table plus the §2.6 frozen cleanup templates. Diagnostics container **[P3P-03]** per §6.1, including population rules R1–R5 (report at entry; `primary == (str(exc),)` on failure; codec errors carry `.report` additively; pre-connect cleanup semantics; failure-diagnostics-only cleanup tuple). Artifact-state pins per §6.3 table (A4.1 no artifact; A4.9 no file, directory untouched; A4.2 empty connect-time file with zero groups; A4.3 inspection variant: original sha256-unchanged, scratch removed, primary outcome delivered with `cleanup_ok=False`; save variant: complete artifact remains). A4.3's frozen seam is **external file-handle invalidation** (§6.2) — re-frozen per architecture-review finding 1 after the double-disconnect mechanism proved non-executable under the cleanup guard; the two plan candidates were probed and are vacuous on both interpreters (evidence §6.2). |
+| A4 — Fault matrix | Mechanisms **[P3P-05]** per §6.2 table — each verified at its frozen stage on **both** Python 3.13.15 and Python 3.9.23 during this design (pre-freeze gate satisfied; evidence and environments quoted in §6.2; CI matrix re-confirms on Ubuntu). Error taxonomy **[P3P-02]** per §2.5 table plus the §2.6 frozen cleanup templates. Diagnostics container **[P3P-03]** per §6.1, including population rules R1–R6 (report at entry; primary diagnostics never empty on failure — first entry the escaping exception's message, the coincident safety+body case preserving both as two entries with `__cause__` chaining; codec errors carry `.report` additively; R4 truthful empty-cleanup semantics — pre-resource raise vs cleanup-ran-clean; failure-diagnostics-only cleanup tuple; R6 inspection `finally` never raises, safety outcomes captured and decided at finalize). Artifact-state pins per §6.3 table (A4.1 no artifact; A4.9 no file, directory untouched; A4.2 empty connect-time file with zero groups; A4.3 inspection variant: original sha256-unchanged, scratch removed, primary outcome delivered with `cleanup_ok=False`; save variant: complete artifact remains). A4.3's frozen seam is **external file-handle invalidation** (§6.2) — re-frozen per architecture-review finding 1 after the double-disconnect mechanism proved non-executable under the cleanup guard; the two plan candidates were probed and are vacuous on both interpreters (evidence §6.2). |
 | A5 — Stage honesty | Stored literals asserted from disk (Phase 2 §8.1). No post-save `set_meta` on any key anywhere in the write path (recorder inventory). Later-outcome facts are runtime `StorageReport` facts only (**[P3P-07]**, §8) — outside the record; vocabulary unchanged. |
 | A6 — Unsupported paths | SQLite rejection: `UnsupportedBackendError("backend: unsupported backend type 'sqlite3' (supported: 'hdf5')")` at step 0 before any I/O (§7). Zero generic-io calls in the supported path (call inventory); F-C/F-D probes are re-assertions on unchanged code. Same-ID deletion probe records non-atomic behavior only. No failed/cancelled-run persistence anywhere. |
 | A7 — Legacy compatibility | The legacy suites pass unmodified against the §2.4 wiring: legacy writer failure surface preserved by exact mapping (connect/save `RuntimeError` literals, stage/cause/`attempts` ordering); `_load_group` extension is additive (absent `run_record` ⇒ pre-change path); legacy files read identically before/after (A7.2 via A3.3's legacy absence). Export surface: exactly the §9 nine-name delta (**[P3P-06]**); Phase 2 suite `tests/test_m03_p2_schema.py` untouched. |
@@ -1273,11 +1387,13 @@ sequenceDiagram
     participant Codec as JsonRunRecordCodec
 
     Caller->>Insp: inspect_run_group(path, group_id=None,<br/>legacy_keys=(), backend=None)
-    Insp->>FS: sha256(original) — baseline hash
-    Insp->>Tmp: TemporaryDirectory + shutil.copy2(original, copy)
+    Note over Insp: entry: report constructed BEFORE any raise (R1);<br/>step 0 backend resolution (UnsupportedBackendError, R4(a))
+    Insp->>FS: sha256(original) — baseline hash<br/>(unreadable → 'read: original artifact unreadable: ...', R4(a))
+    Note over Insp,Tmp: try/finally begins HERE — every operation from<br/>scratch creation onward is inside the cleanup/re-hash finally
+    Insp->>Tmp: TemporaryDirectory + shutil.copy2(original, copy)<br/>(scratch obligation exists from creation; copy failure still<br/>passes through the finally)
     Insp->>H5: preflight: enumerate groups; resolve group_id<br/>(exactly-one rule); reserved attrs present+text;<br/>disk id == group_id — BEFORE any backend load
     H5-->>Insp: identity + captured run_record / legacy texts<br/>+ per-record facts (columns, row counts)
-    Note over Insp,H5: preflight failure → StorageInspectionError,<br/>zero legacy loads (A4.8)
+    Note over Insp,H5: preflight failure → StorageInspectionError,<br/>zero legacy loads (A4.8) — finally still runs (R4(b))
     Insp->>BE: connect({'path': copy})
     Insp->>BE: load_group(str(group_id)) — EXACTLY ONE load per copy
     BE-->>Insp: DataGroup (meta empty — R4-BASE-META-01)
@@ -1289,7 +1405,8 @@ sequenceDiagram
     else absent (legacy file)
         Insp->>Insp: envelope = None — truthful legacy absence,<br/>legacy_meta raw texts still returned, never an error
     end
-    Note over Insp,Tmp: finally — verified reader disconnect + scratch cleanup<br/>(independent diagnostics); sha256(original) re-checked:<br/>mismatch → safety error even if a result exists
+    Note over Insp,Tmp: finally (never raises, R6) — verified reader disconnect<br/>+ scratch cleanup (independent diagnostics, frozen order);<br/>guarded sha256 re-check CAPTURED (mismatch or re-hash<br/>failure → safety diagnostic, not a finally raise)
+    Note over Insp: finalize (step 7): safety failure dominates —<br/>raises with chained body exception per R2; else body exception<br/>escapes with finalized report; else success
     Insp-->>Caller: InspectionResult(group, envelope, legacy_meta,<br/>record_facts, original_sha256, report)
 ```
 
@@ -1304,9 +1421,13 @@ sequenceDiagram
 - **Order of implementation:** exceptions + containers +
   `__all__` skeleton → `save_run_group` (entry report construction,
   then steps 0–5 in exactly the frozen order, §2.2) →
-  `inspect_run_group` (entry report construction, then §3.1.1 steps
-  0–5: preflight → single load → hydration → decode/cross-check →
-  cleanup/safety) → hydration constants →
+  `inspect_run_group` (entry report construction → baseline hash →
+  the single `try` from `TemporaryDirectory` creation through
+  preflight → single load → hydration → decode/cross-check, with
+  body-exception capture; the `finally` performing verified
+  disconnect → scratch removal → guarded re-hash capture and never
+  raising; then the §3.1.1 step-7 finalize deciding safety → body →
+  success, §6.1 R6) → hydration constants →
   `softlab/shui/__init__.py` nine-name delta → example
   wiring (§2.4: `RunResult.execution_id`, `after_count` retention,
   additive attach, writer-block replacement with exact legacy
