@@ -198,29 +198,41 @@ class ThermalIntegrationTests(unittest.TestCase):
     def test_writer_cleanup_failure_does_not_mask_persistence_interruption(self):
         interruption = KeyboardInterrupt('save interrupted')
         calls = []
-        class Writer:
-            file = object()
-            connected = True
-            errors = []
-            def connect(self, config):
+        # Phase 3 routes the writer through the owned save seam, so the
+        # double must be a real HDF5DataBackend subclass and the cleanup
+        # fault is injected at the seam's verified disconnect; the
+        # diagnostics container on the interruption is the frozen
+        # observable (p3-storage-design §2.4, §6.1).
+        class Writer(thermal.HDF5DataBackend):
+            def connect(self, arguments=None):
                 calls.append('connect')
-                return True
+                return super().connect(arguments)
             def save_group(self, group):
                 calls.append('save')
                 raise interruption
-        def disconnect(writer):
+        def disconnect(backend):
             calls.append('disconnect')
             raise RuntimeError('writer cleanup fault')
         stderr = io.StringIO()
         with tempfile.TemporaryDirectory() as root, \
              mock.patch.object(thermal, 'HDF5DataBackend', Writer), \
-             mock.patch.object(thermal, '_disconnect', side_effect=disconnect), \
+             mock.patch.object(thermal.HDF5DataBackend, 'disconnect',
+                               disconnect), \
              contextlib.redirect_stderr(stderr):
             with self.assertRaises(KeyboardInterrupt) as caught:
                 thermal.execute(thermal.ThermalConfig(points=1), Path(root) / 'run')
         self.assertIs(caught.exception, interruption)
-        self.assertEqual(calls, ['connect', 'save', 'disconnect'])
-        self.assertIn('writer cleanup fault', stderr.getvalue())
+        # the owned seam's verified disconnect attempts release first
+        # (recording the fault), then the example's finally attempts it
+        # again under its existing writer-reference discipline
+        self.assertEqual(calls, ['connect', 'save', 'disconnect',
+                                 'disconnect'])
+        report = caught.exception.report
+        self.assertEqual(report.operation, 'save')
+        self.assertFalse(report.primary_ok)
+        self.assertEqual(report.primary, ('save interrupted',))
+        self.assertFalse(report.cleanup_ok)
+        self.assertIn('writer cleanup fault', report.cleanup)
 
     def test_last_observed_boundary_is_not_overwritten_by_teardown(self):
         from softlab.huo.process import CountResult

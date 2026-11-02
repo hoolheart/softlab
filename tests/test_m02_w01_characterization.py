@@ -459,8 +459,12 @@ class ThermalPolicyComparison(unittest.TestCase):
         clean, reload_appends = self.split_trace(result, trace)
         self.assertEqual(clean, ["command"]
                          + ["advance", "read", "append"] * self.CONFIG.points)
-        # persistence replays add_rows on rebuilt records (observed, separate)
-        self.assertEqual(reload_appends, 9)
+        # persistence replays add_rows on rebuilt records (observed,
+        # separate); the Phase 3 dual-write adds two read-only
+        # DataGroup.record() copies — the additive envelope attach in
+        # execute() and the owned save seam's pre-save cross-check
+        # (p3-storage-design §2.2 step 3 / §2.4)
+        self.assertEqual(reload_appends, 11)
         table = result.group.record("thermal_trace").table
         self.assertEqual(list(table["measurement_source_tick"]),
                          list(range(0, self.CONFIG.points)))
@@ -475,7 +479,9 @@ class ThermalPolicyComparison(unittest.TestCase):
         self.assertEqual(clean, ["command"]
                          + ["advance", "observe", "pure-observe", "append"]
                          * self.CONFIG.points)
-        self.assertEqual(reload_appends, 9)
+        # see test_coordinated_previous_boundary_policy: Phase 3
+        # dual-write adds two read-only DataGroup.record() copies
+        self.assertEqual(reload_appends, 11)
         # direct adapter bypasses MockMeasurement entirely
         self.assertEqual(clean.count("read"), 0)
         table = result.group.record("thermal_trace").table
