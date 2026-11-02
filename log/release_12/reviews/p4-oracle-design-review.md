@@ -308,3 +308,95 @@ five findings, then re-review the affected design diff. This review approves
 the numeric values, tolerances, ordering rule, and exclusion policy, but it is
 not test approval, implementation authorization beyond the existing Phase 4
 scope, test execution, fresh-environment evidence, or M03 acceptance.
+
+## Re-review Information — revised design freeze
+
+- **Reviewer**: sw-jerry (Software Architect)
+- **Date**: 2026-11-03 Asia/Shanghai
+- **Reviewed revision**: `log/release_12/design/p4-oracle-design.md` at commit
+  `63ed4610b3112cf354d7497e826a567a3625c8e8` (`63ed461`).
+- **Method**: static review of the complete revised procedure and the
+  `9b6be84..63ed461` design diff, with the frozen thermal calls checked against
+  the actual signature at `examples/thermal_experiment.py:840-843`. The
+  previously accepted oracle arithmetic and tolerance/exclusion assessment are
+  reused because §§1–4 are unchanged. No implementation was changed and no
+  acquisition, storage workflow, or test suite was executed for this re-review.
+
+## Re-review Verdict
+
+**APPROVED.** All five findings are **CLOSED**, with no new findings. The
+revision now freezes callable thermal invocations, an explicit Phase 4 signal
+integration prerequisite, a genuine two-session original-versus-rerun
+comparison, recorded-configuration pass criteria, and a genuinely fresh
+AC06 environment walkthrough. Sections 1–4 remain unchanged, so the prior
+acceptance of the independent oracles, tolerances, ordering rule, and exclusion
+policy continues to apply.
+
+## Finding Closure
+
+### 1. High — Frozen thermal call form — CLOSED
+
+Section 5.2 step 2 now freezes
+`execute(config, output_dir, adapter='coordinated')` for thermal v1 and
+`execute(config, output_dir, adapter='direct')` for thermal v2. These match the
+actual keyword-only `adapter` parameter at
+`examples/thermal_experiment.py:840-843`. The former `delay=1|0` invocation is
+gone. Section 5.2 also makes the adapter the only call-side timing selector and
+delay/source-tick values expected outcomes. The remaining `delay=1` and `delay=0` text in §1 describes the frozen
+pre-step/post-step oracle semantics; it is not a stale call-side argument.
+
+### 2. High — Signal owned-persistence prerequisite and wiring — CLOSED
+
+Section 5.1 plainly states that the signal stored-path procedure is a Phase 4
+target and not an end-to-end capability of the current client. It freezes all
+six required wiring inputs: the completed-acquisition gate before envelope/save;
+execution/group identity sources; `build_run_group` and public record attachment;
+the complete signal payload/envelope inputs; signal-owned software/source facts
+and an explicit HDF5 target; and save-report plus resource-cleanup pass
+conditions. It also correctly limits the solution to the existing Phase 2/3
+seams without a backend repair or new shared framework.
+
+### 3. High — Genuine original-versus-clean-session-rerun workflow — CLOSED
+
+Section 5 and §5.2 steps 2–8 now create original artifact A and rerun artifact B
+in separate fresh Python processes and separate temporary roots using the same
+declared inputs. Both artifacts are independently inspected and checked against
+the §2 oracle. Step 8 then compares A directly with B for every non-excluded
+sample column, timing/structural relation, and recorded configuration while
+applying §4 only to the named nondeterministic fields. Steps 4 and 8 explicitly
+assert `execution_id_B != execution_id_A` and `group_id_B != group_id_A`.
+Per-run identity and original-byte preservation assertions are retained.
+
+### 4. Medium — Recorded-configuration pass criteria — CLOSED
+
+Section 5.3 requires exact equality between stored configuration and the frozen
+§1 declarations. For thermal this covers all seven `ThermalConfig` values, the
+recorded adapter, and the adapter-corresponding manifest
+version/delay/source-tick literals. For signal it covers `points`, offsets,
+non-consumptive `tick_plus_offset` semantics, scheduler ownership, and
+caller-derived/not-stored difference policy. Environment/source observations remain excluded while
+deterministic configuration is explicitly not excluded.
+
+### 5. Medium — Genuinely fresh AC06 environment — CLOSED
+
+Section 6 now requires verbatim evidence of actual isolated-environment creation,
+the selected interpreter, isolation from existing site packages, and installation
+of the current checkout with its declared/resolved dependencies. It expressly
+rejects activation of the preexisting project `.venv` as satisfaction of AC06
+and requires environment-creation, interpreter, network, or package-index
+failures to remain recorded blockers/limitations rather than passes based on an
+existing environment. The command, observed-version, warning, and limitation
+records are retained.
+
+## Unchanged Oracle Scope and Re-review Gate
+
+The `9b6be84..63ed461` diff makes no changes to §§1–4; the first design change
+is at §5. The reference inputs, expected sample/timing tables, tolerances, and
+exclusions are therefore unchanged and remain accepted on the evidence in the
+original review. The three §8 evidence gaps remain Phase 4 execution debt, not
+new design-freeze blockers, and no executed result may be claimed from this
+review.
+
+Commit `63ed461` is approved as the binding Phase 4 oracle/rerun design-freeze
+input. This approval is not test approval, test execution, fresh-environment
+evidence, or M03 acceptance.
