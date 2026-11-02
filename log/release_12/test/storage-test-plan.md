@@ -6,6 +6,13 @@ Status: **DRAFT — revised per developer review (commit `6c842fd`,
 all five findings closed in plan text; awaiting developer re-review,
 then detailed design freeze; no test code and no source changes before
 approval**
+
+> **ORDERING DELTA applied per approved design §3.5.1 (b52e034/11018b2) —
+> pending developer re-review.** A1.2 (4th bullet), A2.5, and A3.1 below
+> carry the §3.5.1 frozen ordering rule (envelope sequence canonical;
+> HDF5 enumeration lexicographic/non-semantic; by-name disk cross-check;
+> samples by row index) in place of the superseded literal wording.
+
 Branch: `codex/m03-p3-storage`
 PRD: [log/release_12/prd.md](../prd.md) (Phase 3 row, **M03-AC03**,
 **M03-AC04**)
@@ -186,9 +193,20 @@ must hold before test code is written.
    - `METADATA_KEY == 'run_record'` is present as a text attribute; its
      bytes decode via the Phase 2 codec `decode_envelope` to an envelope
      deep-equal to the input;
-   - the record dataset(s) exist with the declared ordered columns and
-     truthful units; stored column order equals envelope `record.columns`
-     order (decision §1.1 sample-schema row);
+   - the record dataset(s) exist with the declared columns and truthful
+     units; per design §3.5.1 the envelope's declared column sequence is
+     the canonical stored semantic order (enforced order-sensitively
+     against the in-memory record before any write), while HDF5 dataset
+     enumeration is lexicographic and non-semantic — so the disk
+     cross-check is **by name**: for each declared column, in envelope
+     order, the same-named dataset exists with its four attributes
+     matching exactly and the column-name sets are equal; samples are
+     compared by row index (never via enumeration order). This
+     supersedes this bullet's previous literal "stored column order
+     equals envelope `record.columns` order (decision §1.1
+     sample-schema row)" wording (design §3.5.1 follow-up delta
+     list); the thermal dual-write fixture is unaffected in practice
+     because the thermal schema is already lexicographic;
    - stored row count equals `outcome.completed_rows` (decision §6 item 5
      relation; design §9 cross-check deferral);
    - sample values in the stored dataset match an independently constructed
@@ -284,9 +302,14 @@ design §9 (second and fourth deferral items).
      absence (see A3), never as a hydration success.
 5. **Decode, validate, and cross-check on the copy.** The hydrated text is
    decoded with the Phase 2 codec; identity (`group_id` vs stored group
-     name/`id` attribute), ordered schema/units, row counts, and samples are
-   cross-checked against the stored artifact (decision §2 step 3); a
-   cross-check mismatch fails visibly.
+   name/`id` attribute), schema/units, row counts, and samples are
+   cross-checked against the stored artifact (decision §2 step 3) under
+   the §3.5.1 read-side rule (design §3.5.1 follow-up delta list): the
+   cross-check associates columns **by name** — declared order is the
+   envelope's declared sequence, physical HDF5 enumeration is
+   lexicographic/non-semantic — and per-column sample arrays are
+   compared element-wise **by row index** against the expectation,
+   never via enumeration order; a cross-check mismatch fails visibly.
 6. **F-A regression guard — plain destructive load is never the supported
    path.** Negative/exclusion assertions: the supported inspection entry
    point never opens the original file with the legacy backend loader; no
@@ -331,9 +354,17 @@ process"); design §9.
    module per **[P3P-04]** modeled on `tests/thermal_cli_bootstrap.py`,
    `-W error` where warnings must surface) that performs the full safe
    inspection and emits a JSON payload. Assert: exit code 0; the payload
-   carries the decoded envelope, identity, ordered schema/units, row counts,
-   and sample facts equal to what the parent stored; the parent then
-   re-hashes the original — unchanged.
+   carries the decoded envelope, identity, row counts, and sample facts
+   equal to what the parent stored; per the design §4.3 payload rule
+   (design §3.5.1 follow-up delta list), the payload's
+   `records[*].columns` is asserted in h5py enumeration order
+   (lexicographic — as physically stored, non-semantic), while the
+   declared order is carried by the envelope; reconstruction in
+   envelope (declared) order by same-named dataset/column association,
+   comparing sample arrays by row index, is the Phase 4 by-name oracle
+   rule frozen at design §3.5.1 item 5 — stated here as a
+   **forward-reference only, not a Phase 3 assertion**; the parent
+   then re-hashes the original — unchanged.
 2. **No legacy context in the child.** The child process holds no thermal
    example state, no prior `DataGroup`, and no in-memory envelope; every
    fact in its payload comes from the stored artifact via the safe path
