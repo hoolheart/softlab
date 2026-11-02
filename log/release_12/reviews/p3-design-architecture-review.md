@@ -442,3 +442,67 @@ finding 3's inspection-boundary gaps, add the missing boundary §2-step-3
 ordering delta under finding 4, and reconcile finding 7's evidence wording.
 Then re-review the affected design diff together with the required ordering
 alignment artifacts before test authoring.
+
+---
+
+## Final re-review of revised design at `b52e034`
+
+- **Reviewer**: sw-jerry (Software Architect)
+- **Date**: 2026-11-03
+- **Branch**: `codex/m03-p3-storage`
+- **Reviewed revision**: `b52e034` (`docs(log): revise phase 3 storage design
+  third round`)
+- **Method**: static final re-review of findings 3, 4, and 7 against the
+  revised design, the design diff since `f94d786`, the approved storage test
+  plan, and the binding boundary/schema documents. The unchanged closures for
+  findings 1, 2, 5, and 6 are reused. This was a documentation review; no
+  runtime tests or new probes were executed, and the reported probe evidence
+  was assessed as recorded design evidence.
+
+### Final verdict
+
+**APPROVED.**
+
+Findings **1–7 are CLOSED**, and no new findings are opened. The §3.1.1
+restructure closes the inspection cleanup/report gaps without breaking the
+previously frozen A4.3, codec-error, preflight, or cleanup-only outcome
+contracts.
+
+### Per-finding closure
+
+| Finding | Status | Final basis |
+| --- | --- | --- |
+| **1** | **CLOSED** | The selected A4.3 external file-handle invalidation seam and its artifact/resource ownership remain unchanged from the closure recorded at `44c3d95`. |
+| **2** | **CLOSED** | The final mechanisms retain the recorded Python 3.9.23 and 3.13.15 pre-freeze evidence; candidate CI remains re-confirmation rather than a substitute for that gate. |
+| **3** | **CLOSED** | Section 3.1.1 now places `TemporaryDirectory` creation, copy, preflight, non-text rejection, connect/load, hydration, decode, and cross-checks inside one guarded region. Only backend resolution and baseline hashing raise outside it. Body-exception escape is deferred until after disconnect, scratch cleanup, and guarded re-hash; final report population and attachment then occur at step 7. R4 now distinguishes a genuinely pre-resource raise from cleanup that ran cleanly, R5 retains the cleanup-tuple invariant, and R3 retains unwrapped codec type/message with a fully populated attached report. R6 freezes the re-verification-failure template in §2.5, captures rather than raises from the `finally`, makes byte safety dominate at finalize, and preserves a coincident body exception through `__cause__` and the two-entry `primary` tuple. Sections 4.3, 10, 11.2, and the implementation notes use the same ordering and population rules. |
+| **4** | **CLOSED** | Section 3.5.1 now includes the required `p1-boundary-decision.md` §2 step-3 read-side addendum, using the same envelope-order/by-name/row-index interpretation as the write-side and test-plan deltas. Section 10 A1 also names that follow-up explicitly. |
+| **5** | **CLOSED** | The frozen cleanup literals, append order, and legacy thermal mappings are unchanged by this revision. |
+| **6** | **CLOSED** | The fresh-process stdout redirection and exact warning-allowance policy are unchanged by this revision. |
+| **7** | **CLOSED** | Section 6.2 A4.3 candidate (b) now records the vacuous scratch-removal-before-disconnect probe on both Python 3.9.23/h5py 3.14.0 and Python 3.13.15/h5py 3.16.0: normal disconnect, empty error delta, and `NotConnected`. The Overview, A4.3 rejection narrative, and §10 both-interpreter claims now match the recorded evidence. |
+
+### Finalize-order regression check
+
+No new contradiction was found in the §3.1.1 restructure:
+
+- With no body or byte-safety failure, an A4.3 disconnect failure still returns
+  the primary `InspectionResult` with `primary_ok=True`,
+  `cleanup_ok=False`, and independent cleanup diagnostics, as the approved
+  plan requires.
+- A byte-safety mismatch or failed re-hash remains a primary inspection
+  failure even when the body otherwise succeeded; it does not get downgraded
+  to a cleanup-only result.
+- Coincident body and safety failures preserve both diagnostics and explicitly
+  chain the body exception, so safety precedence does not discard the earlier
+  failure evidence.
+- Preflight still precedes and prevents any legacy load on failure; codec
+  failures remain unwrapped; disconnect → scratch removal → guarded re-hash
+  remains the frozen cleanup order; and the save path is unchanged.
+
+### Final gate disposition
+
+The Phase 3 detailed design is approved at `b52e034`. This closure does not
+mark the §3.5.1 follow-up alignment artifacts as already revised or reviewed:
+the named storage-plan, boundary-decision, and Phase 2-schema deltas still
+require their stated owner alignment and re-review before test code is
+written. No implementation, test execution, or release acceptance is implied
+by this design approval.
