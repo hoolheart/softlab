@@ -108,47 +108,140 @@ and nothing looser is permitted.
 | `thermal.png` plot bytes | Rendering is not bit-stable across matplotlib versions. | Existence of the artifact only. |
 | Original-file byte hash vs rerun-file byte hash | Timestamps/UUIDs embedded in the file differ. | Per-run original-byte preservation (sha256 before/after inspection, C3 discipline) **is** asserted within each run. |
 
-## 5. Clean-session rerun procedure (frozen steps and pass criteria)
+## 5. Clean-session original-versus-rerun procedure (frozen steps and pass criteria)
 
 Applies per scenario in §1. Every step runs in synthetic
 `tempfile.TemporaryDirectory(prefix='softlab-m03-p4-*')` roots; no fixture
-touches the repository tree or real instruments.
+touches the repository tree or real instruments. The workflow creates **two
+artifacts**: recording **A** (the original session) and rerun **B** (a
+separate clean process/session with the same declared inputs), then compares
+each against the §2 oracle and the two against each other.
+
+### 5.1 Signal-scenario prerequisite — Phase 4 client wiring (does not exist today)
+
+**Prerequisite, stated plainly:** the signal steps below are the **target**
+procedure enabled by Phase 4 signal-example integration; they are **not** an
+end-to-end capability of the current client. Today
+`examples/signal_monitor.acquire(points=3)` returns only
+`(CountResult, DataRecord, differences, reads)`: the module has **no owned
+persistence entry point, no saved output path, no source/software capture,
+and no returned `DataGroup`**. Phase 4 implementation **must** wire the
+signal example with owned persistence through the existing Phase 2/3 seams —
+no backend repair and no new shared framework is introduced. The wiring must
+provide **all** of the following as inputs to the rerun procedure:
+
+1. **Acquisition-success gate:** the `acquire()` `CountResult` is checked
+   (`result.overall_success`, or the explicitly equivalent
+   acquisition/terminal/drain/loop/cleanup checks) **before** any envelope is
+   constructed or any save is attempted; a failed, cancelled, or incomplete
+   acquisition never reaches `build_envelope` / `save_run_group`.
+2. **Identity inputs:** `execution_id = str(result.run_id)` (bounded
+   execution UUID) and a freshly generated, distinct persistent `group_id`.
+3. **Group construction and record attachment:** `build_run_group(name,
+   envelope)` followed by attachment of the acquired `DataRecord` via the
+   public `DataGroup.add_record(record)` **before** `save_run_group`
+   (p3-storage-design §2.1–§2.2).
+4. **Envelope inputs:** `build_signal_payload(points=3,
+   offsets={'signal': 5, 'reference': 2})` and
+   `build_envelope(profile='signal', execution_id=..., group_id=...,
+   record_name='signal', columns=<declared columns in declaration order>,
+   requested_rows=3, completed_rows=3, software=..., source=...,
+   payload=...)`.
+5. **Software/source ownership:** the wiring supplies its own `software` and
+   signal-specific `source` facts (signal-owned capture; thermal's private
+   source helper is **not** assumed to be signal-owned integration) plus an
+   explicit HDF5 target path under the temp root.
+6. **Save and cleanup pass conditions:** `save_run_group(group, path)`
+   returns a `StorageReport` whose success flag is asserted; owned resources
+   are disconnected before the procedure proceeds.
+
+### 5.2 Frozen steps
 
 1. **Declare inputs** in the test/driver source: the §1 table row (config
-   values or `points`/offsets), the oracle table from §2, the §3 tolerances,
-   the §4 exclusions. Declarations precede any execution.
-2. **Rerun execution (process A):** fresh Python process; run the client:
-   thermal → `examples/thermal_experiment.execute(config, output_dir,
-   delay=1|0)`; signal → `examples/signal_monitor.acquire(points=3)` then
-   construct and persist its owned record via `build_signal_payload` /
-   `build_envelope` / `save_run_group` (p3-storage-design §2.2 write path).
-   Assert `result.overall_success` (thermal) / save `StorageReport` success
-   (signal); disconnect owned resources.
-3. **Record save verification:** the produced `*.h5` exists under the temp
-   root; record sha256 of the original.
-4. **Separate-process inspection (process B):** run
+   values **and adapter**, or `points`/offsets), the oracle table from §2,
+   the §3 tolerances, the §4 exclusions. Declarations precede any execution.
+2. **Original recording (session A):** fresh Python process; run the client
+   with the §1 inputs:
+   - thermal v1 → `examples/thermal_experiment.execute(config, output_dir,
+     adapter='coordinated')`;
+   - thermal v2 → `examples/thermal_experiment.execute(config, output_dir,
+     adapter='direct')`;
+   - signal → `examples/signal_monitor.acquire(points=3)` followed by the
+     §5.1 wiring (gate → identities → envelope → `build_run_group` →
+     `add_record` → `save_run_group`).
+   The adapter is the only call-side timing selector: delay 1 / manifest v1 /
+   `source_tick='tick-1'` follow from `'coordinated'`, delay 0 / manifest v2 /
+   `source_tick='tick'` from `'direct'`. Delay and source-tick are **expected
+   outcomes**, never call-side inputs (the real signature is
+   `execute(config, output_dir, *, stop=None, after_row=None,
+   adapter='coordinated')`; there is no `delay` parameter).
+   Assert `result.overall_success` (thermal) / gate pass + `StorageReport`
+   success (signal); disconnect owned resources; record `execution_id_A`,
+   `group_id_A`, and artifact path `A.h5`.
+3. **Original save verification:** `A.h5` exists under its temp root; record
+   sha256 of the original bytes (`sha256_A_before`).
+4. **Clean-session rerun (session B):** a **separate fresh Python process**
+   and a separate temp root; repeat step 2 with the **same declared inputs**,
+   producing artifact `B.h5` with identities `execution_id_B`, `group_id_B`.
+   **Distinct identities are expected and asserted:**
+   `execution_id_B != execution_id_A` and `group_id_B != group_id_A` (fresh
+   UUIDs per run, §4).
+5. **Rerun save verification:** as step 3 for `B.h5` (`sha256_B_before`).
+6. **Separate-process inspection (per artifact):** for each of `A.h5` and
+   `B.h5`, run
    `python tests/run_record_inspect_bootstrap.py <path> --profile {thermal|signal}`
    (the Phase 3 bootstrap around `softlab.shui.run_storage.inspect_run_group`;
    warnings fatal except the approved recorded baselines). Parse the JSON
-   payload from stdout; exit code must be 0.
-5. **Oracle comparison (process A, on B's payload plus its own in-memory
-   expectations):** decode the envelope; per §3.5.1 rule 5, iterate the
-   envelope's declared column sequence, retrieve each same-named stored
-   dataset/column, and compare sample arrays **by row index** against §2
-   using §3 tolerances; check all §2 timing/structural relations and §4
-   retained assertions; re-verify original sha256 unchanged.
+   payload from stdout; exit code must be 0. Inspections use fresh copies
+   (F-A guard, p3-storage-design §3.6); originals are never loaded in place.
+7. **Oracle comparison (per artifact):** decode the envelope; per §3.5.1
+   rule 5, iterate the envelope's declared column sequence, retrieve each
+   same-named stored dataset/column, and compare sample arrays **by row
+   index** against §2 using §3 tolerances; check all §2 timing/structural
+   relations and §4 retained assertions; re-verify the artifact's original
+   sha256 unchanged.
+8. **Original-versus-rerun comparison (A vs B):** compare the decoded A and
+   B payloads **to each other**: every non-excluded column's sample arrays
+   match by row index under the same §3 tolerances; all §2 timing and
+   structural relations agree across runs; recorded configurations are
+   mutually equal (and equal to the §1 declarations, per §5.3); identity
+   fields are asserted **distinct** per step 4. §4 excluded fields
+   (`timestamp` values, UUID values, environment/source observation values,
+   plot bytes, cross-run file byte hashes) are **never** compared across
+   runs; their per-run retained assertions still apply to each artifact
+   independently.
 
-**Pass criteria (all required; no partial pass):**
+### 5.3 Pass criteria (all required; no partial pass)
 
-- Process B exit 0 with a well-formed payload; no warning other than the
-  approved recorded baselines (§6).
-- Every §2 column matches within its §3 method/tolerance; all §2 timing and
-  structural relations hold; `completed_rows == requested_rows` and equals
-  the stored row count.
-- All §4 "separate assertion retained" checks pass (UUID distinctness,
-  source-availability states, timestamp presence/shape, original-byte
-  preservation).
-- Two sequential inspections of the same original each succeed on **fresh
+- Each inspection process exits 0 with a well-formed payload; no warning
+  other than the approved recorded baselines (§6).
+- Every §2 column matches within its §3 method/tolerance **for both A and
+  B**; all §2 timing and structural relations hold for both runs;
+  `completed_rows == requested_rows` and equals the stored row count in each
+  run.
+- **Recorded-configuration comparison:** the stored configuration equals the
+  frozen §1 declarations exactly:
+  - thermal: stored `payload.configuration` equals all seven frozen
+    `ThermalConfig` values (`initial_temperature`, `ambient_temperature`,
+    `heat_capacity`, `conductance`, `dt`, `power`, `points`); the recorded
+    adapter equals the declared adapter; manifest `version`,
+    `clock.measurement_delay_ticks`, and `clock.source_tick` match the §2
+    literals for the declared adapter (including the corresponding legacy
+    configuration/manifest relations where applicable);
+  - signal: stored `payload.points == 3`; stored `payload.read_policy`
+    equals `{semantics: 'tick_plus_offset', consumptive: false,
+    offsets: {'signal': 5, 'reference': 2}}`; `scheduler.ownership ==
+    'run_count_owned'`; `derived.difference.storage ==
+    'caller_derived_not_stored'`.
+  Environment/source observation values stay under the §4 exclusions;
+  deterministic configuration is **not** excluded.
+- **Original-versus-rerun comparison passes:** step 8's A-vs-B agreement
+  holds for all non-excluded columns, timing/structural relations, and
+  recorded configuration; A and B identities are distinct as asserted.
+- All §4 "separate assertion retained" checks pass **per run** (UUID
+  distinctness within each run, source-availability states, timestamp
+  presence/shape, original-byte preservation).
+- Two sequential inspections of each original each succeed on **fresh
   copies** (F-A guard, p3-storage-design §3.6) with the original sha256
   unchanged throughout.
 
@@ -156,27 +249,42 @@ touches the repository tree or real instruments.
 
 The Phase 4 walkthrough report **must** record, with verbatim evidence:
 
-1. Exact commands actually run (from repo root): environment activation,
+1. **Genuinely fresh environment creation and installation — actual commands
+   and outcomes:**
+   - The exact environment-**creation** command actually run (e.g.
+     `python3 -m venv <fresh-env-path>` or an equivalent isolated
+     environment-creation command), the selected interpreter path, and
+     recorded evidence of isolation from any existing site packages.
+     **Activating the preexisting project `.venv` does not satisfy AC06.**
+   - The exact installation command and its outcome for the **current
+     checkout** with its declared dependencies (`python -m pip install -e .`
+     run from the repository checkout), including the resolved dependency
+     set actually installed.
+   - A network/package-index failure or unavailable interpreter is a
+     **recorded blocker/limitation** — never a pass justified by falling
+     back to an existing environment.
+2. Exact commands actually run (from repo root, in the fresh environment):
    `python -m unittest discover -s tests -p 'test_*.py'`,
    `python -m compileall -q softlab`, the import smoke check
    (`python -c "import softlab; print(softlab.__version__)"`), and the §5
    rerun/inspection commands per scenario.
-2. Interpreter and dependency versions **actually observed** in the
+3. Interpreter and dependency versions **actually observed** in the
    walkthrough environment (Python, softlab, numpy, pandas, h5py/libhdf5,
    matplotlib, sqlite3 where read), in the same style as the
    characterization-results execution record. The characterization-era values
    (Python 3.13.15, softlab 0.3.0, numpy 2.5.3, pandas 3.0.6, h5py 3.16.0 /
    libhdf5 2.2.0) are historical context, **not** presumed walkthrough
    values; the walkthrough records its own.
-3. Every warning observed, verbatim, categorized as product / environment /
+4. Every warning observed, verbatim, categorized as product / environment /
    CI-reporting artifact. Known approved baselines (bootstrap
    `install_warning_policy`): the four pyparsing deprecations on Python 3.9,
    the pandas `pd.concat` FutureWarning on Python 3.9/pandas 2.x, and the
    sqlite3 `version` DeprecationWarning on Python ≥ 3.13. **Recorded, never
    waived or suppressed**; any new warning fails the walkthrough until
    dispositioned.
-4. Limitations actually encountered (missing optional extras, unavailable
-   interpreters) recorded as limitations, not silently scoped away.
+5. Limitations actually encountered (missing optional extras, unavailable
+   interpreters, environment-creation or install failures) recorded as
+   limitations, not silently scoped away.
 
 ## 7. Traceability
 
@@ -197,13 +305,18 @@ The Phase 4 walkthrough report **must** record, with verbatim evidence:
 1. **Walkthrough not yet executed.** §6 versions/warnings are requirements,
    not observations; the actual fresh-environment evidence is a Phase 4
    deliverable still to be produced (per AC06 this is expected at this gate).
-2. **Signal persistence oracle is design-frozen ahead of its first executed
-   integration run.** Its sample values (`[6,7,8]`/`[3,4,5]`/`[3,3,3]`) are
-   characterized in-memory evidence (C5b); the stored-path round-trip of
-   those exact values through `save_run_group`/`inspect_run_group` was
-   designed in Phase 3 but its **executed** confirmation is a Phase 4 test
-   deliverable. If Phase 4 execution observes any deviation, this freeze is
-   reopened through review — never silently edited.
+2. **Signal persistence oracle is design-frozen ahead of Phase 4 client
+   wiring and its first executed integration run.** The signal stored-path
+   rerun depends on the §5.1 wiring, which is a **Phase 4 implementation
+   prerequisite that does not exist in the current client** (no owned
+   persistence, output path, or source/software capture in
+   `signal_monitor.acquire`). Its sample values
+   (`[6,7,8]`/`[3,4,5]`/`[3,3,3]`) are characterized in-memory evidence
+   (C5b); the stored-path round-trip of those exact values through
+   `save_run_group`/`inspect_run_group` was designed in Phase 3 but its
+   **executed** confirmation is a Phase 4 test deliverable. If Phase 4
+   execution observes any deviation, this freeze is reopened through review —
+   never silently edited.
 3. **Python 3.9 float determinism assumption.** The §2.1/§2.2 temperature
    reprs were computed on Python 3.13.15. IEEE-754 double arithmetic makes
    the recurrence interpreter-independent, and the `abs_tol=1e-10` bound
@@ -213,5 +326,12 @@ The Phase 4 walkthrough report **must** record, with verbatim evidence:
 ## Design review
 
 - **Reviewer**: sw-jerry (architecture), sw-camille (product, AC05/AC06 scope)
-- **Review date**: pending
-- **Status**: PENDING
+- **Review date**: 2026-11-03 (architecture review, commit `e04991d`,
+  `../reviews/p4-oracle-design-review.md` — **CHANGES REQUESTED**, 5 findings)
+- **Revision**: this revision resolves all 5 findings — §5.2 real
+  `adapter=` call seam (finding 1); §5.1 plainly-frozen Phase 4 signal
+  wiring prerequisite (finding 2); §5.2 two-session original-versus-rerun
+  workflow with distinct identities (finding 3); §5.3 recorded-configuration
+  comparison (finding 4); §6 genuinely fresh environment creation/install
+  (finding 5). Numeric oracles, tolerances, and exclusions are unchanged.
+- **Status**: REVISED — pending re-review of the affected diff
