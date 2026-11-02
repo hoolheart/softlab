@@ -33,3 +33,17 @@ later phases; no Phase 2 design/implementation has started.
 
 **Verdict: PASS — Phase 2 may integrate to `dev` once exact-candidate CI passes
 on Python 3.9 and 3.13.** Phase 3 has not started.
+
+## Inspection 3 — Phase 3 completion gate (2026-11-03)
+
+| Principle | Evidence | Result |
+| --- | --- | --- |
+| 1. TDD workflow with mandatory documentation | Storage test plan APPROVED (`d7d7169`, deltas re-reviewed `5ca51d1`); detailed design APPROVED after 3 review rounds (7 findings + re-review items all CLOSED, final `11018b2`); implementation `0217593`; code review APPROVED zero blocking findings (`7b1d771`); executable suite + results (`storage-test-results.md`). | PASS |
+| 2. Zero tolerance for unfixed issues | Design findings 1–7: all CLOSED by sw-jerry. Plan findings: all CLOSED by sw-tom. Code review: zero blocking; two non-blocking observations recorded with rationale. Tests: zero defects. | PASS |
+| 3. Environment completeness | Full suite 507/507 on BOTH Python 3.13.15 (venv) and 3.9.23 (scratch env); the 3.9 pyvisa-sim environment failure was investigated, distinguished from product failure, resolved; no gate skipped. | PASS |
+| 4. Frontend design-first | N/A — no UI work. | N/A |
+| 5. Sprint-end zero-warning compilation | Zero warnings on 3.13; on 3.9 only the pre-existing pandas-2.3.3 `FutureWarning` at `base.py:314`, verbatim-matching the approved policy literal, unsuppressed and recorded; compileall clean both interpreters. | PASS |
+| 6. Log process files committed and pushed | Verified on `codex/m03-p3-storage`: plan `f25c497`/`30f48a9`/`d7d7169`, reviews `6c842fd`/`b31d687`/`26a13b6`/`44c3d95`/`11018b2`/`5ca51d1`, design `ae83c2a`/`f94d786`/`b52e034`, addenda `6575651`/`1e9df20`, code review `7b1d771`, tests `0af5a35`, results `bf01710`. All pushed, conventional messages. | PASS |
+
+**Verdict: PASS — Phase 3 may integrate to `dev` once exact-candidate CI passes
+on Python 3.9 and 3.13.** Phase 4 has not started.
