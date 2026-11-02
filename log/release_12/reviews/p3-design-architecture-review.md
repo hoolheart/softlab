@@ -290,3 +290,155 @@ freeze. Revise the design for findings 1–6, obtain the ordering/test-plan
 alignment required by finding 4, and re-review the affected design and plan
 diffs. P3P-05 is not closed until the final fault mechanisms have actual
 Python 3.9 and 3.13 stage evidence at the required pre-freeze gate.
+
+---
+
+## Re-review of revised design at `f94d786`
+
+- **Reviewer**: sw-jerry (Software Architect)
+- **Date**: 2026-11-02
+- **Branch**: `codex/m03-p3-storage`
+- **Reviewed revision**: `f94d786` (`docs(log): revise phase 3 storage design
+  per architecture review`)
+- **Method**: static re-review of the six requested fixes against the revised
+  design, the approved plan and boundary/schema documents, and the production
+  cleanup/backend/bootstrap source. The reported local probes were assessed as
+  design evidence; no runtime tests or new probes were executed for this review.
+
+### Re-review verdict
+
+**CHANGES REQUESTED.**
+
+Findings **1, 2, 5, and 6 are CLOSED**. Finding **3 remains open** because the
+inspection algorithm still has report/cleanup paths outside its frozen
+`try/finally`, and finding **4 remains open** because its follow-up delta list
+omits one binding read-side statement. New finding **7** records a narrower
+both-interpreter evidence contradiction in the withdrawn-candidate narrative.
+The design is therefore not yet eligible for approval.
+
+### Per-finding closure
+
+#### 1. CLOSED — A4.3 now uses an executable real disconnect-failure seam
+
+The withdrawn double-disconnect mechanism is replaced by external file-handle
+invalidation after the real primary call succeeds. With `backend.file = None`
+and status still `ActionSucceeded`, the cleanup guard evaluates true; the real
+`disconnect_impl()` executes `None.close()` and the real `catch_error` records
+`Failed to disconnect: AttributeError(...)` before `DatabaseBackend.disconnect`
+sets `NotConnected`. This directly addresses the prior disabled-guard defect.
+
+The design names inspection as the frozen A4.3 row and save as supporting
+coverage, pins original/scratch and save-artifact outcomes, and records the
+primary result with `cleanup_ok=False`. The spy retains the detached handle and
+the test closes and asserts it in teardown, so the handle-ownership story is
+complete. The selected seam and its guard/error/status evidence are recorded
+for both Python 3.9.23 and 3.13.15. The vacuous candidates are explicitly
+rejected rather than silently retained; the separate wording inconsistency in
+that rejection narrative is finding 7 below, not a defect in the selected seam.
+
+#### 2. CLOSED — P3P-05 pre-freeze evidence is now local and both-interpreter
+
+Section 6.2 now records exact local commands and actual Python/h5py/libhdf5
+environments for 3.9.23 and 3.13.15. The six mechanism groups—A4.1, A4.2,
+A4.3, A4.4–A4.7, A4.8, and A4.9—have named-stage evidence and identical frozen
+messages where applicable on both interpreters. Wrong-stage/vacuous-seam
+rejection remains explicit. Candidate CI is correctly described as Ubuntu
+re-confirmation, not as the evidence that fulfills the pre-freeze gate.
+
+#### 3. NOT CLOSED — inspection cleanup/report coverage still excludes real failure paths
+
+R1–R5 correctly add entry construction, nonempty primary diagnostics, additive
+`.report` attachment to unwrapped codec exceptions, and the requirement that
+cleanup finish before the final report escapes. The save-side ordering and the
+codec-error/CLI report rule are now clear. The inspection algorithm nevertheless
+contradicts those rules in three concrete ways:
+
+1. Section 3.1.1 creates the `TemporaryDirectory` and copy in step 1 and runs
+   all preflight checks in steps 2–3, but the only `try/finally` that performs
+   scratch removal and original re-hashing starts at step 4. A copy failure
+   after scratch creation, an A4.8 preflight failure, or a present-non-text
+   failure therefore escapes before that `finally`. These paths can leave
+   owned scratch cleanup and byte re-verification unexecuted.
+2. R4 says pre-connect/pre-preflight failures have no cleanup obligations and
+   that no scratch was created. That is false for the post-copy pre-connect
+   failures above, including A4.8. Their empty cleanup tuple cannot truthfully
+   mean both "no obligations" and "cleanup not run despite obligations."
+3. The original re-hash is inside the step-4 `finally`, but no failure mapping
+   or report attachment is specified if that re-hash itself raises. Such an
+   exception would bypass step 5 and contradict the claims that every escaping
+   exception carries a complete report and no report-less path exists.
+
+**Required correction**: put every post-scratch-creation primary operation,
+including preflight, inside the cleanup/re-hash `try/finally`; perform final
+report population and exception attachment only after that cleanup has merged
+its diagnostics. Narrow R4 to genuinely pre-resource raises and define truthful
+cleanup states for post-copy/pre-connect failures. Specify report-bearing
+handling for re-hash failures, or explicitly scope any universal report claim
+with the corresponding reviewed plan impact; A4.8 and codec failures must retain
+independent primary/cleanup evidence.
+
+#### 4. NOT CLOSED — the ordering rule is sound, but the delta list is incomplete
+
+Section 3.5.1 now freezes the required interpretation: envelope order is the
+canonical semantic order, physical HDF5 enumeration is non-semantic, disk
+association is by name, samples compare by row index, and Phase 4 reconstructs
+by envelope-declared names. The listed A1.2/A2.5/A3.1 and Phase 2 §1.3 deltas
+are appropriate, and the explicit review requirement avoids silently changing
+the approved plan.
+
+However, the same binding read-side wording also appears in
+`p1-boundary-decision.md` **§2, supported read/inspection discipline, step 3**:
+"decode, validate, and cross-check identity, ordered schema/units, row counts,
+and samples." The delta list includes the equivalent test-plan A2.5 statement
+but omits this boundary statement. Add an explicit §2-step-3 addendum to the
+same clarification set so the boundary's write-side and read-side ordering
+rules cannot diverge. With that addition, the proposed follow-up set matches
+the affected binding wording found in this review; the actual reviewed plan /
+boundary/schema alignments remain required before test code.
+
+#### 5. CLOSED — cleanup templates and legacy mapping are frozen
+
+Section 2.6 quotes the actual legacy literals and freezes exact templates for
+disconnect exceptions/error deltas, still-connected and open-handle flags, raw
+close failure, and scratch cleanup. Capitalization, prefixes, append order, and
+runtime-data positions are explicit. The thermal `RuntimeError('; '.join(...))`
+mapping is now character-for-character for the shared writer conditions, while
+legacy reader/writer wrappers remain at their existing example-layer call sites.
+
+#### 6. CLOSED — fresh-process stdout and warning policy are implementable
+
+Section 4.1 freezes `redirect_stdout(sys.stderr)` around the inspection call,
+leaving one JSON document on stdout and operational output/tracebacks on
+stderr. Section 4.4 includes the corresponding import. The warning policy now
+mirrors all five precedent allowances: four exact
+`PyparsingDeprecationWarning` message/category/module allowances plus the exact
+pandas `FutureWarning` allowance. Applicability evidence is recorded, and every
+other warning remains fatal and visible.
+
+### New finding
+
+#### 7. Medium — withdrawn-candidate evidence is claimed for 3.9 where the row records only 3.13
+
+**Locations**: revised design Overview "Truthful failure evidence"; §6.2 A4.3
+candidate (b); §10 A4.
+
+The A4.3 row introduces its rejected candidates as having "both-interpreter
+evidence," and §10 says both plan candidates were vacuous on both interpreters.
+Candidate (a) does record 3.9.23 and 3.13.15. Candidate (b), scratch-directory
+removal before disconnect, records only **3.13.15**. The Overview likewise says
+vacuous seams were documented on both interpreters. These statements do not
+match the row's own evidence.
+
+This does not invalidate the selected A4.3 mechanism or the six final-seam
+records closed under finding 2. It does prevent an evidence-honest freeze as
+written. Record the 3.9.23 candidate-(b) result if it was actually run, or
+narrow every both-interpreter withdrawal claim to the evidence present and
+retain candidate (b) explicitly as 3.13-only supporting evidence.
+
+### Re-review gate disposition
+
+Do not begin implementation or executable Phase 3 tests on `f94d786`. Close
+finding 3's inspection-boundary gaps, add the missing boundary §2-step-3
+ordering delta under finding 4, and reconcile finding 7's evidence wording.
+Then re-review the affected design diff together with the required ordering
+alignment artifacts before test authoring.
