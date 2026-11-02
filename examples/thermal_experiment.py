@@ -33,6 +33,18 @@ import softlab
 from softlab.huo.process import StopRequest, count, run_count
 from softlab.jin.vis import plot_record
 from softlab.shui.data import DataGroup, DataRecord, HDF5DataBackend
+from softlab.shui.run_record import (
+    METADATA_KEY,
+    PROFILE_THERMAL,
+    build_envelope,
+    build_thermal_payload,
+    encode_envelope,
+)
+from softlab.shui.run_storage import (
+    StorageConnectError,
+    StorageSaveError,
+    save_run_group,
+)
 from softlab.tu.simulation import (
     Coordinator, Endpoint, MockControl, MockMeasurement, SimulatedObject,
 )
@@ -74,6 +86,7 @@ class RunResult:
     terminal: bool = False
     work_drained: bool = False
     loop_closed: bool = False
+    execution_id: Optional[str] = None
     _coordinator: Optional[Coordinator] = field(default=None, repr=False)
 
     @property
@@ -273,6 +286,7 @@ def _acquire(config: ThermalConfig, coordinator: Coordinator,
 
     def after_count(snapshot):
         map_count(snapshot)
+        result.execution_id = str(snapshot.run_id)
         if not np.isfinite(record.table.to_numpy(dtype=float)).all():
             raise RuntimeError('Acquired nonfinite numeric values')
         if after_row is not None:
@@ -573,6 +587,43 @@ def _capture_source_identity() -> dict:
     return identity
 
 
+_SOURCE_TRACKED_FAILURE = 'Source is not the tracked reference file'
+
+
+def _source_facts() -> Dict[str, Any]:
+    """Map captured source identity onto the run-record availability shape.
+
+    Each fact becomes ``{'state': 'available', 'value': <captured>,
+    'reason': None}`` when captured, else ``{'state': 'unavailable',
+    'value': None, 'reason': <code>}`` where ``<code>`` is
+    ``'source_mismatch'`` iff the captured reason is the
+    tracked-reference-file failure and ``'capture_failed'`` otherwise.
+    Free-text reasons are never stored; ``git_dirty.state`` equals
+    ``git_revision.state`` by construction (one query produces both).
+    """
+    captured = _capture_source_identity()
+    facts: Dict[str, Any] = {
+        'reference': captured['reference'],
+        'digest_algorithm': captured['digest_algorithm'],
+        'digest_scope': captured['digest_scope'],
+    }
+    for key in ('digest', 'git_revision', 'git_dirty'):
+        value = captured[key]
+        if value is not None:
+            facts[key] = {'state': 'available', 'value': value,
+                          'reason': None}
+        else:
+            reason_key = ('digest_unavailable_reason' if key == 'digest'
+                          else 'git_unavailable_reason')
+            reason = captured[reason_key]
+            code = ('source_mismatch'
+                    if reason == _SOURCE_TRACKED_FAILURE
+                    else 'capture_failed')
+            facts[key] = {'state': 'unavailable', 'value': None,
+                          'reason': code}
+    return facts
+
+
 def _make_manifest(config: ThermalConfig, group: DataGroup,
                    result: RunResult, delay: int = 1) -> dict:
     """Build and validate a completed-acquisition snapshot before persistence."""
@@ -684,6 +735,10 @@ def _load_group(backend: HDF5DataBackend, group_id: str) -> DataGroup:
         if type(attrs[_MANIFEST_KEY]) is not str:
             raise ValueError('thermal_manifest: present value is not text')
         metadata[_MANIFEST_KEY] = attrs[_MANIFEST_KEY]
+    if METADATA_KEY in attrs:
+        if type(attrs[METADATA_KEY]) is not str:
+            raise ValueError('run_record: present value is not text')
+        metadata[METADATA_KEY] = attrs[METADATA_KEY]
     loaded = backend.load_group(group_id)
     if (not isinstance(loaded, DataGroup) or not backend.just_succeeded
             or backend.errors):
@@ -829,15 +884,34 @@ def execute(config: ThermalConfig, output_dir: Path, *,
         original.set_meta(_MANIFEST_KEY, _encode_manifest(
             _make_manifest(config, original, result) if delay else
             _make_manifest(config, original, result, delay=delay)))
+        payload = build_thermal_payload(
+            adapter=adapter, configuration=asdict(config), model=_MODEL,
+            boundary={'final_tick': result.final_tick,
+                      'final_sim_time': result.final_sim_time})
+        envelope = build_envelope(
+            profile=PROFILE_THERMAL,
+            execution_id=result.execution_id,
+            group_id=str(original.id),
+            record_name='thermal_trace',
+            columns=original.record('thermal_trace').columns,
+            requested_rows=result.requested_rows,
+            completed_rows=result.completed_rows,
+            software={'softlab_version': softlab.__version__,
+                      'python_version': platform.python_version()},
+            source=_source_facts(),
+            payload=payload)
+        original.set_meta(METADATA_KEY, encode_envelope(envelope))
         writer = HDF5DataBackend()
-        if (not writer.connect({'path': str(data_path)})
-                or not writer.connected or writer.errors):
+        try:
+            report = save_run_group(original, str(data_path), backend=writer)
+        except StorageConnectError as exc:
             raise RuntimeError(
-                f'HDF5 writer connect failed: {writer.last_error}')
-        if (not writer.save_group(original) or not writer.just_succeeded
-                or writer.errors):
-            raise RuntimeError(f'HDF5 save failed: {writer.last_error}')
-        _disconnect(writer)
+                f'HDF5 writer connect failed: {writer.last_error}') from exc
+        except StorageSaveError as exc:
+            raise RuntimeError(
+                f'HDF5 save failed: {writer.last_error}') from exc
+        if not report.cleanup_ok:
+            raise RuntimeError('; '.join(report.cleanup))
         writer = None
         stage = 'reopen verification'
         loaded = _reload_group(data_path, str(original.id))

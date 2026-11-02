@@ -17,15 +17,13 @@ one closure at release end ([release checklist](../templates/release-checklist.m
 
 | Task | Description | Assigned | Gate before start |
 | --- | --- | --- | --- |
-| P2 — Schema and encoding | Bounded field/type, version, missing/null/unknown and failure contract; justified codec/construction seam only | sw-celeste → sw-tom → sw-mike | Phase 1 boundary decision approved |
-| P3 — Storage and inspection | Selected evidenced storage paths, snapshot stages, fault/original-byte evidence, fresh-process inspection | sw-celeste → sw-tom → sw-mike | Phase 2 integrated |
-| P4 — Reference comparison and acceptance | Both thermal modes + second client, oracles/tolerances, walkthroughs, acceptance, single closure | sw-mike → sw-camille | Phase 3 integrated |
+| — (empty) | All planned phases in flight or done; any new scope needs a user decision | — | — |
 
 ## In progress
 
 | Task | Description | Assigned | Status |
 | --- | --- | --- | --- |
-| P3 — Storage and inspection | Selected evidenced storage paths, snapshot stages, fault/original-byte evidence, fresh-process inspection | sw-mike → sw-celeste → sw-tom | Awaiting P2 integration, then branch `codex/m03-p3-storage` from `dev` |
+| P4 — Reference comparison and acceptance | Predeclared oracles/tolerances, both thermal modes + signal client rerun comparison, fresh-environment + clean-process walkthroughs, PO acceptance, single release closure | sw-mike → sw-camille | Awaiting P3 integration, then branch `codex/m03-p4-acceptance` from `dev` |
 
 ## Phase plan (from PRD; four serial gated phases, one release)
 
@@ -33,8 +31,8 @@ one closure at release end ([release checklist](../templates/release-checklist.m
 | --- | --- |
 | 1 — Characterize and decide | DONE — decision: minimal common JSON-text envelope on HDF5, acquisition-snapshot-only, HDF5-only, thermal v1/v2 preserved (`design/p1-boundary-decision.md`, PO concurrence, independent review ACCEPTED). |
 | 2 — Schema and encoding | DONE — codec + group seam implemented, reviewed, tested (459 tests OK). |
-| 3 — Storage and inspection | NEXT: storage integration per decision: owned HDF5 writes, disposable-copy preflight/hydration reads, snapshot stages, fault/original-byte evidence, fresh-process inspection. |
-| 4 — Reference comparison and acceptance | NOT STARTED |
+| 3 — Storage and inspection | DONE — `run_storage.py` save/inspect seam, thermal dual-write, hydration, bootstrap CLI; 507 tests OK both interpreters. |
+| 4 — Reference comparison and acceptance | NEXT: predeclared numeric/timing oracles with tolerances and exclusions, both thermal modes + signal client rerun comparison, fresh-environment and clean-process walkthroughs, PO acceptance, release closure. |
 
 ## Done
 
@@ -42,7 +40,8 @@ one closure at release end ([release checklist](../templates/release-checklist.m
 | --- | --- | --- |
 | RG — Requirements gate | Candidate `08c0858` CI [41256246749](https://github.com/hoolheart/softlab/actions/runs/41256246749) passed; `dev` merge `8cdea23` | 2026-11-01 |
 | P1 — Characterize and decide | Candidate `f6797cd` CI [41263124079](https://github.com/hoolheart/softlab/actions/runs/41263124079) passed 3.9+3.13; principle inspection PASS; boundary decision option (a) concurred; independent review ACCEPTED | 2026-11-01 |
-| P2 — Schema and encoding | Candidate `77af542` CI passed 3.9+3.13; design APPROVED (10 findings closed); plan APPROVED; code review zero defects; 459 tests OK; principle inspection PASS | 2026-11-01 |
+| P2 — Schema and encoding | Candidate `cb2c8ca` CI [41302911516](https://github.com/hoolheart/softlab/actions/runs/41302911516) passed 3.9+3.13; design APPROVED (10 findings closed); plan APPROVED; code review zero defects; 459 tests OK; principle inspection PASS; `dev` merge `81f269c` | 2026-11-01 |
+| P3 — Storage and inspection | Candidate `bf01710`+inspection commit; design APPROVED after 3 rounds; code review zero blocking; 507 tests OK on 3.9+3.13; principle inspection PASS | 2026-11-03 |
 
 ## Gate log
 
@@ -52,3 +51,9 @@ one closure at release end ([release checklist](../templates/release-checklist.m
 - 2026-11-01: Phase 1 complete — 47 characterization tests (405 total suite OK),
   boundary decision concurred (option a), independent review ACCEPTED, CI green
   on 3.9+3.13 after tester-owned failure closure; principle inspection PASS.
+- 2026-11-01: Phase 2 complete — codec + group seam (`a437dc3`), design and plan
+  APPROVED after review loops, code review zero defects, 459 tests OK, CI green
+  on 3.9+3.13 at `cb2c8ca`; integrated to `dev` (`81f269c`); Phase 3 started.
+- 2026-11-03: Phase 3 complete — storage/inspection seam (`0217593`), design
+  APPROVED after 3 review rounds, code review zero blocking findings, 507 tests
+  OK on 3.9+3.13; principle inspection PASS.

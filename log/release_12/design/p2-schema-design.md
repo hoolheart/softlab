@@ -176,6 +176,18 @@ and any extra key is rejected as unknown. Envelope column order must match
 stored column order; the cross-check against the actual stored datasets is
 a Phase 3 inspection concern (§9).
 
+> **Addendum (2026-11-03, per `p3-storage-design.md` §3.5.1 follow-up
+> delta list):** The sentence "Envelope column order must match stored
+> column order" is clarified by `p3-storage-design.md` §3.5.1 as follows:
+> the envelope's declared column sequence is the **canonical stored
+> semantic order**; physical HDF5 key enumeration is **non-semantic**;
+> the disk cross-check is **by-name association** (for each declared
+> column, in envelope order, the same-named dataset exists with matching
+> attributes); samples are compared **by row index**; and Phase 4
+> reconstructs in **envelope order by name**. This addendum **clarifies,
+> and does not change, the Phase 2 contract** — the Phase 2 codec and its
+> tests are unaffected.
+
 ### 1.4 Source and availability facts
 
 `source` is a closed object:

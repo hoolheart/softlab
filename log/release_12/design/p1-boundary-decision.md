@@ -310,3 +310,32 @@ by itself, authorization to implement; Phase 2 still requires its own reviewed
 detailed design and applicable test gates. It also does not approve Phase 3 or
 Phase 4 and is not M03 release acceptance. Any implementation drift beyond the
 recorded boundary requires a revised joint decision.
+
+## Addendum (2026-11-01, architecture clarification — interpretation only, no scope change)
+
+This addendum records the ordering interpretation defined by
+[Phase 3 storage design §3.5.1](p3-storage-design.md#351-ordering-contract-clarification-architecture-review-finding-4)
+and approved on re-review at commit `11018b2`. It clarifies the existing
+boundary without changing its scope or any other decision.
+
+1. **Section 1.1 — “Sample schema and ordering” row.** The envelope's declared
+   column sequence is the **canonical stored semantic order**. The write-side
+   pre-save check enforces that sequence order-sensitively against the
+   in-memory record. Physical HDF5 disk enumeration is **lexicographic by name
+   and non-semantic**. Write-side and read-side stored-artifact cross-checks
+   associate declared columns with same-named stored datasets, including their
+   schema/unit attributes, and compare per-column samples **by row index**;
+   disk enumeration order is not declaration order. Thermal is unaffected: its
+   frozen six-column declaration is already lexicographically ordered, and its
+   semantics and legacy v1/v2 behavior remain unchanged.
+2. **Section 2 — supported read/inspection discipline, step 3.** The
+   requirement to “decode, validate, and cross-check identity, ordered
+   schema/units, row counts, and samples” uses the same interpretation:
+   ordered schema/unit verification is a by-name association against the
+   envelope's declared order, physical HDF5 enumeration is non-semantic, and
+   samples are compared by row index. The write-side and read-side ordering
+   rules therefore share one interpretation and cannot diverge.
+
+The Product Owner's existing concurrence with the boundary stands. This
+interpretation-only clarification neither reopens nor expands that concurrence;
+it will be shown to sw-camille at acceptance.
