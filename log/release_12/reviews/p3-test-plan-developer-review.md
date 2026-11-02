@@ -361,3 +361,90 @@ freeze set confirmed; no new findings. The executable suite remains
 gated on the reviewed Phase 3 detailed design freezing **[P3P-01…07]**
 (as extended) and the plan's quote-check alignment before test code
 per the gate-linkage section.
+
+## Re-review — ordering deltas per approved design §3.5.1 (2026-11-03)
+
+**Scope:** `log/release_12/test/storage-test-plan.md` @ `d7d7169`
+("apply ordering deltas to phase 3 storage test plan"), reviewed against
+the approved Phase 3 storage design §3.5.1
+(`b52e034` third revision, approved at `11018b2`) and the boundary-decision
+ordering addendum (`1e9df20`). This re-review supersedes no part of the
+prior `b31d687` APPROVED verdict except the sections it explicitly re-touched.
+
+### Per-item verification
+
+1. **Diff scope (claim: header note + A1.2/A2.5/A3.1 only).** Verified:
+   `git show d7d7169` touches exactly four hunks — the header ORDERING
+   DELTA note, the A1.2 fourth bullet, the A2.5 step 5, and the A3.1 item
+   1 (40 insertions / 9 deletions, one file). No other plan content
+   drifted; the pre-delta approved text is otherwise byte-identical.
+
+2. **A1.2 fourth bullet — quote-check against §3.5.1.** Matches exactly:
+   - Item 1: "the envelope's declared column sequence is the canonical
+     stored semantic order (enforced order-sensitively against the
+     in-memory record before any write)" — verbatim §3.5.1 item 1.
+   - Item 2: "HDF5 dataset enumeration is lexicographic and
+     non-semantic" — §3.5.1 item 2 ("lexicographic" is §3.5's
+     characterization; probe-verified on both interpreters).
+   - Item 3: "the disk cross-check is **by name**: for each declared
+     column, in envelope order, the same-named dataset exists with its
+     four attributes matching exactly and the column-name sets are
+     equal" — verbatim §3.5.1 item 3.
+   - Item 4: "samples are compared by row index (never via enumeration
+     order)" — §3.5.1 item 4.
+   - The explicit supersession note ("This supersedes this bullet's
+     previous literal … wording (design §3.5.1 follow-up delta list)")
+     implements the delta table's A1.2 row transparently, not silently.
+   - The "thermal dual-write fixture is unaffected in practice because
+     the thermal schema is already lexicographic" claim is corroborated
+     by the boundary addendum (`1e9df20`: "its frozen six-column
+     declaration is already lexicographically ordered"). Consistent.
+
+3. **A2.5 step 5 — quote-check.** Matches the read-side interpretation:
+   "the cross-check associates columns **by name** — declared order is
+   the envelope's declared sequence, physical HDF5 enumeration is
+   lexicographic/non-semantic — and per-column sample arrays are
+   compared element-wise **by row index** against the expectation, never
+   via enumeration order" — verbatim §3.5.1 items 2–4 and the boundary
+   addendum item 2 ("ordered schema/units" read-side addendum). The
+   residual phrase "schema/units … cross-checked against the stored
+   artifact (decision §2 step 3)" now carries the by-name meaning per
+   the addendum; no contradiction with the decision's wording.
+
+4. **A3.1 item 1 — quote-check.** Matches the §4.3 payload rule (design
+   line ~1010: "`records[*].columns` is h5py enumeration order
+   (lexicographic, §3.5); the envelope carries the declared order") and
+   §3.5.1 item 5 exactly: reconstruction in envelope order by same-named
+   association, samples by row index, stated as a **forward-reference
+   only, not a Phase 3 assertion** — correctly fencing the Phase 4
+   by-name oracle rule without importing it into Phase 3 scope.
+
+5. **Cross-area consistency (A1.6 dual-write, A2.8 signal, A4 matrix,
+   A5–A9).** Full-plan grep for residual ordering claims (`order`,
+   `ordered`, `column`, `enumeration`): no other section asserts
+   physical enumeration order, ordered schema equality, or
+   enumeration-based sample comparison anywhere. Specifically:
+   - A1.6 asserts key coexistence (`thermal_manifest` + `run_record`)
+     and A2-safe-path inspection only — no ordering claim.
+   - A2.8 (signal) asserts profile and hydration key-set facts only —
+     no ordering claim; its Phase 4 conditional deferral is untouched.
+   - A4 matrix, A5–A9: no ordering content.
+   - A1.2's neighboring bullets (identity, `execution_id` absence, row
+     count vs `completed_rows`, sample values vs fixture expectations)
+     remain valid under by-name/row-index semantics because fixture
+     rows/columns are addressed by declared name and construction-time
+     row index.
+   No contradiction with the by-name rule found anywhere in the plan.
+
+### Findings
+
+None.
+
+### Verdict
+
+**APPROVED** — the three ordering deltas quote-match design §3.5.1 and
+the §4.3 payload rule; the diff is confined to the header note plus
+A1.2/A2.5/A3.1; all other areas of the previously approved plan are
+unchanged and consistent with the frozen by-name/row-index ordering
+rule. The plan remains gated on detailed-design freeze per the existing
+gate-linkage; no test code before that gate.
