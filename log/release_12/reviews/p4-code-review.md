@@ -16,7 +16,7 @@
 
 ## Summary
 
-- **Status**: CHANGES REQUESTED
+- **Status**: APPROVED (closed 2026-11-04, see Closure section below)
 - **Total Issues**: 1 (plus 1 non-blocking hardening observation)
 - **Critical**: 0
 - **High**: 0
@@ -92,7 +92,7 @@ the zero-tolerance policy no defect is waived regardless of size.
   only, no lint gate), which is precisely why human review must catch it.
 - **Recommendation**: Delete line 12. No other change is required; the
   suite, compileall, and the `-W error` import smoke all remain valid.
-- **Status**: OPEN
+- **Status**: CLOSED (fixed in `35e12ff`; see Closure section below)
 
 ## Flagged Characterization-Test Update — Adjudication
 
@@ -274,3 +274,45 @@ repository root at `98b8569`.
 `examples/signal_monitor.py` (optionally apply the hardening
 observation to the inventory test's absence tuple). Re-review scope will
 be limited to the diff of that fix; all other evidence above stands.
+
+## Closure — Re-review of Fix Commit `35e12ff`
+
+- **Reviewer**: sw-celeste
+- **Date**: 2026-11-04
+- **Commit under re-review**: `35e12ff` —
+  `refactor(examples): remove unused import`
+  (`examples/signal_monitor.py`, `tests/test_m03_p1_characterization.py`)
+- **Scope**: diff of the fix only, per the re-review scope stated above;
+  all prior evidence in this report stands unchanged.
+
+### Verification Results
+
+1. **Issue 1 (unused `import re`) — CLOSED.** The import line is removed
+   from `examples/signal_monitor.py`. A word-boundary scan of the file
+   (`rg '\bre\b' examples/signal_monitor.py`) returns zero occurrences —
+   no remaining references to the name. No other lines of the example
+   were touched, and no `softlab/` library code was modified
+   (`git show 35e12ff --stat`: `examples/` and `tests/` only).
+2. **Optional hardening — applied correctly.** The inventory test's
+   absence tuple now includes `"DataBackend"`
+   (`tests/test_m03_p1_characterization.py`,
+   `SignalMonitorInventory.test_*`). This is a truthful addition:
+   `DataBackend` occurs zero times in `examples/signal_monitor.py`
+   (verified by scan), so the static check asserts a fact, not a
+   falsehood. It fully mirrors the retired lowercase `backend` absence
+   intent as defense-in-depth, exactly as observed in the original
+   review.
+3. **Suite green.** Full regression run at `35e12ff` with the project
+   venv (`python -m unittest discover -s tests -p 'test_*.py'`):
+   **Ran 508 tests, OK** — identical count and result to the pre-fix
+   run, confirming the fix and hardening changed no behavior.
+
+### Final Verdict
+
+- [x] All issues resolved — Issue 1 CLOSED
+- [x] Design faithfully implemented (freeze §5.1 all six inputs)
+- [x] Simplicity restored — zero dead code; no new dependencies
+- [x] Quality checks green — 508/508 tests pass
+
+**Status: APPROVED.** The Phase 4 implementation (`db007bc`, `98b8569`,
+`35e12ff`) is approved and cleared for testing by sw-mike.
