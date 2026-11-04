@@ -9,7 +9,6 @@ from dataclasses import dataclass
 import hashlib
 from pathlib import Path
 import platform
-import re
 import subprocess
 import uuid
 

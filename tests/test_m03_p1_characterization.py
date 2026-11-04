@@ -1153,7 +1153,7 @@ class SignalMonitorInventory(unittest.TestCase):
         step through the shared run_group/run_record/run_storage seams;
         the example still performs no direct backend I/O of its own."""
         source = MONITOR.read_text()
-        for absent in ("import h5py", "Sqlite", "sqlite3"):
+        for absent in ("import h5py", "Sqlite", "sqlite3", "DataBackend"):
             self.assertNotIn(absent, source)
         for present in ("def acquire(", "def persist(",
                         "build_run_group", "build_envelope",
