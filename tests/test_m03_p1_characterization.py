@@ -1147,19 +1147,39 @@ class SignalMonitorInventory(unittest.TestCase):
         self.assertEqual(left[columns].to_numpy(dtype=float).tolist(),
                          right[columns].to_numpy(dtype=float).tolist())
 
-    def test_no_writer_manifest_or_backend_exists_today(self):
-        """Only the example-local acquire() builds DataGroup/DataRecord in
-        memory; no writer, manifest or backend code exists for this client."""
+    def test_owned_persistence_wiring_uses_shared_seams(self):
+        """Phase 4 (oracle freeze section 5.1) wires owned persistence:
+        persist() gates on acquisition success and routes every storage
+        step through the shared run_group/run_record/run_storage seams;
+        the example still performs no direct backend I/O of its own."""
         source = MONITOR.read_text()
-        for absent in ("backend", "HDF5", "Sqlite", "manifest", "save",
-                       "h5py"):
+        for absent in ("import h5py", "Sqlite", "sqlite3"):
             self.assertNotIn(absent, source)
-        # the only function DEFINED by this module is acquire(); the other
-        # visible names are imports (count, run_count, DataGroup, ...)
+        for present in ("def acquire(", "def persist(",
+                        "build_run_group", "build_envelope",
+                        "build_signal_payload", "save_run_group",
+                        "add_record"):
+            self.assertIn(present, source)
+        # the functions DEFINED by this module; other visible names are
+        # imports (count, run_count, DataGroup, save_run_group, ...)
         defined = [name for name, value in vars(monitor).items()
                    if callable(value)
                    and getattr(value, "__module__", None) == monitor.__name__]
-        self.assertEqual(defined, ["acquire"])
+        self.assertEqual(sorted(defined),
+                         ["SavedRun", "_capture_source_identity", "_git",
+                          "_source_facts", "acquire", "persist"])
+
+    def test_persist_gate_refuses_unsuccessful_acquisition(self):
+        """A failed acquisition never reaches the storage seam: the gate
+        raises and no artifact is created (freeze section 5.1 input 1)."""
+        from softlab.huo.process import CountResult
+        result, record, _, _ = monitor.acquire(points=3)
+        bad = CountResult(3, result.stop, acquisition="failed")
+        with tempfile.TemporaryDirectory(prefix="softlab-m03-p1-gate-") as root:
+            target = Path(root) / "never.h5"
+            with self.assertRaises(RuntimeError):
+                monitor.persist(bad, record, target)
+            self.assertFalse(target.exists())
 
     def test_field_origins_and_scheduler_ownership(self):
         _, record, differences, _ = monitor.acquire(points=3)
