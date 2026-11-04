@@ -52,6 +52,26 @@ Two result artifacts are produced by execution of this plan:
    traceability to M03-AC05 / M03-AC06**;
 2. Verbatim environment/warning evidence inside that report per freeze §6.
 
+### Subprocess invocation form (W1/W2/W3, pinned)
+
+Sessions A and B in W1/W2/W3 are launched as **fresh Python subprocesses**;
+either of the following invocation forms is acceptable (both route through
+the real seams and satisfy DEP-2's signature probe):
+
+- the example CLI (`python examples/thermal_experiment.py --output-dir ...
+  --adapter ...` for W1/W2), or
+- a small driver script or `python -c` invocation importing
+  `examples.thermal_experiment` / `examples.signal_monitor` from the repo
+  root (namespace-package import; `execute`'s empty/nonexistent-output-dir
+  requirement is satisfied by the temp roots).
+
+Whichever form is used, the **exact command line is recorded verbatim** in
+the results report for every session (including distinct PIDs per W5).
+For **W3**, the driver must invoke `acquire(points=3)` **and** the DEP-1
+wiring in the **same process** — the wiring is Phase 4 code without a module
+entry point (DEP-1 asserts against it rather than assuming one), so a driver
+that only calls `acquire()` cannot produce the stored artifact.
+
 ### Frozen literals reused verbatim (never re-declared test-local copies)
 
 All oracle values, tolerances and exclusions are **imported or transcribed
@@ -203,10 +223,18 @@ With DEP-1 present, steps 1–8 mirror W1/W2:
    `{'signal': 5, 'reference': 2}`, §2.3 oracle (declared column order
    `(timestamp, signal, reference)` — non-lexicographic), §3, §4.
 2. **Session A:** fresh process; `examples/signal_monitor.acquire(points=3)`
-   followed by the DEP-1 wiring. Assert the **acquisition-success gate**
-   before any envelope/save; assert `StorageReport` success; record
-   `execution_id_A = str(result.run_id)`, fresh `group_id_A`, `A.h5`;
-   disconnect owned resources.
+    followed by the DEP-1 wiring (same process — see "Subprocess invocation
+    form"). Assert the **acquisition-success gate**
+    before any envelope/save; assert `StorageReport` success; record
+    `execution_id_A = str(result.run_id)`, fresh `group_id_A`, `A.h5`;
+    disconnect owned resources. **Acquisition-time evidence:** the per-tick
+    read trace and non-consumptive-read facts asserted in step 7 are
+    captured here, from each session driver's `acquire()` return — the
+    `reads` list (and the `DataRecord` reused across ticks) — and recorded
+    verbatim in the results report alongside the stored-path assertions;
+    nothing in the stored artifact or the bootstrap JSON can evidence them
+    (C5b already established this in-memory evidence). The bootstrap JSON
+    remains the source for all stored-column and envelope assertions.
 3–5. Save verification and **Session B** clean-process rerun in a separate
    temp root with the same declared inputs; identities asserted distinct.
 6. Separate-process inspection: `python tests/run_record_inspect_bootstrap.py
@@ -217,9 +245,12 @@ With DEP-1 present, steps 1–8 mirror W1/W2:
    order** (mandatory — no backend repair is introduced): `signal ==
    [6,7,8]`, `reference == [3,4,5]` exact `==`; caller-derived
    `difference == [3,3,3]` recomputed from stored source samples and
-   asserted **absent from stored columns**; per-tick read trace
-   `[('signal',1),('reference',1),...,('signal',3),('reference',3)]`;
-   non-consumptive reads; `completed_rows == requested_rows == 3`.
+    asserted **absent from stored columns**; per-tick read trace
+    `[('signal',1),('reference',1),...,('signal',3),('reference',3)]`
+    (evidence source: each session driver's `acquire()` return, recorded in
+    step 2 — never the stored artifact or bootstrap JSON);
+    non-consumptive reads (same evidence source); `completed_rows ==
+    requested_rows == 3` (stored-path assertion via bootstrap JSON).
 8. A-vs-B comparison of non-excluded columns/relations under §3, plus
    recorded-configuration comparison (freeze §5.3): stored
    `payload.points == 3`; stored `payload.read_policy` equals
@@ -247,11 +278,20 @@ preexisting project `.venv` does **not** satisfy this scenario:
    project `.venv` site-packages are not visible). The creation command,
    its full output, and its exit code are recorded verbatim.
 2. **Install current checkout (actual, recorded):** from the repository
-   checkout, in the fresh environment, run `python -m pip install -e .`;
-   record the resolved dependency set actually installed (pip output).
-   **A network/package-index failure or unavailable interpreter is a
-   recorded blocker/limitation — never a pass justified by falling back to
-   an existing environment** (freeze §6 item 1).
+    checkout, in the fresh environment, run `python -m pip install -e .`;
+    record the resolved dependency set actually installed (pip output)
+    **verbatim**, alongside evidence of index reachability (the resolved
+    set requires network/package-index access — build isolation pulls
+    setuptools/wheel and the declared dependency set — numpy/scipy/pandas/
+    matplotlib/plotly/ipywidgets/pyvisa/h5py — resolves from the index,
+    typically several minutes of wheel downloads).
+    **A network/package-index failure or unavailable interpreter is a
+    recorded blocker/limitation — never a pass justified by falling back to
+    an existing environment** (freeze §6 item 1). In particular, a Python
+    3.9 interpreter may not exist on the walkthrough host: its absence is a
+    recorded limitation, and single-interpreter execution with the observed
+    version table is acceptable — this plan never mandates a 3.9 run, only
+    version-portable assertions (Hygiene).
 3. **Documented command sequence (actual, recorded):** from the repo root,
    in the fresh environment, run and record verbatim (command, exit code,
    key output):
@@ -380,6 +420,14 @@ behavior in W1–W5.
 
 ## Hygiene (applies to every scenario)
 
+- **No mocks at all** (carried forward from the Phase 1–3 discipline):
+  every assertion is a real-seam assertion (subprocess execution, stored
+  bytes, bootstrap JSON) — the walkthrough needs no `unittest.mock` of any
+  kind. Specifically: no `mock.patch` with `autospec=True` combined with
+  `wraps` (CPython gh-75988 on Python 3.9); and if any recording double is
+  ever introduced for diagnosis, it must delegate without skipping the real
+  code path — no mock may stand in for the seam under test. This keeps W5's
+  "no shared in-memory state" evidence clean.
 - **Synthetic data only**, in `tempfile.TemporaryDirectory(prefix=
   'softlab-m03-p4-*')` roots; nothing written into the repository tree; no
   database/HDF5 artifacts committed.
@@ -439,7 +487,10 @@ Verdict: <ALL PASS / FAIL / BLOCKED>
 <the debt table with observed evidence per item>
 
 ## Limitations
-<honest list: missing extras, unavailable interpreters, index failures, DEP gaps>
+<honest list: missing extras, unavailable interpreters (e.g. absent
+Python 3.9 — recorded, with single-interpreter execution acceptable),
+network/package-index reachability and the verbatim pip-resolved
+dependency set, creation/install failures, DEP gaps>
 ```
 
 ### AC traceability matrix
