@@ -1,6 +1,7 @@
 # M03 — Proposed bounded reproducible run record
 
-Status: **RELEASE 12 KICKOFF — PRD confirmation hold**. M02 is CLOSED in the authoritative local
+Status: **CLOSED — Release 12 delivered and promoted to `main` at `5a0e416`
+(2026-11-05); authoritative record: `log/release_12/closure.md`**. M02 is CLOSED in the authoritative local
 `main` record at commit `e827e7f` (`git show e827e7f:log/release_11/closure.md`);
 this plan does not implement or accept M03. One release (`log/release_12`)
 contains four serial gated phases; these are not separate releases, calendar

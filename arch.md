@@ -969,8 +969,8 @@ preserving their legacy manifests; Phase 4 added the signal monitor's owned
 persistence wiring and the frozen comparison/walkthrough artifacts. The
 [maintainer guide](docs/run-record.md) is the usage and ownership reference.
 
-This is an implementation-history entry, not a release-acceptance or closure
-claim. The [Release 12 acceptance record](log/release_12/acceptance.md) remains
-REJECTED with M03 open. Final acceptance-candidate CI, `dev` integration, `main`
-promotion, promoted-state verification and clean-worktree release closure are not
-claimed by this architecture update.
+Status update (2026-11-05, post-promotion factual correction): Release 12 is
+now CLOSED. Product acceptance PASS at `9913905`; candidate `622dc5e` CI green;
+`dev` integration `70842f7`; `main` promotion `5a0e416` with promoted-state CI
+green. The authoritative record is
+[Release 12 closure](log/release_12/closure.md).

@@ -23,7 +23,7 @@ one closure at release end ([release checklist](../templates/release-checklist.m
 
 | Task | Description | Assigned | Status |
 | --- | --- | --- | --- |
-| P4 — Reference comparison and acceptance | Walkthroughs W1–W7 all PASS (521 tests OK); oracle freeze, plan, wiring, code review APPROVED; principle inspection 4 PASS. Next: PO acceptance → freeze → candidate CI → integrate `dev` | sw-camille | Branch `codex/m03-p4-acceptance` from `dev` (`7f67373`) |
+| — (none) | Release 12 CLOSED — all four phases done, accepted, promoted | — | — |
 
 ## Phase plan (from PRD; four serial gated phases, one release)
 
@@ -32,7 +32,7 @@ one closure at release end ([release checklist](../templates/release-checklist.m
 | 1 — Characterize and decide | DONE — decision: minimal common JSON-text envelope on HDF5, acquisition-snapshot-only, HDF5-only, thermal v1/v2 preserved (`design/p1-boundary-decision.md`, PO concurrence, independent review ACCEPTED). |
 | 2 — Schema and encoding | DONE — codec + group seam implemented, reviewed, tested (459 tests OK). |
 | 3 — Storage and inspection | DONE — `run_storage.py` save/inspect seam, thermal dual-write, hydration, bootstrap CLI; 507 tests OK both interpreters. |
-| 4 — Reference comparison and acceptance | EXECUTION DONE — W1–W7 PASS, 521 tests OK, results recorded; PO acceptance and release closure remain. |
+| 4 — Reference comparison and acceptance | DONE — W1–W7 PASS, acceptance ACCEPTED at `9913905`, candidate `622dc5e` CI green, integrated `70842f7`, promoted `5a0e416`, promoted CI green, closure recorded. |
 
 ## Done
 
@@ -42,6 +42,7 @@ one closure at release end ([release checklist](../templates/release-checklist.m
 | P1 — Characterize and decide | Candidate `f6797cd` CI [41263124079](https://github.com/hoolheart/softlab/actions/runs/41263124079) passed 3.9+3.13; principle inspection PASS; boundary decision option (a) concurred; independent review ACCEPTED | 2026-11-01 |
 | P2 — Schema and encoding | Candidate `cb2c8ca` CI [41302911516](https://github.com/hoolheart/softlab/actions/runs/41302911516) passed 3.9+3.13; design APPROVED (10 findings closed); plan APPROVED; code review zero defects; 459 tests OK; principle inspection PASS; `dev` merge `81f269c` | 2026-11-01 |
 | P3 — Storage and inspection | Candidate `bf01710`+inspection commit; design APPROVED after 3 rounds; code review zero blocking; 507 tests OK on 3.9+3.13; principle inspection PASS | 2026-11-03 |
+| P4 — Reference comparison and acceptance | Candidate `622dc5e` CI [42051004463](https://github.com/hoolheart/softlab/actions/runs/42051004463) passed 3.9+3.13; acceptance PASS (`9913905`); principle inspection 4 PASS; `dev` merge `70842f7`; `main` promotion `5a0e416` with promoted CI [42052175557](https://github.com/hoolheart/softlab/actions/runs/42052175557) | 2026-11-05 |
 
 ## Gate log
 
@@ -61,3 +62,6 @@ one closure at release end ([release checklist](../templates/release-checklist.m
   APPROVED, walkthroughs W1–W7 PASS (fresh env, clean process, both thermal
   modes + signal original-vs-rerun with frozen oracles), 521 tests OK;
   principle inspection 4 PASS; PO acceptance next.
+- 2026-11-05: Acceptance first FAIL (4 issues) → all fixed → ACCEPTED at
+  `9913905`; candidate `622dc5e` CI green; integrated `dev` (`70842f7`);
+  promoted `main` (`5a0e416`), promoted CI green; release CLOSED.
