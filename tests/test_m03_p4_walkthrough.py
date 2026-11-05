@@ -369,7 +369,7 @@ def _inspect(artifact, profile, root, interpreter=None):
         raise AssertionError(
             "bootstrap inspection returned non-ok payload: {}".format(payload)
         )
-    return payload, child_pid, copy_path, digest
+    return payload, child_pid, copy_path, digest, list(completed.args)
 
 
 def _disk_identity_facts(copy_path, group_id):
@@ -544,6 +544,7 @@ def _thermal_session(test, root, adapter, interpreter=None):
     test.assertTrue(session["plot_exists"])  # §4: thermal.png existence
     sha_before = _sha256_file(str(artifact))
     _evidence("thermal-session", adapter=adapter, pid=session["pid"],
+              command=list(completed.args),
               interpreter=Path(interpreter or sys.executable).name,
               execution_id=session["execution_id"],
               group_id=session["group_id"],
@@ -558,10 +559,10 @@ def _inspect_twice(test, artifact, profile, root, tag, interpreter=None):
     """Two separate-process bootstrap inspections on fresh copies (F-A)."""
     payloads = []
     for index in (1, 2):
-        payload, child_pid, copy_path, _ = _inspect(
+        payload, child_pid, copy_path, _, command = _inspect(
             artifact, profile, root, interpreter=interpreter)
         _evidence("{}-inspection-{}".format(tag, index),
-                  child_pid=child_pid, copy=copy_path,
+                  child_pid=child_pid, command=command, copy=copy_path,
                   profile=profile, status=payload["status"])
         payloads.append(payload)
     # The two inspections decode identical semantic content; only the
@@ -613,6 +614,7 @@ def _signal_session(test, root):
     test.assertTrue(artifact.exists())
     sha_before = _sha256_file(str(artifact))
     _evidence("signal-session", pid=session["pid"],
+              command=list(completed.args),
               execution_id=session["execution_id"],
               group_id=session["group_id"],
               artifact=str(artifact), sha256_before=sha_before,
@@ -958,12 +960,13 @@ class W5CleanProcessWalkthrough(unittest.TestCase):
     def _inspect_in_fresh_process(self, artifact, profile, root,
                                   parent_pid, *other_child_pids):
         """One bootstrap inspection in its own process; PID distinctness."""
-        payload, child_pid, copy_path, _ = _inspect(
+        payload, child_pid, copy_path, _, command = _inspect(
             artifact, profile, root)
         self.assertNotEqual(child_pid, parent_pid)
         for other in other_child_pids:
             self.assertNotEqual(child_pid, other)
-        _evidence("w5-inspection", child_pid=child_pid, copy=copy_path,
+        _evidence("w5-inspection", child_pid=child_pid, command=command,
+                  copy=copy_path,
                   profile=profile, status=payload["status"])
         return payload, child_pid
 
@@ -1629,6 +1632,7 @@ class W4FreshEnvironmentWalkthrough(unittest.TestCase):
                          {"nest_asyncio": False, "pyvisa_sim": False},
                          facts)
         _evidence("w4-item1-creation-isolation",
+                  creation_argv=list(record["command"]),
                   creation_command=" ".join(record["command"]),
                   creation_exit=record["returncode"],
                   creation_stdout=record["stdout"].strip(),
@@ -1677,7 +1681,7 @@ class W4FreshEnvironmentWalkthrough(unittest.TestCase):
         # CLI inspects it; the envelope decodes with the frozen identity
         # semantics (execution_id != group_id, freeze §4).
         out_dir = Path(self._env_root.name) / "thermal-out"
-        completed = self._run_in_venv(
+        cli_completed = self._run_in_venv(
             ["examples/thermal_experiment.py",
              "--output-dir", str(out_dir),
              "--adapter", "coordinated"],
@@ -1685,10 +1689,10 @@ class W4FreshEnvironmentWalkthrough(unittest.TestCase):
             timeout=900,
             tag="thermal-cli")
         self.assertEqual(
-            completed.returncode, 0,
+            cli_completed.returncode, 0,
             "thermal example CLI failed in the fresh environment\n"
             "stdout:\n{}\nstderr:\n{}".format(
-                completed.stdout, completed.stderr))
+                cli_completed.stdout, cli_completed.stderr))
         artifact = out_dir / "thermal.h5"
         self.assertTrue(artifact.exists())
         sha_before = _sha256_file(str(artifact))
@@ -1721,11 +1725,13 @@ class W4FreshEnvironmentWalkthrough(unittest.TestCase):
         self.assertEqual(_sha256_file(str(artifact)), sha_before)
         self.assertEqual(payload["original_sha256"], digest)
         _evidence("w4-item3-minimal-workflow",
+                  cli_argv=list(cli_completed.args),
                   cli_command="MPLBACKEND=Agg python "
                               "examples/thermal_experiment.py "
                               "--output-dir {} --adapter coordinated"
                               .format(out_dir),
                   cli_exit=0,
+                  bootstrap_argv=list(completed.args),
                   artifact=str(artifact),
                   sha256=sha_before,
                   execution_id=envelope["execution_id"],
