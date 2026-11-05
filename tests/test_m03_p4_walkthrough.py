@@ -1,4 +1,4 @@
-"""M03 phase 4 walkthrough scenarios W1, W2 and W3.
+"""M03 phase 4 walkthrough scenarios W1, W2, W3, W5, W6 and W7.
 
 Assertion-based original-versus-clean-session-rerun walkthrough of the frozen
 thermal and signal oracles, per the approved plan
@@ -13,6 +13,17 @@ transcribed verbatim from that freeze, never re-derived at run time.
   clean-session rerun; acquisition-time evidence (read trace,
   non-consumptive facts, caller-derived differences) is taken from each
   session driver's `acquire()` return.
+- W5: clean-process walkthrough — every session and every inspection runs
+  in its own fresh Python process; the walkthrough parent never decodes a
+  stored artifact in-process (it never even imports softlab).
+- W6: legacy compatibility and debt re-confirmation — the full legacy
+  suite is green (one subprocess run), and every tracked debt item's
+  disposition is re-verified against repo-checkable facts plus small
+  real-seam probes.
+- W7: guidance verification — every command in docs/run-record.md is
+  executed verbatim in subprocesses and observed to produce the documented
+  outcome. A command that fails as written is a filed guide defect, never
+  fixed by the tester.
 
 Both scenarios: two sessions in separate fresh Python processes and separate
 temp roots, bootstrap inspection of both artifacts on sha256-verified byte
@@ -813,6 +824,492 @@ class W3SignalOriginalVsRerun(unittest.TestCase):
                       reads_a=session_a["reads"],
                       differences_a=session_a["differences"],
                       sha256_a=sha_a, sha256_b=sha_b)
+
+
+# ---------------------------------------------------------------------------
+# W5: clean-process walkthrough (no shared in-memory state).
+# ---------------------------------------------------------------------------
+
+_GUIDE_THERMAL_DIR = Path("/tmp/thermal-run-01")
+
+
+def _softlab_module_names():
+    return [name for name in sys.modules
+            if name == "softlab" or name.startswith("softlab.")]
+
+
+class W5CleanProcessWalkthrough(unittest.TestCase):
+    """W5: separate-process inspection and rerun, no shared in-memory state.
+
+    Plan W5 items 1-3: sessions A and B each run in a separate fresh Python
+    process (distinct PIDs recorded); every artifact inspection runs via
+    the bootstrap in its own process, never via an in-process decode; each
+    process opens only its own temp root; and a stored artifact produced
+    by one process is inspectable by a completely fresh process from a
+    different temp root. The walkthrough parent asserts it never holds
+    any ``softlab`` module state — no in-process decoding of stored
+    artifacts exists anywhere in this suite.
+    """
+
+    def test_w5_clean_process_walkthrough_no_shared_in_memory_state(self):
+        parent_pid = os.getpid()
+        # Control evidence (plan W5 item 3): the walkthrough parent performs
+        # zero in-process softlab activity — whatever modules a surrounding
+        # test runner may already have imported, W5 itself imports none, so
+        # no in-process decode path exists or is exercised anywhere in this
+        # suite. (Run standalone, the parent holds no softlab modules at
+        # all; under full-suite discovery the runner pre-imports softlab via
+        # other modules — recorded as an evidence fact, neither hidden nor
+        # conflated with walkthrough activity.)
+        softlab_before = set(_softlab_module_names())
+        _evidence("w5-parent-baseline",
+                  parent_pid=parent_pid,
+                  runner_preloaded_softlab=sorted(softlab_before))
+
+        with tempfile.TemporaryDirectory(prefix=_TEMP_PREFIX) as root_a, \
+                tempfile.TemporaryDirectory(prefix=_TEMP_PREFIX) as root_b:
+            # Plan W5 item 1: session A and rerun B are separate fresh
+            # processes with distinct PIDs, distinct temp roots, and no
+            # shared driver state. Each driver records its own
+            # clean-prefix control evidence before importing softlab.
+            session_a, artifact_a, sha_a = _thermal_session(
+                self, root_a, "coordinated")
+            session_b, artifact_b, sha_b = _thermal_session(
+                self, root_b, "coordinated")
+            for session in (session_a, session_b):
+                self.assertNotEqual(session["pid"], parent_pid)
+                self.assertTrue(session["clean_prefix"], session)
+                # Environment facts are recorded (plan W5 item 3). The only
+                # tolerated SOFTLAB_* variable is this suite's own
+                # suite-in-suite re-entrancy guard, present solely when a
+                # session driver runs inside W6's single nested full-suite
+                # subprocess — it is harness state, never product state.
+                self.assertEqual(
+                    [name for name in session["env_softlab_vars"]
+                     if name != _W6_SUITE_GUARD], [], session)
+            self.assertNotEqual(session_b["pid"], session_a["pid"])
+            self.assertNotEqual(root_a, root_b)
+            self.assertNotIn(str(Path(root_a).resolve()),
+                             str(artifact_b.resolve()))
+            self.assertNotIn(str(Path(root_b).resolve()),
+                             str(artifact_a.resolve()))
+            # Rerun determinism cross-check (plan W5 item 4): the two
+            # independently produced artifacts decode identically under
+            # the freeze §3 oracle — W1's comparison is reused here on
+            # this process pair.
+            self.assertNotEqual(session_b["execution_id"],
+                                session_a["execution_id"])
+            self.assertNotEqual(session_b["group_id"], session_a["group_id"])
+            self.assertEqual(_sha256_file(str(artifact_b)), sha_b)
+            self.assertEqual(_sha256_file(str(artifact_a)), sha_a)
+
+            # Plan W5 item 2: every inspection runs via the bootstrap in
+            # its own process on a fresh verified copy — never an
+            # in-process import of inspect_run_group. PIDs recorded.
+            payload_a, child_pid_a = self._inspect_in_fresh_process(
+                artifact_a, "thermal", root_a, parent_pid,
+                session_a["pid"], session_b["pid"])
+            # A second fresh process re-inspects the same artifact (fresh
+            # copy again) and decodes identical semantic content.
+            payload_a2, child_pid_a2 = self._inspect_in_fresh_process(
+                artifact_a, "thermal", root_a, parent_pid,
+                session_a["pid"], session_b["pid"])
+            for key in ("envelope", "records", "legacy_meta",
+                        "original_sha256", "group_id", "envelope_present"):
+                self.assertEqual(payload_a[key], payload_a2[key], key)
+            self.assertNotEqual(child_pid_a2, child_pid_a)
+
+            # A stored artifact from an earlier scenario (session A's
+            # production) is inspected by a completely fresh process
+            # operating from the OTHER temp root: the artifact bytes are
+            # carried across, but no process, file handle, or in-memory
+            # object crosses the boundary.
+            carried_copy, carried_digest = _fresh_verified_copy(
+                artifact_a, root_b)
+            payload_carried, child_pid_carried = self._inspect_in_fresh_process(
+                Path(carried_copy), "thermal", root_b, parent_pid,
+                session_a["pid"], session_b["pid"])
+            for key in ("envelope", "records", "legacy_meta",
+                        "original_sha256", "group_id", "envelope_present"):
+                self.assertEqual(payload_a[key], payload_carried[key], key)
+            self.assertEqual(payload_carried["original_sha256"],
+                             carried_digest)
+            self.assertNotIn(child_pid_carried,
+                             (child_pid_a, child_pid_a2))
+
+            # W5 itself added no softlab-module state: every decode happened
+            # in a child process; the parent only hashed and copied bytes.
+            self.assertEqual(set(_softlab_module_names()), softlab_before)
+            _evidence("w5-clean-process", parent_pid=parent_pid,
+                      session_pids=[session_a["pid"], session_b["pid"]],
+                      inspection_pids=[child_pid_a, child_pid_a2,
+                                       child_pid_carried],
+                      roots=[root_a, root_b],
+                      carried_copy=carried_copy)
+
+    def _inspect_in_fresh_process(self, artifact, profile, root,
+                                  parent_pid, *other_child_pids):
+        """One bootstrap inspection in its own process; PID distinctness."""
+        payload, child_pid, copy_path, _ = _inspect(
+            artifact, profile, root)
+        self.assertNotEqual(child_pid, parent_pid)
+        for other in other_child_pids:
+            self.assertNotEqual(child_pid, other)
+        _evidence("w5-inspection", child_pid=child_pid, copy=copy_path,
+                  profile=profile, status=payload["status"])
+        return payload, child_pid
+
+
+# ---------------------------------------------------------------------------
+# W6: legacy compatibility and tracked-debt re-confirmation.
+# ---------------------------------------------------------------------------
+
+_W6_SUITE_GUARD = "SOFTLAB_M03_P4_W6_SUITE_GUARD"
+
+_DEFECT2_DRIVER = """
+import json
+import os
+import sys
+import warnings
+
+sys.path.insert(0, sys.argv[1])
+
+from softlab.tu.station import Parameter
+
+with warnings.catch_warnings(record=True) as caught:
+    warnings.simplefilter('always')
+    Parameter('probe', settable=False, gettable=False)
+
+print(json.dumps({
+    "pid": os.getpid(),
+    "warnings": [str(item.message) for item in caught],
+    "categories": [item.category.__name__ for item in caught],
+}))
+"""
+
+_META01_DRIVER = """
+import json
+import os
+import sys
+
+sys.path.insert(0, sys.argv[1])
+
+from softlab.shui.data import DataGroup
+
+caller_meta = {'a': 1}
+group = DataGroup('probe', meta=caller_meta)
+
+print(json.dumps({
+    "pid": os.getpid(),
+    "group_meta": dict(group.meta),
+    "get_meta_a": group.get_meta('a'),
+    "caller_meta_after": dict(caller_meta),
+}))
+"""
+
+
+class W6LegacyCompatibilityAndDebt(unittest.TestCase):
+    """W6: full legacy suite green plus tracked-debt re-confirmation.
+
+    Plan W6 item 2 (legacy suite green) is executed once as a real
+    subprocess run of the complete suite; the guard env var only prevents
+    unbounded suite-in-suite recursion inside that one subprocess — the
+    outer invocation always executes the full run. Item 3 re-confirms
+    each tracked debt item with what is actually checkable from the repo:
+    recorded dispositions in the log documents, plus small real-seam
+    child-process probes (the DEFECT-2 warning and the R4-BASE-META-01
+    constructor defect). Facts that are only recordable in the results
+    report (suite split counts, Phase 1 suite class mapping) are emitted
+    as evidence lines here and recorded there.
+    """
+
+    def test_w6_full_legacy_suite_green(self):
+        if os.environ.get(_W6_SUITE_GUARD) == "1":
+            self.skipTest(
+                "nested W6 suite-spawn guard: the outer invocation runs "
+                "the full suite once; this skip only exists inside that "
+                "one subprocess to prevent suite-in-suite recursion")
+        env = dict(os.environ)
+        env[_W6_SUITE_GUARD] = "1"
+        completed, child_pid = _run_python(
+            ["-m", "unittest", "discover", "-s", "tests",
+             "-p", "test_*.py"],
+            timeout=1800,
+            env=env,
+        )
+        self.assertEqual(completed.returncode, 0,
+                         "legacy suite failed\nstdout:\n{}\nstderr:\n{}"
+                         .format(completed.stdout, completed.stderr))
+        # Record the summary line (test count and OK) as results-report
+        # evidence; a count regression is a defect investigated from the
+        # recorded line, not an assertion on a moving number.
+        summary = [line for line in completed.stderr.splitlines()
+                   if line.startswith("Ran ")]
+        self.assertEqual(len(summary), 1, completed.stderr[-2000:])
+        _evidence("w6-legacy-suite", child_pid=child_pid,
+                  guard="outer-invocation-full-run",
+                  summary=summary[0].strip(),
+                  stderr_tail=completed.stderr.strip().splitlines()[-1],
+                  stdout_chars=len(completed.stdout))
+
+    def test_w6_debt_reconfirmation(self):
+        characterization = (ROOT / "log" / "release_12" / "test"
+                            / "characterization-results.md").read_text()
+        boundary = (ROOT / "log" / "release_12" / "design"
+                    / "p1-boundary-decision.md").read_text()
+        evidence_r8 = (ROOT / "log" / "release_8" / "design"
+                       / "evidence-decision.md").read_text()
+        prd_r8 = (ROOT / "log" / "release_8" / "prd.md").read_text()
+        run_record_guide = (ROOT / "docs" / "run-record.md").read_text()
+        bounded = (ROOT / "softlab" / "huo" / "process"
+                   / "bounded.py").read_text()
+        signal_example = (ROOT / "examples" / "signal_monitor.py").read_text()
+        thermal_example = (ROOT / "examples" / "thermal_experiment.py") \
+            .read_text()
+        run_group = (ROOT / "softlab" / "shui" / "run_group.py").read_text()
+
+        # R4-BASE-SCHED-01 / F-01 / F-02 — avoided via the M02 serial
+        # seam, not repaired (release_8 dispositions recorded), and the
+        # seam fact is verifiable in the current tree: run_count owns a
+        # fresh SerialScheduler and never touches the generic scheduler;
+        # both supported clients route through run_count.
+        self.assertIn("F-01", evidence_r8)
+        self.assertIn("R4-BASE-SCHED-01", evidence_r8)
+        self.assertIn("avoid", evidence_r8.lower())
+        self.assertIn("SerialScheduler(_capture_failures=True)", bounded)
+        self.assertNotIn("_SchedulerImpl", bounded)
+        self.assertNotIn("get_scheduler", bounded)
+        for source, name in ((signal_example, "signal_monitor"),
+                             (thermal_example, "thermal_experiment")):
+            self.assertIn("run_count(", source, name)
+            self.assertNotIn("_SchedulerImpl", source, name)
+            self.assertNotIn("get_scheduler", source, name)
+
+        # R4-BASE-META-01 — constructor defect still characterized
+        # (Phase 1 record retained) and the supported construction path
+        # still bypasses the constructor metadata path entirely.
+        self.assertIn("R4-BASE-META-01", characterization)
+        self.assertIn("Deviation D1", characterization)
+        self.assertIn("``meta=`` is never passed", run_group)
+        self.assertIn(
+            "group = DataGroup(name=name, id=uuid.UUID(envelope['group_id']))",
+            run_group)
+        with tempfile.TemporaryDirectory(prefix=_TEMP_PREFIX) as probe_root:
+            payload, completed = _run_driver(
+                _META01_DRIVER, probe_root,
+                [str(ROOT)])
+            probe_pid = payload["pid"]
+            self.assertEqual(payload["group_meta"], {},
+                             "R4-BASE-META-01 defect was silently repaired: "
+                             "constructor meta now populates the group")
+            self.assertIsNone(payload["get_meta_a"])
+            # The caller-dict mutation half of the characterized behavior
+            # is retained evidence; supported paths never pass caller
+            # dicts in.
+            _evidence("w6-meta01-still-characterized", child_pid=probe_pid,
+                      group_meta=payload["group_meta"],
+                      caller_meta_after=payload["caller_meta_after"])
+        # R4-BASE-HDF5-01 / F-A — destructive plain-load reader still
+        # guarded against: the Phase 1 record stands, the user guide
+        # documents the disposable-copy inspection path, and every
+        # inspection executed by this suite (W1-W3 above, W5, W7) routes
+        # through the subprocess bootstrap on fresh verified copies with
+        # per-run original-byte sha256 preservation asserted by the
+        # calling classes.
+        self.assertIn("F-A", characterization)
+        self.assertIn("destructive", characterization.lower())
+        self.assertIn("disposable", run_record_guide)
+        self.assertTrue(BOOTSTRAP.exists())
+
+        # OBS-004 / OBS-005 / OBS-006 and DEFECT-2 — dispositions recorded
+        # in the release_8 baseline (the evidence decision cites the OBS
+        # group as "OBS-004/005/006"; the PRD records each marker
+        # individually); DEFECT-2 additionally re-confirmed at runtime: the
+        # deliberate programmer-error warning still fires.
+        for marker in ("OBS-004", "OBS-005", "OBS-006", "DEFECT-2"):
+            self.assertIn(marker, prd_r8)
+        self.assertIn("OBS-004/005/006", evidence_r8)
+        self.assertIn("DEFECT-2", evidence_r8)
+        self.assertIn("untouched by the selected path", evidence_r8)
+        with tempfile.TemporaryDirectory(prefix=_TEMP_PREFIX) as probe_root:
+            payload, completed = _run_driver(
+                _DEFECT2_DRIVER, probe_root,
+                [str(ROOT)])
+            probe_pid = payload["pid"]
+        self.assertEqual(payload["categories"], ["UserWarning"], payload)
+        self.assertEqual(payload["warnings"],
+                         ["Parameter probe is neither settable and "
+                          "gettable"], payload)
+        _evidence("w6-defect2-warning-still-fires", child_pid=probe_pid,
+                  warning=payload["warnings"][0])
+
+        # D1 / D2 and F-A ... F-D — characterized in the Phase 1 record
+        # and dispositioned in the boundary decision; the Phase 1
+        # characterization suite is part of the green legacy run above.
+        for marker in ("D1", "D2", "F-A", "F-B", "F-C", "F-D"):
+            self.assertIn("| " + marker + " ", characterization,
+                          "Phase 1 deviations table lost " + marker)
+        for marker in ("D1", "D2", "F-A", "F-B", "F-C", "F-D"):
+            self.assertIn(marker, boundary,
+                          "boundary decision lost disposition " + marker)
+        self.assertTrue((ROOT / "tests" / "test_m03_p1_characterization.py")
+                        .exists())
+
+        # F-C / F-D — no supported flow uses the generic io helpers
+        # ``io.reload_group`` / ``io.load_groups`` (the thermal example's
+        # private ``_reload_group`` is its own scoped disposable-copy
+        # reader, not the excluded generic seam); both supported clients
+        # save through the owned save_run_group seam.
+        for name, source in (("signal_monitor", signal_example),
+                             ("thermal_experiment", thermal_example)):
+            self.assertNotIn("io.reload_group", source, name)
+            self.assertNotIn("io.load_groups", source, name)
+            self.assertNotIn("shui.data import io", source, name)
+            self.assertNotIn("from softlab.shui.data.io import", source,
+                             name)
+            self.assertIn("save_run_group", source, name)
+        _evidence("w6-debt-reconfirmation",
+                  suite_guard="nested-skip-only-in-subprocess",
+                  checked="R4-BASE-SCHED-01,META-01,HDF5-01,"
+                          "OBS-004/005/006,DEFECT-2,D1/D2,F-A..F-D")
+
+
+# ---------------------------------------------------------------------------
+# W7: guidance verification — every docs/run-record.md command, verbatim.
+# ---------------------------------------------------------------------------
+
+_W7_SIGNAL_RECIPE = """
+from pathlib import Path
+import tempfile
+
+from examples.signal_monitor import acquire, persist
+
+with tempfile.TemporaryDirectory(prefix='softlab-run-') as root:
+    result, record, differences, reads = acquire(points=3)
+    saved = persist(result, record, Path(root) / 'signal.h5')
+    print(saved.execution_id, saved.group_id, saved.path)
+"""
+
+_W7_SIGNAL_PERSIST = """
+import json
+import os
+import sys
+
+sys.path.insert(0, sys.argv[1])
+
+from pathlib import Path
+
+from examples.signal_monitor import acquire, persist
+
+out_dir = Path(sys.argv[2])
+out_dir.mkdir(parents=True, exist_ok=True)
+result, record, differences, reads = acquire(points=3)
+saved = persist(result, record, out_dir / 'signal.h5')
+print(json.dumps({
+    "pid": os.getpid(),
+    "execution_id": saved.execution_id,
+    "group_id": saved.group_id,
+    "path": str(saved.path),
+}))
+"""
+
+
+class W7GuidanceVerification(unittest.TestCase):
+    """W7: docs/run-record.md commands execute verbatim with documented outcomes.
+
+    Plan W7 item 2: every command/procedure the guidance documents is
+    executed exactly as written and observed to work. The §3 bootstrap
+    examples use the guide's own placeholder paths (``/path/to/*.h5``);
+    the documented intent is that they are run against artifacts the
+    guide's own production sections produce, so the placeholders are
+    substituted with those artifacts and everything else is verbatim. A
+    command that fails as written is a filed guide defect (sw-tom owns
+    the guide) — the tester never edits the guide. Items 3 and 4
+    (semantic match, no overclaim) are document-review facts recorded in
+    the results report, not executable assertions.
+    """
+
+    def test_w7_run_record_guide_commands_verbatim(self):
+        env = dict(os.environ)
+        # §2.1 thermal CLI, verbatim. The example refuses a non-empty
+        # output dir, so a stale /tmp/thermal-run-01 from any earlier
+        # run is removed first (setup hygiene, not a command edit); the
+        # produced directory is removed at the end.
+        shutil.rmtree(str(_GUIDE_THERMAL_DIR), ignore_errors=True)
+        try:
+            completed, thermal_pid = _run_python(
+                ["examples/thermal_experiment.py",
+                 "--output-dir", str(_GUIDE_THERMAL_DIR),
+                 "--adapter", "coordinated"],
+                env=dict(env, MPLBACKEND="Agg"))
+            self.assertEqual(completed.returncode, 0,
+                             "guide thermal CLI failed as written\n"
+                             "stdout:\n{}\nstderr:\n{}".format(
+                                 completed.stdout, completed.stderr))
+            # Documented outcome: "The artifact is <output-dir>/thermal.h5".
+            thermal_artifact = _GUIDE_THERMAL_DIR / "thermal.h5"
+            self.assertTrue(thermal_artifact.exists(),
+                            "guide promises <output-dir>/thermal.h5")
+            _evidence("w7-thermal-cli", pid=thermal_pid,
+                      command="MPLBACKEND=Agg python "
+                              "examples/thermal_experiment.py --output-dir "
+                              "/tmp/thermal-run-01 --adapter coordinated",
+                      exit=completed.returncode,
+                      artifact=str(thermal_artifact),
+                      stderr_tail=completed.stderr.strip().splitlines()[-1]
+                      if completed.stderr.strip() else "")
+
+            # §2.2 signal recipe, verbatim (exact code block from the
+            # guide). Documented outcome: the recipe runs and prints
+            # execution_id, group_id and path.
+            with tempfile.TemporaryDirectory(prefix=_TEMP_PREFIX) as root:
+                completed, recipe_pid = _run_python(
+                    ["-c", _W7_SIGNAL_RECIPE], cwd=ROOT)
+                self.assertEqual(completed.returncode, 0,
+                                 "guide signal recipe failed as written\n"
+                                 "stdout:\n{}\nstderr:\n{}".format(
+                                     completed.stdout, completed.stderr))
+                printed = completed.stdout.strip().splitlines()[-1].split()
+                self.assertEqual(len(printed), 3,
+                                 "guide promises execution_id group_id path "
+                                 "output: {}".format(completed.stdout))
+                _evidence("w7-signal-recipe", pid=recipe_pid,
+                          printed_fields=3, exit=completed.returncode)
+
+                # The recipe's TemporaryDirectory deletes its artifact on
+                # exit, so a persistent-artifact variant (identical recipe
+                # with an explicit temp root; harness necessity, recorded)
+                # feeds the §3 bootstrap commands.
+                persist_root = Path(root) / "signal-out"
+                payload, completed = _run_driver(
+                    _W7_SIGNAL_PERSIST, root,
+                    [str(ROOT), str(persist_root)])
+                persist_pid = payload["pid"]
+                signal_artifact = Path(payload["path"])
+                self.assertTrue(signal_artifact.exists())
+
+                # §3 bootstrap CLI, both profiles, with the guide's
+                # placeholder paths substituted by the artifacts its own
+                # production sections produced. Documented outcome: one
+                # JSON payload on stdout, exit 0.
+                for artifact, profile in (
+                        (signal_artifact, "signal"),
+                        (thermal_artifact, "thermal")):
+                    completed, inspect_pid = _run_python(
+                        [BOOTSTRAP, str(artifact), "--profile", profile])
+                    self.assertEqual(completed.returncode, 0,
+                                     "guide bootstrap CLI failed as written "
+                                     "for profile {}"
+                                     .format(profile))
+                    payload = json.loads(completed.stdout)
+                    self.assertEqual(payload["status"], "ok")
+                    self.assertNotEqual(inspect_pid, persist_pid)
+                    _evidence("w7-bootstrap-{}".format(profile),
+                              pid=inspect_pid, exit=completed.returncode,
+                              artifact=str(artifact), status=payload["status"])
+        finally:
+            shutil.rmtree(str(_GUIDE_THERMAL_DIR), ignore_errors=True)
+        self.assertFalse(_GUIDE_THERMAL_DIR.exists())
 
 
 if __name__ == "__main__":
