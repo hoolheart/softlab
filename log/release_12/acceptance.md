@@ -263,3 +263,56 @@ Final acceptance-candidate CI, integration to `dev`, promotion to `main`, promot
 ### Re-review Commit / Closure Status
 
 This re-review was appended to `log/release_12/acceptance.md`. No commit or push was performed because git execution tooling is unavailable in this review environment. The revised document must be committed and pushed by the coordinator before it can serve as committed release evidence. No final candidate CI, integration, promotion, promoted-state check, clean-worktree verification, or closure action was performed.
+
+## Acceptance Re-review — 2026-11-05 (`9913905`, Issue 1 Closure)
+
+This focused re-review covers only the remaining Issue 1 evidence gap from the renewed FAIL at `fefecf3`. It controls over the preserved earlier sections wherever their Issue 1 findings or verdict differ. Issues 2–4 remain **CLOSED** under the previous re-review; their dispositions are unchanged.
+
+### Re-review Information
+
+- **Reviewer**: sw-camille, Product Owner
+- **Date**: 2026-11-05
+- **Review branch**: `codex/m03-p4-acceptance`
+- **Revision reviewed**: `9913905` (`9913905008ddfd7f5bc2d2a80f920215713165d3`, confirmed by the local branch and origin refs)
+- **Review type**: focused acceptance re-review; no product-code or test changes
+- **Method**: static inspection of the committed walkthrough record, cross-checking representative argv against the instrumented walkthrough helpers and bootstrap CLI, and inspection of the `6fe5acb...9913905` commit diff for evidence applicability. I did not independently execute tests or runtime workflows. Git commit/push, CI, integration, promotion, and clean-worktree operations were unavailable and were not performed.
+
+### Issue 1 Verification — Fresh-environment AC06 Evidence
+
+**Status: CLOSED.**
+
+1. **The required per-session command transcript is now present and auditable.** `test/walkthrough-results.md` lines 160–203 record all six actual W1–W3 A/B session-driver argv arrays and all twelve bootstrap-inspection argv arrays, with arguments, exit 0, and key outputs. `$FE` is explicitly resolved to the concrete fresh-environment interpreter `/var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/opencode/m03-ac1-transcript/venv/bin/python`; driver, output, bootstrap-script, and inspection-copy paths name their real temporary roots. The artifact names reported in the key outputs are consistent with each driver's explicit output directory.
+2. **Representative plausibility checks pass.** W1 A uses `driver_01.py`, adapter `coordinated`, root `softlab-m03-p4-7ps0felx`, and group `eee3fce4-ae21-406f-b5f3-a6beff63dd0d`; its copies `inspect-copy-03.h5`/`04.h5` use `--profile thermal` and PIDs 98035/98039. W2 B uses `driver_10.py`, adapter `direct`, root `softlab-m03-p4-bxdvuoqo`, and group `7f127cf4-da1b-49d8-9138-38313a29ada2`; copies `13`/`14` use `thermal` and PIDs 98109/98119. W3 A/B use `driver_17.py`/`18.py`, groups `e335e998-162e-4ec5-ad92-d9f248c0f9c5`/`648876a7-b1e4-4030-9367-0ebd52020f09`, and copies `19`/`20` and `21`/`22` with `--profile signal` and the recorded PIDs. These forms match `_run_python`, `_run_driver`, `_inspect`, the copy counter, and the bootstrap parser. The actual inspection argv does not pass the optional `--group-id`; this matches the instrumented helper and the approved pinned invocation, so there is no group-selector mismatch to reconcile. Each recorded inspection exits 0 with `status: ok` on its own fresh copy.
+3. **F1 is literal.** It records `/Users/edward/workspace/softlab/.venv/bin/python -m venv /var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/opencode/m03-ac1-transcript/venv`, including the real selected interpreter and target, exit 0, and empty stdout/stderr. No `<tmp>` placeholder remains in F1.
+4. **Completeness wording is now supported at the required command/exit/key-output granularity.** The committed transcript, rather than the external raw log, is sufficient for the required audit. The raw-log reference at lines 201–203 is expressly provenance-only. Earlier narrowed claims are retained only as explicitly superseded history; the current W4 verdict, correction record, and AC matrix identify the `93336e0` transcript run and the standing `6fe5acb` F4–F6 evidence rather than conflating them.
+5. **The AC06 matrix is supported.** The W1/W2/W3 cell is backed by the six fresh-environment driver commands, twelve inspection commands, scenario outcomes, and A/B assertions. The W4 cell is backed by literal creation/install records, standing full-discovery/compile/import evidence, the new W1–W3 transcript, and recorded versions/warnings/limitations. The W5/W6/W7 environment labels remain consistent with the full-discovery and guide evidence.
+6. **F4–F6 evidence reuse is honest and applicable.** The record expressly says those commands were not re-run in the new transcript venv and identifies their `6fe5acb` provenance. The `6fe5acb...9913905` diff contains only acceptance/principle/walkthrough records, one `softlab/shui/run_storage.py` docstring-whitespace correction, and test-only argv/evidence instrumentation in `tests/test_m03_p4_walkthrough.py`. There is no product-behavior drift; the final `9913905` change is the walkthrough record itself. Reusing F4–F6 therefore does not hide a changed runtime path or an unrun gate.
+
+The remaining evidence defect identified at `fefecf3` is corrected without broadening the supported product scope. No Issue 1 blocker remains.
+
+### Focused Pass Conditions
+
+| Condition | Status after Issue 1 closure |
+| --- | --- |
+| AC01–AC05 | **YES** — previously accepted evidence remains applicable |
+| AC06 complete fresh-environment/independent-repeat and documentation gate | **YES** — Issue 1 is closed; F4–F6 applicability is explicit |
+| Issues 1–4 | **ALL CLOSED** — Issues 2–4 retain their prior closures |
+| Required reviews/tests applicable to unchanged evidence | **YES** — recorded passes are reused only where applicable |
+| Documentation complete, current, and accurate for product acceptance | **YES** — the remaining transcript/completeness defect is corrected |
+| User experience within the claimed scope | **YES** — a maintainer can now audit the fresh-environment commands and outcomes from committed evidence |
+| AC07 release closure | **PENDING / RELEASE OPEN** — product acceptance is granted, but the later gates below are not complete |
+| Exact final-candidate CI / `dev` integration / promotion / promoted-state checks / clean worktree / authoritative closure | **PENDING** — none is claimed as passed or completed |
+
+### Overall Verdict After Issue 1 Closure (Current)
+
+**Status: PASS — ACCEPTED (product acceptance at `9913905`)**
+
+Release 12 receives Product Owner acceptance within the PRD's recorded scope. Issues 1–4 are closed, and AC01–AC06 are satisfied by the committed evidence and the explicitly applicable standing records. This verdict supersedes the earlier FAIL verdicts for product acceptance; it does not waive any recorded limitation or debt.
+
+**AC07's later gates remain explicitly PENDING:** exact final-candidate CI, integration to `dev`, promotion to `main`, promoted-state verification and required promoted-state checks, clean-worktree verification, and authoritative release closure. The release therefore remains **OPEN**, not CLOSED. No CI, merge, promotion, promoted-state, clean-worktree, or closure result is claimed by this acceptance verdict.
+
+**Signed**: sw-camille, Product Owner
+
+### Issue 1 Closure Commit / Release Status
+
+This focused re-review was appended to `log/release_12/acceptance.md`. No commit or push was performed because git execution tooling is unavailable in this review environment. The coordinator must commit and push this document before it can serve as committed release evidence. All later AC07 gates and release closure remain **PENDING**.
