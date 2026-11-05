@@ -9,6 +9,7 @@
 - **PRD**: `log/release_12/prd.md`
 - **Review type**: final product acceptance; review only, no product-code changes
 - **Method**: requirement-to-evidence tracing plus static inspection of the delivered codec, group/storage seams, client wiring, walkthrough assertions, guide, and architecture record. I did not execute tests or runtime workflows and do not claim an independent runtime rerun. Git/CI/worktree operations were not available in this review environment.
+- **Current status after re-review**: **FAIL — REJECTED (renewed 2026-11-05 at `218d8fc`)**. Issues 2–4 are closed. Issue 1 remains open because the fresh-environment execution is substantially evidenced, but the required verbatim W1–W3 per-session driver/inspection command record is still absent. AC07's later closure gates remain **PENDING** and are not claimed. See “Acceptance Re-review — 2026-11-05 (`218d8fc`)” below; that section controls over the preserved initial-review record.
 
 ## Product Outcome Assessment
 
@@ -141,9 +142,9 @@ The guide is **not acceptable as a whole** while Issue 2's categorical failed-sa
 | User experience acceptable within the claimed scope | **NO — the evidence/report overclaim and save-safety documentation are not acceptable** |
 | Exact final-candidate CI / promotion / promoted checks / clean worktree | PENDING; none is claimed as passed |
 
-### Overall Verdict
+### Overall Verdict — Initial Review (Historical)
 
-**Status: FAIL — REJECTED**
+**Status: FAIL — REJECTED (initial verdict at `90dc1dc`; renewed at `218d8fc` below)**
 
 Release 12 is **not accepted** and M03 must remain **OPEN**. AC01–AC05 have substantive supporting evidence within the recorded scope, but AC06 is not satisfied and its current PASS/no-gate-skipped presentation is contradicted by the recorded execution deviation. The documentation issues must also be corrected. Final candidate CI, integration, promotion, promoted-state checks, and clean-worktree/closure verification remain pending and cannot proceed as release closure on this rejection.
 
@@ -153,4 +154,112 @@ Re-review must cover Issue 1's new execution evidence and corrected reports, Iss
 
 ## Commit / Closure Status
 
-This acceptance document was written to `log/release_12/acceptance.md`. No commit, push, CI, merge, promotion, or clean-worktree verification was performed because git tooling is unavailable in this review environment. The document therefore requires committing/pushing by the coordinator before it can serve as committed release evidence.
+This initial acceptance document was written to `log/release_12/acceptance.md`. No commit, push, CI, merge, promotion, or clean-worktree verification was performed because git tooling is unavailable in this review environment. The document therefore requires committing/pushing by the coordinator before it can serve as committed release evidence.
+
+## Acceptance Re-review — 2026-11-05 (`218d8fc`)
+
+This section records the re-review of the initial FAIL at `06ce39c`. It controls over the preserved initial-review sections wherever their findings or verdict differ.
+
+### Re-review Information
+
+- **Reviewer**: sw-camille, Product Owner
+- **Date**: 2026-11-05
+- **Review branch**: `codex/m03-p4-acceptance`
+- **Revision reviewed**: `218d8fc` (`218d8fc6d772cf2e56118afb6a0c11ffe62500cf`, confirmed by the branch ref)
+- **Review type**: acceptance re-review only; no product-code changes
+- **Method**: requirement-to-evidence tracing, static inspection of the corrected records and source/docstrings, commit-diff applicability checking, and cross-document consistency checks. I did not independently execute tests or runtime workflows. Git commit/push, CI, integration, promotion, and clean-worktree operations were unavailable and were not performed.
+- **Evidence applicability**: the complete fresh-environment run names `6fe5acb`. The subsequent `2697fd0` and `9a69cfb` commits change only the walkthrough/principle records, and `218d8fc` changes only docstring whitespace. The runtime evidence therefore remains applicable to the reviewed revision; this is not treated as a candidate mismatch.
+
+### Issue 1 Verification — Fresh-environment AC06 evidence
+
+**Status: OPEN — Blocker; substantially corrected but not complete.**
+
+The following corrections are truthful and retained:
+
+- The earlier narrowed W4 PASS is explicitly superseded in `test/walkthrough-results.md` lines 4–7 and 16–28, in the corrected W4 row, in the closed deviation, and in the AC-matrix preamble. Inspection 4 in `principle_compliance_report.md` now expressly acknowledges that the original “no gate skipped” statement was inaccurate rather than hiding it.
+- The tester-created fresh environment records editable installation plus the actually required `pyvisa-sim==0.7.1` test dependency and its transitive packages. It records no propagated `PYTHONPATH`/`PYTHONHOME` and distinguishes this environment from the in-suite nested W4 environment.
+- F4 records fresh-environment full discovery: `Ran 521 tests in 480.586s`, `OK`, with zero failures, errors, or skips in the outer run. The nested W6 run's single re-entrancy-guard skip is disclosed and is not represented as an outer-suite skip-free result.
+- F5 records `python -m compileall -q softlab` with exit 0 and no output; F6 records the exact import smoke command with exit 0 and softlab `0.3.0`.
+- F7 records the explicit W1/W2/W3 test-class invocation in the fresh environment: three tests ran and passed. Its per-scenario evidence supplies distinct A/B process IDs and identities, four successful separate-process inspections per scenario, oracle/A-versus-B outcomes, signal samples/read trace/non-consumptive facts, and original-hash preservation. The execution itself is therefore substantially evidenced; this re-review does not allege that those scenarios did not run.
+- Fresh-environment Python/dependency versions, the resolved installation set, warnings and their dispositions, the single-interpreter limitation, optional-extra distinctions, synthetic-data limits, and the post-correction 13-test sanity run are recorded. No undispositioned new warning is claimed away.
+
+The required evidence is nevertheless still incomplete:
+
+1. **The actual W1–W3 session and inspection commands are not recorded verbatim.** The approved plan's pinned subprocess invocation form (lines 68–69) requires the exact command line in the results report **for every session**, and W4 item 3 requires the W1–W3 sessions A/B **driver invocations and bootstrap inspection commands** in the fresh environment, with command, exit code, and key output. The correction supplies only the outer F7 `python -m unittest ...` wrapper command. It does not supply the six actual A/B driver argv lines or the twelve actual bootstrap-inspection argv lines (two per artifact), including their concrete fresh-interpreter, driver/artifact/copy paths, arguments, and outcomes. PIDs, truncated IDs/hashes, driver-form descriptions, and test outcomes do not replace that command transcript. The test helpers construct these argv values at runtime, but their emitted session/inspection evidence does not include the command arrays; source inspection cannot turn them into a record of the commands actually executed.
+2. **The claimed verbatim fresh-creation record is abbreviated.** F1 is shown as `python -m venv <tmp>/m03-ac1-correction/venv`, not the literal creation argv and selected interpreter path. The separate in-suite W4 creation record cannot substitute for the distinct tester-created environment.
+3. **The replacement completeness wording overclaims the committed transcript.** The statement that the F1–F7 full outputs were “transcribed here verbatim” is not borne out by the `<tmp>` placeholder, ellipsized identities/hashes, and absent driver/bootstrap commands. A reference to temporary external run logs is not the committed verbatim evidence required by the approved plan. Consequently, Inspection 4's historical correction is accurate, but its present `PASS (corrected)` and the results' “complete”/“recorded verbatim” conclusions remain premature until this record gap is closed.
+
+**AC06 traceability matrix, cell-by-cell:**
+
+| Matrix row | Re-review assessment |
+| --- | --- |
+| W1/W2/W3 → AC06 | **PARTIAL / OVERCLAIMED AS COMPLETE.** FE execution and outcomes are recorded through F7, including under FE discovery, but the required actual A/B driver and bootstrap commands are absent. |
+| W4 → AC06 | **PARTIAL / OVERCLAIMED AS COMPLETE.** Full discovery, compileall, import smoke, versions, warnings, and limitations are present, but item 3 lacks the per-session command transcript and F1 is not a literal creation-command record. The item-3 “complete sequence … verbatim” cell therefore cannot yet be accepted. |
+| W5 → AC06 | **SUPPORTED.** W5 is included in the recorded FE 521-test discovery run; the process-separation evidence is not newly overclaimed. |
+| W6 → AC06 | **SUPPORTED.** FE legacy discovery is green; the outer/nested skip distinction and DEFECT-2 warning are explicit. |
+| W7 → AC06 | **SUPPORTED.** The PE guide execution is identified as PE and W7 also ran within FE discovery. The corrected guide was already present at `6fe5acb`. |
+
+The AC05 cells remain supported by the original and fresh A/B outcomes. The matrix's environment labeling does not cure the two incomplete AC06 cells above.
+
+**Remaining required correction:** add the actual fresh-environment command/exit/key-output record for all six A/B driver invocations and all twelve bootstrap inspections, and replace F1 shorthand with the literal creation command and selected interpreter path. If the retained raw logs contain these facts, transcribe them truthfully into committed evidence; otherwise rerun F7 with command-level logging. Remove or qualify the “complete”/“transcribed here verbatim” claims until then, and update the affected matrix and Inspection 4 conclusions. No additional backend or product-code change is authorized by this documentation/evidence correction.
+
+### Issue 2 Verification — Same-ID failed-save risk
+
+**Status: CLOSED.**
+
+- `docs/run-record.md` §6 now states that supported writes are new-run HDF5 writes, that the unchanged writer deletes an existing same-ID group before recreating it, and that a failed save over that group can lose its previous content. It recommends a fresh target path when prior content matters; it no longer gives a categorical failed-save preservation guarantee.
+- `softlab/shui/run_storage.py` lines 23–30 and 414–418 distinguish the save seam's own direct actions from the characterized writer's delete-then-recreate behavior and explicitly limit byte-preservation claims to inspection.
+- `design/p3-storage-design.md` §2.2 lines 251–259 and §6.3 lines 1214–1222 expressly scope the historical “never deletes or truncates” sentence to the seam's own actions/pinned cases, then disclose the same-ID loss risk and unsupported overwrite case. §7 lines 1264–1269 retains non-atomic same-ID deletion/recreation as unsupported.
+- This matches the unchanged implementation: `softlab/shui/data/hdf5.py` lines 73–76 still delete an existing same-ID group before creating its replacement. No rollback, atomic-publication, same-ID preservation, or backend-repair guarantee has been introduced.
+
+The guide, storage docstrings, design clarification, and implementation now convey the same bounded risk. No new contradiction was found in this correction.
+
+### Issue 3 Verification — Architecture currency
+
+**Status: CLOSED.**
+
+- `arch.md` now records `run_record.py`, `run_group.py`, and `run_storage.py` as implemented M03 modules under `shui`, their ownership and public entry points, and links to the relevant designs and maintainer guide.
+- The documented package exports agree with `softlab/shui/__init__.py`; module-only constants and non-re-exported storage types are not falsely listed as package exports.
+- The HDF5-only/new-run/copy-inspection boundary, acquisition-only outcome, unsupported clients/backends and generic helpers, non-atomic same-ID behavior, and unfixed destructive-load/custom-key limitations are explicit.
+- The M03 history entry at lines 972–976 says this is not release acceptance or closure and preserves M03 as OPEN with final candidate CI, `dev` integration, `main` promotion, promoted-state verification, and clean-worktree closure unclaimed. That status remains accurate under this renewed FAIL.
+- `tests/test_arch_links.py` checks Markdown links and repository-path spans, and its M03 targets were statically spot-checked against existing files. It was also included in the recorded 521-test fresh discovery at `6fe5acb`, whose result applies to `218d8fc` as explained above. I did not independently rerun the test and make no separate runtime claim.
+
+### Issue 4 Verification — Signal read semantics
+
+**Status: CLOSED.**
+
+`examples/signal_monitor.py` lines 3–5 now say the source is intentionally **non-consumptive**, with one read per channel per cycle and `tick + offset` values (signal 5, reference 2), consuming no queued value. This agrees with `read()` at lines 54–56, C5b in `test/characterization-results.md`, the frozen payload literal `consumptive: False`, the W3 assertions, and `docs/run-record.md` §4. The correction changes wording only and introduces no acquisition-behavior claim or contradiction.
+
+### Cross-document Consistency Assessment
+
+The Issue 2 storage corrections consistently distinguish inspection-time original-byte preservation from save-time same-ID deletion/recreation risk. The Issue 4 example, guide, characterization, schema, and walkthrough consistently use non-consumptive `tick + offset` semantics. The M03 architecture modules/exports/limits agree with the current package initializer and source. No new product-behavior contradiction was introduced by the corrections. The only remaining acceptance defect is Issue 1's incomplete fresh-environment execution transcript and the associated completeness wording.
+
+### Re-reviewed Pass Conditions
+
+| Condition | Status after re-review |
+| --- | --- |
+| AC01 characterization and evidence decision | YES — unchanged evidence remains applicable |
+| AC02 strict bounded schema/codec | YES — unchanged evidence remains applicable |
+| AC03 stored declarations, units, identity, samples, and stage honesty | YES — unchanged evidence remains applicable |
+| AC04 owned HDF5 storage, safe inspection, and tested failures within scope | YES — the broader guide overclaim is corrected; no stronger guarantee is accepted |
+| AC05 independent oracles, compatibility, and clean-session A/B comparison | YES — original and fresh A/B outcomes support this within scope |
+| AC06 complete fresh-environment/independent-repeat and documentation gate | **NO — Issue 1's verbatim per-session command record remains incomplete** |
+| AC07 acceptance/principle mapping and final release closure | **NO / RELEASE OPEN — product acceptance is not granted; later gates remain pending** |
+| Required reviews/tests applicable to unchanged evidence | Recorded pass, but the W4 evidence-completeness gate is not satisfied |
+| Documentation complete, current, and accurate | **NO — Issues 2–4 are corrected; the fresh-environment results still overclaim a complete verbatim transcript** |
+| User experience acceptable within the claimed scope | **NO — a maintainer still cannot audit the required fresh A/B and inspection commands from the committed record** |
+| Exact final-candidate CI / `dev` integration / promotion / promoted checks / clean worktree / closure | **PENDING — none is claimed as passed or completed** |
+
+### Overall Verdict After Re-review (Current)
+
+**Status: FAIL — REJECTED (renewed at `218d8fc`)**
+
+Release 12 remains **unaccepted and OPEN**. Issues 2, 3, and 4 are closed. Issue 1 remains a Blocker solely because the approved AC06 fresh-environment command evidence is still incomplete and is described more completely than the committed transcript supports. AC01–AC05 retain their supporting evidence within the recorded scope; AC06 is not met, and AC07 release closure is not met.
+
+Final acceptance-candidate CI, integration to `dev`, promotion to `main`, promoted-state verification, clean-worktree verification, and authoritative closure remain **PENDING**. They are not authorized as completed release closure by this verdict, and no CI, merge, promotion, or clean-worktree result is claimed. No blocker or major issue is waived.
+
+**Signed**: sw-camille, Product Owner
+
+### Re-review Commit / Closure Status
+
+This re-review was appended to `log/release_12/acceptance.md`. No commit or push was performed because git execution tooling is unavailable in this review environment. The revised document must be committed and pushed by the coordinator before it can serve as committed release evidence. No final candidate CI, integration, promotion, promoted-state check, clean-worktree verification, or closure action was performed.
