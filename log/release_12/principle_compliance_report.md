@@ -47,3 +47,18 @@ on Python 3.9 and 3.13.** Phase 3 has not started.
 
 **Verdict: PASS — Phase 3 may integrate to `dev` once exact-candidate CI passes
 on Python 3.9 and 3.13.** Phase 4 has not started.
+
+## Inspection 4 — Phase 4 completion gate (2026-11-03)
+
+| Principle | Evidence | Result |
+| --- | --- | --- |
+| 1. TDD workflow with mandatory documentation | Oracle/rerun freeze APPROVED (`63ed461`, review `d8d8744`); walkthrough plan APPROVED (`8ef207f`, developer review `f551f16` + closure fixes); implementation `db007bc`/`98b8569`; code review APPROVED after trivial-fix closure (`3d71635`); walkthrough suite + results (`aad62a8`). | PASS |
+| 2. Zero tolerance for unfixed issues | Oracle-freeze findings 1–5 CLOSED (sw-jerry); plan findings 1–4 fixed (reviewer waived further round per closing note — verified verbatim by sw-prod); code review finding (dead import) CLOSED (sw-celeste); zero test defects. | PASS |
+| 3. Environment completeness | W4 fresh-environment walkthrough: real venv creation + editable install with recorded outcomes; 3.9-absence recorded as limitation (plan-compliant); no gate skipped. | PASS |
+| 4. Frontend design-first | N/A — no UI work. | N/A |
+| 5. Sprint-end zero-warning compilation | 521/521 OK; zero undispositioned warnings (only approved sqlite3 baseline + deliberate DEFECT-2 re-confirmation); compileall clean. | PASS |
+| 6. Log process files committed and pushed | Verified on `codex/m03-p4-acceptance`: freeze `9b6be84`/`63ed461` + review `e04991d`/`d8d8744`; plan `2864063`/`8ef207f` + review `f551f16`; code review `f4fd85c`/`3d71635`; impl `db007bc`/`98b8569`/`35e12ff`; tests `4adcf2a`/`8b23f4a`/`f391117`/`d055a31`; results `aad62a8`. All pushed. | PASS |
+
+**Verdict: PASS — Phase 4 may proceed to product acceptance.** All four phases
+complete; release-level gates (acceptance, candidate CI, promotion, closure)
+remain.
