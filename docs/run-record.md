@@ -167,9 +167,12 @@ work:
 - **SQLite unsupported** (D2): run records persist on HDF5 only;
   selecting SQLite requires a separately reviewed storage/schema
   decision.
-- **No atomicity**: no rollback, retry, transactional publication, or
-  same-ID deletion/recreation guarantee; a failed save never deletes or
-  truncates the target.
+- **No atomicity**: no rollback, retry, or transactional publication.
+  The supported writes are new-run HDF5 writes; the unchanged HDF5
+  writer deletes an existing same-ID group before recreating it, so a
+  failed save over an existing same-ID group can leave the previous
+  group content lost (delete-then-recreate). When preserving prior
+  content matters, write to a fresh target path.
 - **No failed-run persistence**: only the completed-acquisition snapshot
   is supported; failed, cancelled, and partial runs leave no supported
   record.
