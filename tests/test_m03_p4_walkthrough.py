@@ -1,7 +1,7 @@
-"""M03 phase 4 walkthrough scenarios W1 and W2 (thermal v1/v2).
+"""M03 phase 4 walkthrough scenarios W1, W2 and W3.
 
 Assertion-based original-versus-clean-session-rerun walkthrough of the frozen
-thermal oracles, per the approved plan
+thermal and signal oracles, per the approved plan
 (log/release_12/test/walkthrough-test-plan.md, APPROVED `8ef207f`) and the
 frozen oracle design (log/release_12/design/p4-oracle-design.md, FROZEN
 `63ed461`). All oracle values, tolerances and exclusions below are
@@ -9,6 +9,10 @@ transcribed verbatim from that freeze, never re-derived at run time.
 
 - W1: thermal v1 (`adapter='coordinated'`) original vs clean-session rerun.
 - W2: thermal v2 (`adapter='direct'`) original vs clean-session rerun.
+- W3: signal monitor (`acquire(points=3)` + DEP-1 wiring) original vs
+  clean-session rerun; acquisition-time evidence (read trace,
+  non-consumptive facts, caller-derived differences) is taken from each
+  session driver's `acquire()` return.
 
 Both scenarios: two sessions in separate fresh Python processes and separate
 temp roots, bootstrap inspection of both artifacts on sha256-verified byte
@@ -119,6 +123,33 @@ _THERMAL_V2 = {
 # Freeze §3: the single non-exact tolerance, everything else exact ==.
 _TEMP_ABS_TOL = 1e-10
 
+# Freeze §2.3: signal oracle. Declared column order is NON-lexicographic
+# (by-name reconstruction in envelope order is mandatory); the derived
+# difference is caller-derived and never a stored column.
+_SIGNAL_DECLARED = ("timestamp", "signal", "reference")
+_SIGNAL_POINTS = 3
+_SIGNAL_OFFSETS = {"signal": 5, "reference": 2}
+_SIGNAL_COLUMNS = {
+    "signal": [6, 7, 8],  # = tick + 5
+    "reference": [3, 4, 5],  # = tick + 2
+}
+_SIGNAL_DIFFERENCE = [3, 3, 3]  # caller-derived; recomputed, never stored
+_SIGNAL_READ_TRACE = [
+    ["signal", 1], ["reference", 1],
+    ["signal", 2], ["reference", 2],
+    ["signal", 3], ["reference", 3],
+]
+
+# Freeze §5.3 recorded-configuration literals (signal).
+_SIGNAL_READ_POLICY = {
+    "semantics": "tick_plus_offset",
+    "consumptive": False,
+    "offsets": {"signal": 5, "reference": 2},
+}
+_SIGNAL_SCHEDULER_OWNERSHIP = "run_count_owned"
+_SIGNAL_DERIVED_STORAGE = "caller_derived_not_stored"
+_SIGNAL_DERIVED_FORMULA = "signal - reference"
+
 
 # ---------------------------------------------------------------------------
 # Session driver: a small real-seam script launched as a fresh subprocess.
@@ -160,6 +191,67 @@ print(json.dumps({
     "data_path": str(result.data_path),
     "plot_path": str(result.plot_path),
     "plot_exists": Path(result.plot_path).exists(),
+}))
+"""
+
+
+_SIGNAL_DRIVER = """
+import json
+import os
+import sys
+
+_REPO, _OUT = sys.argv[1], sys.argv[2]
+
+# Clean-process control evidence, captured before any softlab import: a
+# fresh interpreter holds no softlab-module state from a prior session.
+_clean = not any(
+    name == "softlab" or name.startswith("softlab.")
+    for name in sys.modules
+)
+
+sys.path.insert(0, _REPO)
+from pathlib import Path
+
+from examples.signal_monitor import acquire, persist
+
+# Pinned invocation form (plan "Subprocess invocation form"): acquire()
+# and the DEP-1 wiring (persist) in the SAME process.
+result, record, differences, reads = acquire(points=3)
+out_dir = Path(_OUT)
+out_dir.mkdir(parents=True, exist_ok=True)
+saved = persist(result, record, out_dir / 'signal.h5')
+
+# Non-consumptive-read facts, from the acquire() return only: every trace
+# entry's tick equals its row tick (reads never consumed anything queued).
+table = record.table
+signal = table['signal'].tolist()
+reference = table['reference'].tolist()
+non_consumptive = all(
+    (tick - 1) < len(signal)
+    and (signal if channel == 'signal' else reference)[tick - 1]
+        == tick + (5 if channel == 'signal' else 2)
+    for channel, tick in reads
+)
+print(json.dumps({
+    "pid": os.getpid(),
+    "clean_prefix": _clean,
+    "env_softlab_vars": sorted(
+        key for key in os.environ if key.startswith("SOFTLAB")),
+    "overall_success": result.overall_success,
+    "acquisition": result.acquisition,
+    "requested_rows": result.requested_rows,
+    "completed_rows": result.completed_rows,
+    "execution_id": saved.execution_id,
+    "group_id": saved.group_id,
+    "run_id_matches": str(result.run_id) == saved.execution_id,
+    "data_path": str(saved.path),
+    "report_ok": bool(saved.report.primary_ok and saved.report.cleanup_ok),
+    "reads": [list(entry) for entry in reads],
+    "differences": differences,
+    "signal": signal,
+    "reference": reference,
+    "non_consumptive": non_consumptive,
+    "record_columns": [column["name"] for column in record.columns],
 }))
 """
 
@@ -467,6 +559,108 @@ def _inspect_twice(test, artifact, profile, root, tag, interpreter=None):
     return payloads[0]
 
 
+# ---------------------------------------------------------------------------
+# W3 helpers: signal session driver, oracle comparison.
+# ---------------------------------------------------------------------------
+
+def _signal_session(test, root):
+    """One fresh-process signal session plus its save verification.
+
+    Acquisition-time evidence (plan W3 step 2) is taken from the
+    driver's ``acquire()`` return — the read trace, the non-consumptive
+    facts, and the caller-derived differences — never from the stored
+    artifact or the bootstrap JSON.
+    """
+    session, completed = _run_driver(
+        _SIGNAL_DRIVER, root,
+        [str(ROOT), str(Path(root) / "out")],
+    )
+    # Acquisition-success gate and storage report (freeze §5.1 inputs 1/6).
+    test.assertTrue(session["overall_success"], session)
+    test.assertEqual(session["acquisition"], "completed")
+    test.assertEqual(session["requested_rows"], _SIGNAL_POINTS)
+    test.assertEqual(session["completed_rows"], _SIGNAL_POINTS)
+    test.assertTrue(session["report_ok"], session)
+    test.assertTrue(session["run_id_matches"], session)
+    # DEP-1 envelope declared columns in declaration order.
+    test.assertEqual(tuple(session["record_columns"]), _SIGNAL_DECLARED)
+    # Acquisition-time evidence from the acquire() return (freeze §2.3).
+    test.assertEqual(session["signal"], _SIGNAL_COLUMNS["signal"])
+    test.assertEqual(session["reference"], _SIGNAL_COLUMNS["reference"])
+    test.assertEqual(session["differences"], _SIGNAL_DIFFERENCE)
+    test.assertEqual(session["reads"], _SIGNAL_READ_TRACE)
+    test.assertTrue(session["non_consumptive"], session["reads"])
+    artifact = Path(session["data_path"])
+    test.assertTrue(artifact.exists())
+    sha_before = _sha256_file(str(artifact))
+    _evidence("signal-session", pid=session["pid"],
+              execution_id=session["execution_id"],
+              group_id=session["group_id"],
+              artifact=str(artifact), sha256_before=sha_before,
+              temp_root=str(root), clean_prefix=session["clean_prefix"],
+              env_softlab_vars=session["env_softlab_vars"],
+              reads=session["reads"], differences=session["differences"],
+              non_consumptive=session["non_consumptive"],
+              driver_stderr=completed.stderr.strip())
+    return session, artifact, sha_before
+
+
+def _compare_signal_artifact(test, payload, session):
+    """Freeze §5.2 step 7 oracle comparison for one signal artifact."""
+    envelope = payload["envelope"]
+    record = payload["records"]["signal"]
+    samples = record["samples"]
+
+    # Declared column sequence, envelope order (p3 §3.5.1 rule 5 —
+    # non-lexicographic for signal); each same-named stored dataset
+    # retrieved by name, compared by row index under exact == (§3).
+    declared = [column["name"] for column in envelope["record"]["columns"]]
+    test.assertEqual(tuple(declared), _SIGNAL_DECLARED)
+    test.assertEqual(record["row_count"], _SIGNAL_POINTS)
+    test.assertEqual(set(samples), set(_SIGNAL_DECLARED))
+    for name in ("signal", "reference"):
+        test.assertEqual(samples[name], _SIGNAL_COLUMNS[name])
+    # Caller-derived difference: recomputed from stored source samples,
+    # asserted ABSENT from the stored columns (never read from storage).
+    test.assertNotIn("difference", samples)
+    test.assertNotIn("difference", declared)
+    recomputed = [s - r for s, r in zip(samples["signal"],
+                                        samples["reference"])]
+    test.assertEqual(recomputed, _SIGNAL_DIFFERENCE)
+    # Cross-check against the acquisition-time evidence (plan W3 step 7):
+    # the stored columns agree with the driver's acquire() return.
+    test.assertEqual(samples["signal"], session["signal"])
+    test.assertEqual(samples["reference"], session["reference"])
+
+    # §4 retained per-run assertions.
+    timestamp_decl = [
+        column for column in envelope["record"]["columns"]
+        if column["name"] == "timestamp"
+    ]
+    test.assertEqual(len(timestamp_decl), 1)
+    test.assertEqual(timestamp_decl[0]["unit"], "s")
+    timestamps = samples["timestamp"]
+    test.assertEqual(len(timestamps), _SIGNAL_POINTS)
+    test.assertTrue(all(math.isfinite(value) for value in timestamps))
+
+    # Outcome/boundary literals: completed_rows == requested_rows == 3.
+    outcome = envelope["outcome"]
+    test.assertEqual(outcome["completed_rows"], _SIGNAL_POINTS)
+    test.assertEqual(outcome["requested_rows"], _SIGNAL_POINTS)
+
+    # Recorded configuration (freeze §5.3, signal): points, the full
+    # read policy (non-consumptive semantics + frozen offsets), scheduler
+    # ownership, and the derived-difference storage policy.
+    payload_section = envelope["payload"]
+    test.assertEqual(payload_section["points"], _SIGNAL_POINTS)
+    test.assertEqual(payload_section["read_policy"], _SIGNAL_READ_POLICY)
+    test.assertEqual(payload_section["scheduler"]["ownership"],
+                     _SIGNAL_SCHEDULER_OWNERSHIP)
+    difference = payload_section["derived"]["difference"]
+    test.assertEqual(difference["storage"], _SIGNAL_DERIVED_STORAGE)
+    test.assertEqual(difference["formula"], _SIGNAL_DERIVED_FORMULA)
+
+
 class _ThermalWalkthroughBase(unittest.TestCase):
     """Shared A/B driver for W1/W2 (thermal original vs clean-session rerun)."""
 
@@ -550,6 +744,75 @@ class W2ThermalV2OriginalVsRerun(_ThermalWalkthroughBase):
 
     def test_w2_thermal_v2_original_vs_clean_session_rerun(self):
         self._run_original_vs_rerun("direct", _THERMAL_V2)
+
+
+class W3SignalOriginalVsRerun(unittest.TestCase):
+    """W3: signal monitor original vs clean-session rerun (DEP-1)."""
+
+    def test_w3_signal_original_vs_clean_session_rerun(self):
+        with tempfile.TemporaryDirectory(prefix=_TEMP_PREFIX) as root_a, \
+                tempfile.TemporaryDirectory(prefix=_TEMP_PREFIX) as root_b:
+            # Sessions A and B: separate fresh processes, separate temp
+            # roots, same declared inputs (freeze §5.2 steps 2-5). Each
+            # driver runs acquire(points=3) + the DEP-1 wiring in one
+            # process (plan-pinned invocation form) and records its
+            # acquire() return evidence for the results report.
+            session_a, artifact_a, sha_a = _signal_session(self, root_a)
+            session_b, artifact_b, sha_b = _signal_session(self, root_b)
+
+            # Distinct identities are expected and asserted (freeze §4).
+            self.assertNotEqual(session_b["execution_id"],
+                                session_a["execution_id"])
+            self.assertNotEqual(session_b["group_id"], session_a["group_id"])
+
+            # Separate-process inspections: two per artifact on fresh
+            # verified copies (F-A guard); originals never loaded in place.
+            payload_a = _inspect_twice(self, artifact_a, "signal",
+                                       root_a, "A")
+            payload_b = _inspect_twice(self, artifact_b, "signal",
+                                       root_b, "B")
+
+            # Oracle comparison per artifact (freeze §5.2 step 7).
+            _compare_signal_artifact(self, payload_a, session_a)
+            _compare_signal_artifact(self, payload_b, session_b)
+            _assert_common_per_run(self, payload_a, session_a, artifact_a,
+                                   _SIGNAL_POINTS)
+            _assert_common_per_run(self, payload_b, session_b, artifact_b,
+                                   _SIGNAL_POINTS)
+
+            # Original-byte preservation (C3 discipline) per run.
+            self.assertEqual(_sha256_file(str(artifact_a)), sha_a)
+            self.assertEqual(_sha256_file(str(artifact_b)), sha_b)
+
+            # A-vs-B comparison (freeze §5.2 step 8): every non-excluded
+            # column matches under §3 exact ==; the recorded configuration
+            # agrees; identities stay distinct. §4 excluded fields
+            # (timestamps, identity values, environment/source values,
+            # cross-run byte hashes) are never compared here.
+            samples_a = payload_a["records"]["signal"]["samples"]
+            samples_b = payload_b["records"]["signal"]["samples"]
+            for name in samples_a:
+                if name == "timestamp":
+                    continue  # §4 excluded
+                self.assertEqual(samples_a[name], samples_b[name], name)
+            envelope_a = payload_a["envelope"]
+            envelope_b = payload_b["envelope"]
+            self.assertEqual(envelope_a["payload"], envelope_b["payload"])
+            # Acquisition-time evidence agrees across runs (freeze §2.3
+            # relations): identical read trace, differences, and samples.
+            self.assertEqual(session_b["reads"], session_a["reads"])
+            self.assertEqual(session_b["differences"],
+                             session_a["differences"])
+            self.assertTrue(session_a["non_consumptive"])
+            self.assertTrue(session_b["non_consumptive"])
+            _evidence("avsb-signal",
+                      execution_id_a=session_a["execution_id"],
+                      execution_id_b=session_b["execution_id"],
+                      group_id_a=session_a["group_id"],
+                      group_id_b=session_b["group_id"],
+                      reads_a=session_a["reads"],
+                      differences_a=session_a["differences"],
+                      sha256_a=sha_a, sha256_b=sha_b)
 
 
 if __name__ == "__main__":
