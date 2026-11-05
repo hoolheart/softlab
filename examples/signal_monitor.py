@@ -1,6 +1,8 @@
 """A synthetic paired-signal count client using the bounded execution seam.
 
-The source is intentionally consumptive: each channel is read once per cycle.
+The source is intentionally non-consumptive: each channel is read once per
+cycle, and each read returns the current tick plus the channel's fixed
+offset (signal 5, reference 2), consuming no queued value.
 This example owns its configuration, its derived difference policy, and its
 owned run-record persistence: a completed-acquisition snapshot envelope
 written through the shared Phase 2/3 seams to one explicit HDF5 path.

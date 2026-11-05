@@ -248,10 +248,16 @@ def save_run_group(group: DataGroup, path: str, *,
     attachment at the boundary (type and message unchanged; §6.1
     population contract). A cleanup-only failure never raises: it is
     reported in `report.cleanup` with `cleanup_ok == False`
-    ([P3P-03], §6.1). The target artifact is never deleted or
-    truncated on failure — no rollback (decision §2 NON-support;
-    artifact-state pins in §6.3).
-    """
+     ([P3P-03], §6.1). The target artifact is never deleted or
+     truncated on failure — no rollback (decision §2 NON-support;
+     artifact-state pins in §6.3).
+     Clarification (acceptance Issue 2 scope): the previous sentence
+     bounds the seam's own actions only — it is NOT a guarantee that
+     pre-existing target content survives a failed save; the unchanged
+     writer deletes an existing same-ID group before recreating it
+     (§7 A6.3), so writes over an existing ID are unsupported and can
+     lose prior group content on failure.
+     """
 ```
 
 Algorithm (failure ordering is contractual; the report exists from
@@ -1207,7 +1213,14 @@ CI correction record).
 
 The seam **never deletes or truncates** the target artifact on
 failure — no rollback, no atomic publication (decision §2
-NON-support). Because `connect_impl` opens `'a'` mode and creates the
+NON-support). Clarification (acceptance Issue 2 scope): this sentence
+bounds the seam's own actions and the §6.3 pins only — the design's
+byte-preservation guarantees belong to the inspection path's original
+copy, never to save atomicity; the unchanged writer's
+delete-then-recreate of an existing same-ID group (§7 A6.3) means a
+failed save over an existing ID can lose prior group content, and
+same-ID overwrites remain unsupported. Because `connect_impl` opens
+`'a'` mode and creates the
 target at connect (`hdf5.py:39`), any post-connect fault leaves an
 artifact behind. The pinned state per row (asserted exactly, never
 left unasserted):
