@@ -409,7 +409,7 @@ def save_run_group(group: DataGroup, path: str, *,
     path can escape, so every exception that leaves this function
     carries ``.report`` — subclasses by construction, unwrapped codec
     errors by additive instance attachment at the boundary (type and
-    message unchanged).     A cleanup-only failure never raises: it is
+    message unchanged). A cleanup-only failure never raises: it is
     reported in ``report.cleanup`` with ``cleanup_ok == False``. The
     seam performs no rollback and no atomic publication and never
     deletes or truncates the target itself; however, the characterized
