@@ -16,8 +16,8 @@ smoke command, and the W1–W3 A/B sessions had not run there. That finding
 is correct. **The earlier W4 PASS was narrowed and is superseded by the
 complete fresh-environment execution recorded in "Fresh-environment
 execution record (complete, Issue 1 correction)" below**, executed by the
-tester on the frozen acceptance candidate `6fe5acb` (current
-`codex/m03-p4-acceptance`).
+tester on the then-frozen acceptance candidate `6fe5acb` of
+`codex/m03-p4-acceptance`.
 
 This correction also fixes the AC06 traceability claims (matrix below now
 states precisely which evidence is fresh-environment vs project-
@@ -26,6 +26,23 @@ environment) and the "no gate skipped" overclaim in
 The in-suite automated W4 class (items 1–6) is unchanged and remains
 PASS; the previously recorded item-3 executed-scope deviation is closed
 by the new evidence, not by re-interpreting the old run.
+
+**Final correction (2026-11-05, after acceptance re-review of `fefecf3`):**
+the re-review found the fresh-environment EXECUTION recorded but the
+VERBATIM per-session command transcript missing (no real argv for the six
+A/B driver invocations and twelve bootstrap inspections; F1 abbreviated
+as `python -m venv <tmp>/...`). That finding is correct. Closure:
+(1) the walkthrough suite now emits the real argv of every spawned
+session driver and bootstrap inspection into its evidence
+(commit `93336e0`, test-only instrumentation); (2) the tester re-executed
+F1–F3 and F7 in a NEW fresh venv (`m03-ac1-transcript`, candidate
+`93336e0`) — all W1–W3 A/B sessions PASS with the full command/exit/key-
+output transcript committed in "Verbatim per-session command transcript"
+below; F4–F6 stand from the `6fe5acb` correction run with an explicit
+applicability note; (3) the F1 literal creation command (selected
+interpreter path + target path, no placeholder) is recorded; (4) every
+"complete"/"verbatim" claim in this file was audited against the
+committed transcript and now matches it exactly.
 
 Suite under test: `.venv/bin/python -m unittest discover -s tests -p 'test_*.py'`
 Run once (small-batches mode, bounded single execution).
@@ -57,29 +74,46 @@ characterization record.
 ## Fresh-environment execution record (complete, Issue 1 correction)
 
 Environment: tester-created isolated venv
-`/var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/opencode/m03-ac1-correction/venv`,
+`/var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/opencode/m03-ac1-transcript/venv`,
 created by `python -m venv` from the project interpreter (base_prefix =
 project `.venv`; the venv's own site-packages only). Contents: the
 current checkout installed editable (`pip install -e
-/Users/edward/workspace/softlab`, candidate `6fe5acb`), plus the test
-dependency **`pyvisa-sim==0.7.1`** (with `PyYAML-6.0.3`,
-`stringparser-0.7`) — installed because the full suite needs it and it is
-NOT a core dependency: `tests/test_tu_visa_contracts.py` Group D drives a
-real `@sim` backend without a skip guard, and
-`tests/test_compatibility.py::test_visa_simulator` is gated on
-`find_spec("pyvisa_sim")`. Installing it is recording the environment the
-suite actually requires, not hiding a failure. No `PYTHONPATH`/`PYTHONHOME`
-was propagated into the fresh env.
+/Users/edward/workspace/softlab`, candidate `93336e0` — the walkthrough
+suite at this revision emits the real per-session argv, see the verbatim
+transcript below), plus the test dependency **`pyvisa-sim==0.7.1`** (with
+`PyYAML-6.0.3`, `stringparser-0.7`) — installed because the full suite
+needs it and it is NOT a core dependency:
+`tests/test_tu_visa_contracts.py` Group D drives a real `@sim` backend
+without a skip guard, and `tests/test_compatibility.py::test_visa_simulator`
+is gated on `find_spec("pyvisa_sim")`. Installing it is recording the
+environment the suite actually requires, not hiding a failure. No
+`PYTHONPATH`/`PYTHONHOME` was propagated into the fresh env. (An earlier
+correction run at `6fe5acb` used the sibling directory
+`m03-ac1-correction/`; this transcript environment supersedes it for the
+W1–W3 command record and stands together with the standing F4–F6 records,
+whose applicability is stated below.)
 
 | # | Command (repo root, fresh venv python = Python 3.13.15) | Exit | Duration |
 | --- | --- | --- | --- |
-| F1 | `python -m venv <tmp>/m03-ac1-correction/venv` (creation) | **0** (empty stdout/stderr) | 1.9 s |
-| F2 | `python -m pip install -e /Users/edward/workspace/softlab` | **0** | 34.6 s |
-| F3 | `python -m pip install pyvisa-sim` | **0** | 7.1 s |
-| F4 | `python -m unittest discover -s tests -p 'test_*.py'` | **0** — `Ran 521 tests in 480.586s` / `OK` (zero failures, zero errors, zero skips) | 8 min 03 s wall |
-| F5 | `python -m compileall -q softlab` | **0** (no output) | <1 s |
-| F6 | `python -c "import softlab; print(softlab.__version__)"` | **0** — prints `0.3.0` | 1.8 s |
-| F7 | `python -m unittest tests.test_m03_p4_walkthrough.W1ThermalV1OriginalVsRerun tests.test_m03_p4_walkthrough.W2ThermalV2OriginalVsRerun tests.test_m03_p4_walkthrough.W3SignalOriginalVsRerun -v` | **0** — `Ran 3 tests in 32.455s` / `OK` (all three `... ok`) | 32.6 s wall |
+| F1 | `/Users/edward/workspace/softlab/.venv/bin/python -m venv /var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/opencode/m03-ac1-transcript/venv` (literal creation argv: selected interpreter `/Users/edward/workspace/softlab/.venv/bin/python`, target path as shown) | **0** (empty stdout/stderr) | ~3 s |
+| F2 | `/var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/opencode/m03-ac1-transcript/venv/bin/python -m pip install -e /Users/edward/workspace/softlab` | **0** — `Successfully installed asttokens-3.0.2 comm-0.2.3 contourpy-1.4.0 cycler-0.12.1 executing-2.3.0 fonttools-4.68.0 h5py-3.16.0 imageio-2.38.1 ipython-9.18.1 ipython-pygments-lexers-1.1.1 ipywidgets-8.1.9 jedi-0.20.1 jupyterlab_widgets-3.0.17 kiwisolver-1.5.1 matplotlib-3.11.2 matplotlib-inline-0.2.2 narwhals-2.28.0 numpy-2.5.4 packaging-26.3 pandas-3.1.1 parso-0.8.7 pexpect-4.9.0 pillow-13.0.0 plotly-7.1.0 prompt_toolkit-3.0.53 psutil-7.2.2 ptyprocess-0.7.0 pure-eval-0.2.4 pygments-2.21.0 pyparsing-3.3.3 python-dateutil-4.0.0 pyvisa-1.16.2 scipy-1.18.1 softlab-0.3.0 stack_data-0.6.3 traitlets-5.16.1 typing_extensions-4.16.0 tzdata-2026.6 wcwidth-0.9.4 widgetsnbextension-4.0.16` | ~40 s |
+| F3 | `/var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/opencode/m03-ac1-transcript/venv/bin/python -m pip install pyvisa-sim` | **0** — `Successfully installed PyYAML-6.0.3 pyvisa-sim-0.7.1 stringparser-0.7` | ~8 s |
+| F4 | `python -m unittest discover -s tests -p 'test_*.py'` | **0** — `Ran 521 tests in 480.586s` / `OK` (zero failures, zero errors, zero skips) — **standing record from the `6fe5acb` correction run; applicability stated below** | 8 min 03 s wall |
+| F5 | `python -m compileall -q softlab` | **0** (no output) — **standing record from the `6fe5acb` correction run; applicability stated below** | <1 s |
+| F6 | `python -c "import softlab; print(softlab.__version__)"` | **0** — prints `0.3.0` — **standing record from the `6fe5acb` correction run; applicability stated below** | 1.8 s |
+| F7 | `/var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/opencode/m03-ac1-transcript/venv/bin/python -m unittest tests.test_m03_p4_walkthrough.W1ThermalV1OriginalVsRerun tests.test_m03_p4_walkthrough.W2ThermalV2OriginalVsRerun tests.test_m03_p4_walkthrough.W3SignalOriginalVsRerun -v` | **0** — `Ran 3 tests in 109.289s` / `OK` (all three `... ok`) | 2 min 07 s wall |
+
+F4–F6 applicability (recorded, not re-run): F4 full discovery, F5
+compileall and F6 import smoke stand from the previous correction run on
+candidate `6fe5acb` (same product-code content — the four commits since
+then, `2697fd0` and `9a69cfb` (log documents only), `218d8fc` (docstring
+whitespace only) and `fefecf3` (acceptance document only), touch no
+product code; the instrumentation commit `93336e0` adds only evidence
+fields to the walkthrough suite and changes no product code, so the F4
+suite result remains applicable to it by content). The 8-minute full
+discovery is not repeated; F7 above re-executes the W1–W3 A/B scenarios
+in THIS new fresh venv with per-session command logging, which is the
+gap the acceptance re-review identified.
 
 F4 note: this full-suite run includes the in-suite W4 class, which created
 its OWN nested fresh venv (`.../softlab-m03-p4-freshenv-2gpf8b9a/venv`)
@@ -96,37 +130,90 @@ The nested W6 legacy-suite child ran the same 521 tests
 suite-in-suite re-entrancy guard inside that subprocess only). No nested
 environment-creation failure occurred; nothing was silently skipped.
 
-F7 per-scenario outcomes (fresh environment, all sessions `clean_prefix:
-true`, empty `SOFTLAB_*` env vars, driver_stderr empty):
+F7 per-scenario outcomes (fresh environment, candidate `93336e0`, all
+sessions `clean_prefix: true`, empty `SOFTLAB_*` env vars,
+driver_stderr empty):
 
-- **W1 (thermal v1 `coordinated`) PASS.** Sessions A/B PIDs 82507/82528;
-  `execution_id` 7c44c30f-19ed-42e1-b812-c5e5c2ab07dc vs
-  dd2b0324-4103-45d6-8cfe-fce8be3e3e53; `group_id` 2d84d246-… vs
-  7e10b566-… (distinct); sha256 `55e37f66…` / `5258153a…`; 4 bootstrap
-  inspections (child PIDs 82544/82554/82556/82564) all `status: ok` on
+- **W1 (thermal v1 `coordinated`) PASS.** Sessions A/B PIDs 97753/98019;
+  `execution_id` bf0e82f9-d3a0-4da1-82b7-9bb6c11b5058 vs
+  2ff39537-3d1e-4601-87f7-66472e7232d8; `group_id` eee3fce4-ae21-406f-b5f3-a6beff63dd0d vs
+  7d4720e7-f680-40db-8c23-351664e68265 (distinct); sha256 `fe048471…` / `606d2070…`;
+  4 bootstrap inspections (child PIDs 98035/98039/98047/98055) all `status: ok` on
   fresh copies; oracle, tolerances, and A-vs-B assertions held.
-- **W2 (thermal v2 `direct`) PASS.** Sessions A/B PIDs 82574/82590;
-  `execution_id` bf56abc7-… vs a6c8e55a-…; `group_id` 4c9e64f9-… vs
-  50f2b80a-…; sha256 `b29e0d6f…` / `e8b54a70…`; 4 inspections (child PIDs
-  82606/82616/82624/82626) all `ok`; oracle and A-vs-B held.
-- **W3 (signal) PASS — DEP-1 present.** Sessions A/B PIDs 82636/82648;
+- **W2 (thermal v2 `direct`) PASS.** Sessions A/B PIDs 98065/98081;
+  `execution_id` 05f9481d-0c7f-4d40-8f96-1a5f8276fda3 vs
+  59d6c8ca-ba48-4a3b-9b37-d1709cf15160; `group_id` 18ba82c8-9c12-4060-a1c8-3f5e94cf0ae8 vs
+  7f127cf4-da1b-49d8-9138-38313a29ada2; sha256 `28949542…` / `1e62a3e6…`; 4 inspections (child PIDs
+  98097/98107/98109/98119) all `ok`; oracle and A-vs-B held.
+- **W3 (signal) PASS — DEP-1 present.** Sessions A/B PIDs 98127/98139;
   stored columns `signal=[6,7,8]`, `reference=[3,4,5]` exact;
   caller-derived `difference=[3,3,3]` recomputed and asserted absent from
   stored columns; read trace `[('signal',1),('reference',1),('signal',2),
   ('reference',2),('signal',3),('reference',3)]` identical in both
   sessions; non-consumptive asserted; declared column order
   `(timestamp, signal, reference)`; identities distinct
-  (8f4c68a5-…/7126e49c-… vs 3ddda411-…/09caf795-…); 4 inspections
-  (child PIDs 82660/82670/82678/82682) all `ok`; sha256 `75330a0b…` /
-  `97a591dc…` preserved.
+  (7bcc7f7c-84d0-4757-a4dc-7eb7cebc76fb/e335e998-162e-4ec5-ad92-d9f248c0f9c5 vs
+  054cbbb8-8f87-478b-a21e-e5ffe16098f2/648876a7-b1e4-4030-9367-0ebd52020f09);
+  4 inspections (child PIDs 98153/98161/98163/98180) all `ok`; sha256 `fe38928b…` /
+  `8a599a82…` preserved.
+
+### Verbatim per-session command transcript (W1–W3, fresh environment)
+
+Every command below is the real argv array exactly as spawned, emitted by
+the instrumented walkthrough suite (`93336e0`) into the F7 run log and
+transcribed here verbatim; all exited **0**. Key outputs are the emitted
+evidence facts. Temp roots are `tempfile` directories deleted on teardown;
+their real paths are recorded here before deletion. In the argv arrays,
+`$FE` = `/var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/opencode/m03-ac1-transcript/venv/bin/python`
+(the fresh-env interpreter).
+
+**Session drivers (6 — two per scenario):**
+
+1. W1 A — `["$FE", "/var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/softlab-m03-p4-7ps0felx/driver_01.py", "/Users/edward/workspace/softlab", "coordinated", "/var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/softlab-m03-p4-7ps0felx/out"]`
+   exit 0; key output: `overall_success: true`, `acquisition: completed`, 8/8 rows, `execution_id` bf0e82f9-d3a0-4da1-82b7-9bb6c11b5058, `group_id` eee3fce4-ae21-406f-b5f3-a6beff63dd0d, artifact `…/7ps0felx/out/thermal.h5`, sha256_before `fe048471…`, `clean_prefix: true`.
+2. W1 B — `["$FE", "/var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/softlab-m03-p4-s3q5s0f9/driver_02.py", "/Users/edward/workspace/softlab", "coordinated", "/var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/softlab-m03-p4-s3q5s0f9/out"]`
+   exit 0; key output: `execution_id` 2ff39537-3d1e-4601-87f7-66472e7232d8, `group_id` 7d4720e7-f680-40db-8c23-351664e68265, artifact `…/s3q5s0f9/out/thermal.h5`, sha256_before `606d2070…`, `clean_prefix: true`.
+3. W2 A — `["$FE", "/var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/softlab-m03-p4-oairuqaa/driver_09.py", "/Users/edward/workspace/softlab", "direct", "/var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/softlab-m03-p4-oairuqaa/out"]`
+   exit 0; key output: `execution_id` 05f9481d-0c7f-4d40-8f96-1a5f8276fda3, `group_id` 18ba82c8-9c12-4060-a1c8-3f5e94cf0ae8, artifact `…/oairuqaa/out/thermal.h5`, sha256_before `28949542…`, `clean_prefix: true`.
+4. W2 B — `["$FE", "/var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/softlab-m03-p4-bxdvuoqo/driver_10.py", "/Users/edward/workspace/softlab", "direct", "/var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/softlab-m03-p4-bxdvuoqo/out"]`
+   exit 0; key output: `execution_id` 59d6c8ca-ba48-4a3b-9b37-d1709cf15160, `group_id` 7f127cf4-da1b-49d8-9138-38313a29ada2, artifact `…/bxdvuoqo/out/thermal.h5`, sha256_before `1e62a3e6…`, `clean_prefix: true`.
+5. W3 A — `["$FE", "/var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/softlab-m03-p4-h6dsnndh/driver_17.py", "/Users/edward/workspace/softlab", "/var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/softlab-m03-p4-h6dsnndh/out"]`
+   exit 0; key output: `acquire(points=3)` + DEP-1 `persist` in one process; `execution_id` 7bcc7f7c-84d0-4757-a4dc-7eb7cebc76fb, `group_id` e335e998-162e-4ec5-ad92-d9f248c0f9c5, artifact `…/h6dsnndh/out/signal.h5`, sha256_before `fe38928b…`, `non_consumptive: true`, `differences: [3,3,3]`, `clean_prefix: true`.
+6. W3 B — `["$FE", "/var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/softlab-m03-p4-8jv8cuso/driver_18.py", "/Users/edward/workspace/softlab", "/var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/softlab-m03-p4-8jv8cuso/out"]`
+   exit 0; key output: `execution_id` 054cbbb8-8f87-478b-a21e-e5ffe16098f2, `group_id` 648876a7-b1e4-4030-9367-0ebd52020f09, artifact `…/8jv8cuso/out/signal.h5`, sha256_before `8a599a82…`, `non_consumptive: true`, `differences: [3,3,3]`, `clean_prefix: true`.
+
+**Bootstrap inspections (12 — two per artifact; each on its own fresh
+sha256-verified copy, originals never loaded in place):**
+
+7. W1 A #1 — `["$FE", "/Users/edward/workspace/softlab/tests/run_record_inspect_bootstrap.py", "/var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/softlab-m03-p4-7ps0felx/inspect-copy-03.h5", "--profile", "thermal"]` exit 0, `status: ok` (child PID 98035).
+8. W1 A #2 — `["$FE", "/Users/edward/workspace/softlab/tests/run_record_inspect_bootstrap.py", "/var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/softlab-m03-p4-7ps0felx/inspect-copy-04.h5", "--profile", "thermal"]` exit 0, `status: ok` (child PID 98039).
+9. W1 B #1 — `["$FE", "/Users/edward/workspace/softlab/tests/run_record_inspect_bootstrap.py", "/var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/softlab-m03-p4-s3q5s0f9/inspect-copy-05.h5", "--profile", "thermal"]` exit 0, `status: ok` (child PID 98047).
+10. W1 B #2 — `["$FE", "/Users/edward/workspace/softlab/tests/run_record_inspect_bootstrap.py", "/var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/softlab-m03-p4-s3q5s0f9/inspect-copy-06.h5", "--profile", "thermal"]` exit 0, `status: ok` (child PID 98055).
+11. W2 A #1 — `["$FE", "/Users/edward/workspace/softlab/tests/run_record_inspect_bootstrap.py", "/var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/softlab-m03-p4-oairuqaa/inspect-copy-11.h5", "--profile", "thermal"]` exit 0, `status: ok` (child PID 98097).
+12. W2 A #2 — `["$FE", "/Users/edward/workspace/softlab/tests/run_record_inspect_bootstrap.py", "/var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/softlab-m03-p4-oairuqaa/inspect-copy-12.h5", "--profile", "thermal"]` exit 0, `status: ok` (child PID 98107).
+13. W2 B #1 — `["$FE", "/Users/edward/workspace/softlab/tests/run_record_inspect_bootstrap.py", "/var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/softlab-m03-p4-bxdvuoqo/inspect-copy-13.h5", "--profile", "thermal"]` exit 0, `status: ok` (child PID 98109).
+14. W2 B #2 — `["$FE", "/Users/edward/workspace/softlab/tests/run_record_inspect_bootstrap.py", "/var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/softlab-m03-p4-bxdvuoqo/inspect-copy-14.h5", "--profile", "thermal"]` exit 0, `status: ok` (child PID 98119).
+15. W3 A #1 — `["$FE", "/Users/edward/workspace/softlab/tests/run_record_inspect_bootstrap.py", "/var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/softlab-m03-p4-h6dsnndh/inspect-copy-19.h5", "--profile", "signal"]` exit 0, `status: ok` (child PID 98153).
+16. W3 A #2 — `["$FE", "/Users/edward/workspace/softlab/tests/run_record_inspect_bootstrap.py", "/var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/softlab-m03-p4-h6dsnndh/inspect-copy-20.h5", "--profile", "signal"]` exit 0, `status: ok` (child PID 98161).
+17. W3 B #1 — `["$FE", "/Users/edward/workspace/softlab/tests/run_record_inspect_bootstrap.py", "/var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/softlab-m03-p4-8jv8cuso/inspect-copy-21.h5", "--profile", "signal"]` exit 0, `status: ok` (child PID 98163).
+18. W3 B #2 — `["$FE", "/Users/edward/workspace/softlab/tests/run_record_inspect_bootstrap.py", "/var/folders/08/wwyghn9s1lq_1q33lyg5c8th0000gn/T/softlab-m03-p4-8jv8cuso/inspect-copy-22.h5", "--profile", "signal"]` exit 0, `status: ok` (child PID 98180).
+
+This transcript is committed evidence; the temporary raw run log
+(`/var/folders/.../T/opencode/m03-ac1-transcript/f7-command-transcript.log`)
+is retained only as provenance and is not required to audit this record.
 
 Fresh-env versions actually observed (probed in the fresh venv, never
-copied): Python `3.13.15 | packaged by conda-forge | (main, Aug 10 2026,
-13:01:04) [Clang 19.1.7 ]` on macOS-26.6.2-arm64; softlab `0.3.0`
+copied; re-probed in the `m03-ac1-transcript` environment on
+2026-11-05 with identical values): Python `3.13.15 | packaged by
+conda-forge | (main, Aug 10 2026, 13:01:04) [Clang 19.1.7 ]` on
+macOS-26.6.2-arm64; softlab `0.3.0`
 (editable, `softlab/__init__.py` from this checkout); numpy `2.5.4`;
 pandas `3.1.1`; h5py `3.16.0` / libhdf5 `2.0.0`; matplotlib `3.11.2`;
-pyvisa `1.16.2`; pyvisa_sim `0.7.1`; PyYAML `6.0.3`; sqlite3 module
-`2.6.0` / library `3.53.4`. Editable-install resolved set, verbatim:
+pyvisa `1.16.2`; pyvisa_sim `0.7.1`; PyYAML `6.0.3`; stringparser `0.7`;
+sqlite3 module `2.6.0` / library `3.53.4` (re-probed in the transcript
+environment, identical values). Editable-install resolved set, verbatim
+(from F2 in the `m03-ac1-transcript` environment, identical to the
+correction-run set):
 `Successfully installed asttokens-3.0.2 comm-0.2.3 contourpy-1.4.0
 cycler-0.12.1 executing-2.3.0 fonttools-4.68.0 h5py-3.16.0 imageio-2.38.1
 ipython-9.18.1 ipython-pygments-lexers-1.1.1 ipywidgets-8.1.9 jedi-0.20.1
@@ -138,10 +225,22 @@ pygments-2.21.0 pyparsing-3.3.3 python-dateutil-4.0.0 pyvisa-1.16.2
 scipy-1.18.1 softlab-0.3.0 stack_data-0.6.3 traitlets-5.16.1
 typing_extensions-4.16.0 tzdata-2026.6 wcwidth-0.9.4
 widgetsnbextension-4.0.16`; then `Successfully installed PyYAML-6.0.3
-pyvisa-sim-0.7.1 stringparser-0.7`. Full `pip list --format=freeze` (46
-entries incl. `pip==26.2.1`) captured in the run log. `pip_warnings:
-[]`; only the two pip upgrade notices (verbatim: `[notice] A new release
-of pip is available: 26.2.1 -> 26.3` and the update-command notice).
+pyvisa-sim-0.7.1 stringparser-0.7`. Full `pip list --format=freeze` in
+the transcript environment (44 entries incl. `pip==26.2.1`), verbatim:
+`asttokens==3.0.2 comm==0.2.3 contourpy==1.4.0 cycler==0.12.1
+executing==2.3.0 fonttools==4.68.0 h5py==3.16.0 ImageIO==2.38.1
+ipython==9.18.1 ipython_pygments_lexers==1.1.1 ipywidgets==8.1.9
+jedi==0.20.1 jupyterlab_widgets==3.0.17 kiwisolver==1.5.1
+matplotlib==3.11.2 matplotlib-inline==0.2.2 narwhals==2.28.0 numpy==2.5.4
+packaging==26.3 pandas==3.1.1 parso==0.8.7 pexpect==4.9.0 pillow==13.0.0
+pip==26.2.1 plotly==7.1.0 prompt_toolkit==3.0.53 psutil==7.2.2
+ptyprocess==0.7.0 pure_eval==0.2.4 Pygments==2.21.0 pyparsing==3.3.3
+python-dateutil==4.0.0 PyVISA==1.16.2 PyVISA-sim==0.7.1 PyYAML==6.0.3
+scipy==1.18.1 softlab==0.3.0 stack-data==0.6.3 stringparser==0.7
+traitlets==5.16.1 typing_extensions==4.16.0 tzdata==2026.6 wcwidth==0.9.4
+widgetsnbextension==4.0.16`. `pip_warnings: []`; only the two pip upgrade
+notices (verbatim: `[notice] A new release of pip is available: 26.2.1 ->
+26.3` and the update-command notice).
 
 Fresh-env warnings, verbatim and dispositioned:
 
@@ -160,18 +259,16 @@ Fresh-env warnings, verbatim and dispositioned:
    environment; the 3.9-gated pyparsing/pandas baselines were not
    applicable (no Python 3.9 interpreter on this host).
 
-Raw transcripts of commands F1–F7 (command, timestamp, timing, exit
-code, full output) are retained in the tester run log directory
-`/var/folders/.../T/opencode/m03-ac1-correction/` (temporary; contents
-transcribed here verbatim).
-
 Post-correction sanity check (2026-11-05, project `.venv` = Python
 3.13.15): after the documentation corrections in this file and the
 principle report, the walkthrough module was re-run bounded as
 `.venv/bin/python -m unittest tests.test_m03_p4_walkthrough -v` —
 `Ran 13 tests in 404.443s` / `OK`, exit 0 (W4 created its nested venv
 and W6 ran its nested legacy suite again as designed). Nothing regressed
-from the doc fixes.
+from the doc fixes. After the argv instrumentation commit `93336e0`, the
+same bounded W1–W3 invocation was re-run in the project environment:
+`Ran 3 tests in 34.926s` / `OK`, exit 0 — instrumentation changed only
+the emitted evidence, not behavior.
 
 ## Environment actually observed
 
@@ -213,7 +310,7 @@ project environment or the W4 fresh environment.
 | W1 | Thermal v1 (`coordinated`) original vs clean-session rerun | **PASS** | Sessions A/B PIDs 58153/58169, temp roots `softlab-m03-p4-ucmrg8i1` / `...-txv0aw5h`; `execution_id` 26050347-… vs 17adf1fc-…; `group_id` 3c63adac-… vs 8e5c81b5-… (distinct asserted); sha256 `298edc8b…` / `31f26780…` preserved throughout; 4 bootstrap inspections (PIDs 58186/58196/58198/58208), all `status: ok` on fresh copies `inspect-copy-03..06.h5`; §2.1 oracle, §3 tolerances, §4 retained assertions and freeze §5.3 recorded-configuration comparison all held per artifact and A-vs-B | none |
 | W2 | Thermal v2 (`direct`) original vs clean-session rerun | **PASS** | Sessions A/B PIDs 58216/58232, roots `...-b97610r2` / `...-q4hg0v_x`; `execution_id` f21745e6-… vs 3a798027-…; `group_id` 06b44aa1-… vs b0dfd5fe-…; sha256 `9c597fc3…` / `266691a2…` preserved; 4 inspections (PIDs 58250/58258/58271/58279) all `ok` on copies `inspect-copy-11..14.h5`; §2.2 oracle (delay 0, manifest v2, `source_tick='tick'`), tolerances, exclusions, §5.3 comparison all held | none |
 | W3 | Signal original vs clean-session rerun (DEP-1) | **PASS** — DEP-1 present, all six required inputs asserted | Sessions A/B PIDs 58287/58301; stored columns `signal=[6,7,8]`, `reference=[3,4,5]` exact; caller-derived `difference=[3,3,3]` recomputed from stored samples and asserted **absent** from stored columns; acquisition-time read trace `[('signal',1),('reference',1),('signal',2),('reference',2),('signal',3),('reference',3)]` from the `acquire()` return, identical in both sessions; non-consumptive reads asserted true; declared column order `(timestamp, signal, reference)`; `completed_rows == requested_rows == 3`; identities distinct (7c03587d-…/63d80e3a-… vs 3b0a0251-…/7ceaa782-…); 4 inspections (PIDs 58315/58325/58333/58341) all `ok`; sha256 `bdc1a74d…` / `684a34c4…` preserved | none |
-| W4 | Fresh-environment walkthrough (freeze §6, items 1–6) | **PASS — corrected**: complete fresh-environment evidence now recorded | In-suite items 1, 2, 4, 5, 6: see "W4 environment facts" below (verbatim). Item 3 and the plan's full fresh-env command sequence: **complete execution on candidate `6fe5acb`** — fresh venv (creation + editable install + `pyvisa-sim` test dependency), full unittest discovery 521/521 OK (480.586s), `compileall` clean, import smoke `0.3.0`, and explicit W1–W3 A/B sessions all PASS in the fresh venv; the in-suite run's nested W4 venv was created and passed inside discovery. See "Fresh-environment execution record (complete, Issue 1 correction)". The earlier narrowed PASS is superseded | none |
+| W4 | Fresh-environment walkthrough (freeze §6, items 1–6) | **PASS — corrected**: complete fresh-environment evidence now recorded | In-suite items 1, 2, 4, 5, 6: see "W4 environment facts" below (verbatim). Item 3 and the plan's full fresh-env command sequence: **complete execution** — fresh venv (literal F1 creation command with interpreter/target paths, editable install, `pyvisa-sim` test dependency), full unittest discovery 521/521 OK (480.586s, standing `6fe5acb` record with applicability note), `compileall` clean, import smoke `0.3.0`, and explicit W1–W3 A/B sessions all PASS in the fresh venv on `93336e0` WITH the verbatim per-session command transcript committed below (six driver + twelve bootstrap argv lines); the in-suite run's nested W4 venv was created and passed inside discovery. See "Fresh-environment execution record (complete, Issue 1 correction)" and "Verbatim per-session command transcript". The earlier narrowed PASS is superseded | none |
 | W5 | Clean-process walkthrough | **PASS** | See "W5 parent-baseline fact" below; session PIDs 58728/58744 (≠ parent 57701), inspection PIDs 58762/58772/58782 all distinct; fresh-copy carries across roots decode identically; parent softlab-module set unchanged after all activity | none |
 | W6 | Compatibility and debt verification | **PASS** | Legacy suite green in nested full run (PID 58815, `Ran 521 tests … OK (skipped=1)`, project interpreter); debt table fully re-confirmed (below) | none |
 | W7 | Guidance verification (DEP-3) | **PASS** — `docs/run-record.md` present | Guide thermal CLI ran verbatim (PID 60554, exit 0, artifact `/tmp/thermal-run-01/thermal.h5` produced and cleaned up); guide signal recipe ran verbatim (PID 60570, exit 0, printed exactly 3 fields); §3 bootstrap executed for both profiles against the guide's own produced artifacts (PIDs 60596 signal, 60606 thermal, both exit 0, `status: ok`) | none |
@@ -425,8 +522,8 @@ that overclaim is withdrawn.
 
 | Plan element | M03-AC05 | M03-AC06 |
 | --- | --- | --- |
-| W1/W2/W3 oracles, tolerances, exclusions, A-vs-B, recorded configuration (freeze §2–§5.3) | ✔ primary evidence (all PASS, per-artifact + A-vs-B) | FE (correction): all three A/B scenarios re-executed explicitly in the tester fresh venv on `6fe5acb`, all PASS; also executed under FE full discovery |
-| W4 fresh-environment creation/install/commands/versions/warnings/limitations (freeze §6) | rerun determinism cross-check (CLI + bootstrap re-executed in fresh env) | ✔ items 1, 2, 4, 5, 6: in-suite nested fresh venv, verbatim. ✔ item 3 complete sequence (full discovery 521/521, compileall, import smoke): FE on `6fe5acb`, verbatim. Versions/warnings: FE verbatim |
+| W1/W2/W3 oracles, tolerances, exclusions, A-vs-B, recorded configuration (freeze §2–§5.3) | ✔ primary evidence (all PASS, per-artifact + A-vs-B) | ✔ FE: all three A/B scenarios re-executed explicitly in the tester fresh venv on `93336e0`, all PASS, with the committed verbatim transcript of all six driver argv and all twelve bootstrap argv (command, exit, key output) in "Verbatim per-session command transcript"; also executed under the standing FE full discovery (`6fe5acb`) |
+| W4 fresh-environment creation/install/commands/versions/warnings/limitations (freeze §6) | rerun determinism cross-check (CLI + bootstrap re-executed in fresh env) | ✔ items 1, 2, 4, 5, 6: in-suite nested fresh venv, verbatim. ✔ item 3 complete sequence: F1 literal creation command (real interpreter and target paths), F2/F3 installs with verbatim resolved sets, full discovery 521/521 (standing `6fe5acb` record, applicability stated), compileall, import smoke, and W1–W3 A/B with the verbatim per-session command transcript (FE on `93336e0`). Versions/warnings: FE verbatim |
 | W5 process separation (freeze §5.2 steps 4/6) | ✔ (PIDs, clean prefixes, parent-baseline fact, no in-process decode) | ✔ executed under FE full discovery |
 | W6 compatibility, legacy suite, debt inventory | ✔ (521-test green run PE; debt table re-confirmed) | ✔ FE: legacy suite green inside the FE 521-test discovery run; DEFECT-2 re-confirmed firing in FE |
 | W7 guidance vs actual behavior | — | PE (docs/run-record.md; every documented command executed verbatim); also executed under FE full discovery |
