@@ -13,6 +13,14 @@ transcribed verbatim from that freeze, never re-derived at run time.
   clean-session rerun; acquisition-time evidence (read trace,
   non-consumptive facts, caller-derived differences) is taken from each
   session driver's `acquire()` return.
+- W4: fresh-environment walkthrough — a genuinely fresh `python -m venv`
+  (project `.venv` activation explicitly does not satisfy it), editable
+  install of the current checkout against the package index, the
+  documented minimal workflow (import, thermal CLI, bootstrap inspection,
+  frozen identity semantics) executed in that environment, with every
+  command, outcome, resolved dependency set, observed version and warning
+  recorded verbatim; environment failures are recorded limitations, never
+  a pass by falling back.
 - W5: clean-process walkthrough — every session and every inspection runs
   in its own fresh Python process; the walkthrough parent never decodes a
   stored artifact in-process (it never even imports softlab).
@@ -1310,6 +1318,500 @@ class W7GuidanceVerification(unittest.TestCase):
         finally:
             shutil.rmtree(str(_GUIDE_THERMAL_DIR), ignore_errors=True)
         self.assertFalse(_GUIDE_THERMAL_DIR.exists())
+
+
+# ---------------------------------------------------------------------------
+# W4: fresh-environment walkthrough (freeze §6; plan area W4).
+# ---------------------------------------------------------------------------
+
+_W4_ISOLATION_PROBE = """
+import importlib.util
+import json
+import sys
+
+base_site_packages = "__BASE_SITEPACKAGES__"
+project_only = ("nest_asyncio", "pyvisa_sim")
+
+print(json.dumps({
+    "prefix": sys.prefix,
+    "base_prefix": sys.base_prefix,
+    "executable": sys.executable,
+    "base_site_packages_on_path": any(
+        entry == base_site_packages for entry in sys.path),
+    "project_only_importable": {
+        name: importlib.util.find_spec(name) is not None
+        for name in project_only
+    },
+}))
+"""
+
+_W4_VERSION_PROBE = """
+import json
+import sqlite3
+import sys
+import warnings
+
+import h5py
+import matplotlib
+import numpy
+import pandas
+
+import softlab
+
+versions = {
+    "python_version": sys.version,
+    "python_info": list(sys.version_info[:3]),
+    "softlab": softlab.__version__,
+    "numpy": numpy.__version__,
+    "pandas": pandas.__version__,
+    "h5py": h5py.__version__,
+    "libhdf5": h5py.version.hdf5_version,
+    "matplotlib": matplotlib.__version__,
+    "sqlite3_library": sqlite3.sqlite_version,
+    "sqlite3_module": None,
+}
+with warnings.catch_warnings(record=True) as caught:
+    warnings.simplefilter("always")
+    versions["sqlite3_module"] = sqlite3.version
+versions["warnings"] = [
+    {"category": item.category.__name__, "message": str(item.message)}
+    for item in caught
+]
+print(json.dumps(versions))
+"""
+
+
+class W4FreshEnvironmentWalkthrough(unittest.TestCase):
+    """W4: genuinely fresh-environment walkthrough (freeze §6, all items).
+
+    Plan W4: activating the preexisting project ``.venv`` does NOT satisfy
+    this scenario. ``setUpClass`` performs the expensive environment
+    creation and editable install ONCE — a real ``python -m venv`` with no
+    site packages, then ``pip install -e <current checkout>`` against the
+    package index (build isolation pulls setuptools/wheel; the declared
+    dependency set resolves from the index) — and the test methods reuse
+    that environment. Every creation/install command, actual outcome,
+    pip-resolved dependency set, interpreter version, key dependency
+    version and warning is recorded verbatim as evidence.
+
+    Honesty rule (plan W4 item 2): a venv-creation failure, an unavailable
+    interpreter or an unreachable package index is a RECORDED BLOCKER /
+    LIMITATION — never a pass justified by falling back to the existing
+    environment. When such a blocker is recorded, every environment-
+    dependent test asserts the limitation was recorded precisely (the
+    creation attempt and its outcome exist) and then skips the remaining
+    assertions, so a blocked W4 is visible as a skip with a recorded
+    reason, not a pass.
+    """
+
+    _env_root = None
+    _venv_dir = None
+    _venv_python = None
+    _creation_record = None
+    _install_record = None
+    _probe = None
+    _limitation = None
+    _warnings_seen = ()
+
+    @classmethod
+    def setUpClass(cls):
+        cls._warnings_seen = []
+        cls._creation_record = None
+        cls._install_record = None
+        cls._probe = None
+        cls._limitation = None
+        cls._env_root = tempfile.TemporaryDirectory(
+            prefix=_TEMP_PREFIX + "freshenv-")
+        cls._venv_dir = Path(cls._env_root.name) / "venv"
+        cls._venv_python = None
+
+        # Plan W4 item 1: real environment creation, recorded verbatim
+        # (command, full output, exit code).
+        creation_command = [sys.executable, "-m", "venv", str(cls._venv_dir)]
+        try:
+            process = subprocess.Popen(
+                creation_command,
+                cwd=str(ROOT),
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            stdout, stderr = process.communicate(timeout=900)
+            cls._creation_record = {
+                "command": creation_command,
+                "returncode": process.returncode,
+                "stdout": stdout,
+                "stderr": stderr,
+            }
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            cls._creation_record = {
+                "command": creation_command,
+                "returncode": None,
+                "stdout": "",
+                "stderr": repr(exc),
+            }
+            cls._limitation = (
+                "venv creation could not run: {!r} — environment "
+                "limitation (interpreter/venv module), not a product "
+                "defect; no fallback to the project .venv performed"
+                .format(exc))
+            return
+        if process.returncode != 0:
+            cls._limitation = (
+                "venv creation failed (exit {}) — recorded limitation, "
+                "no fallback: {}".format(
+                    process.returncode, stderr.strip()[:500]))
+            return
+
+        for candidate in (cls._venv_dir / "bin" / "python",
+                          cls._venv_dir / "Scripts" / "python.exe"):
+            if candidate.exists():
+                cls._venv_python = candidate
+                break
+        if cls._venv_python is None:
+            cls._limitation = (
+                "no interpreter found inside the created venv at {} — "
+                "recorded limitation".format(cls._venv_dir))
+            return
+
+        # Plan W4 item 2: editable install of the CURRENT checkout in the
+        # fresh environment, against the package index. A failure here
+        # (unreachable index, resolution failure, timeout) is a recorded
+        # blocker/limitation — never a pass by falling back.
+        install_command = [str(cls._venv_python), "-m", "pip", "install",
+                           "-e", str(ROOT)]
+        try:
+            completed = cls._run_in_venv(
+                ["-m", "pip", "install", "-e", str(ROOT)],
+                timeout=3600, tag="pip-install")
+        except subprocess.TimeoutExpired:
+            cls._limitation = (
+                "pip install -e . timed out after 3600s in the fresh "
+                "environment — package-index reachability limitation, "
+                "recorded; no fallback performed")
+            return
+        resolved = [line for line in completed.stdout.splitlines()
+                    if line.startswith("Successfully installed")]
+        cls._install_record = {
+            "command": install_command,
+            "returncode": completed.returncode,
+            "resolved_set_line": resolved[0] if resolved else "",
+            "stdout_tail": completed.stdout.strip()[-2000:],
+            "stderr_tail": completed.stderr.strip()[-2000:],
+            "pip_warnings": [line.strip() for line in
+                             (completed.stdout + completed.stderr).splitlines()
+                             if "WARNING:" in line],
+        }
+        if completed.returncode != 0:
+            cls._limitation = (
+                "pip install -e . failed (exit {}) in the fresh "
+                "environment — package index unreachable or resolution "
+                "failure; recorded blocker, no fallback performed. "
+                "stderr tail: {}".format(
+                    completed.returncode,
+                    completed.stderr.strip()[-500:]))
+            return
+
+        # Plan W4 item 4: versions actually observed in the walkthrough
+        # environment (never copied from the characterization record).
+        probe_driver = Path(cls._env_root.name) / "version_probe.py"
+        probe_driver.write_text(_W4_VERSION_PROBE)
+        completed = cls._run_in_venv([probe_driver], tag="version-probe")
+        if completed.returncode != 0:
+            cls._limitation = (
+                "version probe failed in the fresh environment "
+                "(exit {}): {} — recorded limitation".format(
+                    completed.returncode, completed.stderr.strip()[-500:]))
+            return
+        cls._probe = json.loads(completed.stdout.strip().splitlines()[-1])
+
+    @classmethod
+    def tearDownClass(cls):
+        if cls._env_root is not None:
+            cls._env_root.cleanup()
+
+    @classmethod
+    def _run_in_venv(cls, args, env_extra=None, timeout=600, tag="cmd",
+                     cwd=ROOT):
+        """Run one command with the fresh interpreter; record warnings."""
+        env = dict(os.environ)
+        # A fresh environment must not inherit interpreter routing from
+        # the parent (project .venv) session.
+        env.pop("PYTHONPATH", None)
+        env.pop("PYTHONHOME", None)
+        if env_extra:
+            env.update(env_extra)
+        command = [str(cls._venv_python)] + [str(a) for a in args]
+        completed = subprocess.run(
+            command,
+            cwd=str(cwd),
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=env,
+            timeout=timeout,
+        )
+        cls._collect_warnings(tag, completed.stderr)
+        return completed
+
+    @classmethod
+    def _collect_warnings(cls, tag, stderr):
+        for line in (stderr or "").splitlines():
+            if "Warning" in line:
+                cls._warnings_seen.append(
+                    {"tag": tag, "line": line.strip()})
+
+    def _require_environment(self):
+        """Gate environment-dependent tests on the recorded state.
+
+        Recorded-blocker path (plan W4 item 2): assert the limitation was
+        recorded precisely (the creation attempt and its outcome exist),
+        then skip — a blocked W4 is a visible recorded limitation, never a
+        pass by falling back to the project environment.
+        """
+        if self._limitation is not None:
+            self.assertIsNotNone(
+                self._creation_record,
+                "limitation recorded without the creation-attempt evidence")
+            raise unittest.SkipTest(
+                "W4 BLOCKED — recorded limitation: " + self._limitation)
+        self.assertIsNotNone(self._venv_python)
+        self.assertIsNotNone(self._install_record)
+
+    @staticmethod
+    def _is_approved_baseline(line, python_info, pandas_version):
+        """Freeze §6 item 4 / install_warning_policy approved baselines."""
+        if python_info is None:
+            return False  # cannot disposition without observed versions
+        major, minor = python_info[0], python_info[1]
+        # sqlite3.version DeprecationWarning on Python >= 3.13 (attribute
+        # deprecated there, removal 3.14) — approved recorded baseline.
+        if (major, minor) >= (3, 13) and "DeprecationWarning" in line \
+                and "version is deprecated" in line:
+            return True
+        # The four pyparsing deprecations and the pandas pd.concat
+        # FutureWarning are approved ONLY on Python 3.9 with pandas 2.x.
+        if (major, minor) == (3, 9) and pandas_version \
+                and pandas_version.split(".")[0] == "2":
+            tokens = ("oneOf", "parseString", "resetCache", "enablePackrat")
+            if "PyparsingDeprecationWarning" in line and any(
+                    "'{}'".format(token) in line for token in tokens):
+                return True
+            if "FutureWarning" in line \
+                    and "DataFrame concatenation" in line:
+                return True
+        return False
+
+    def test_w4_item1_environment_creation_and_isolation(self):
+        self._require_environment()
+        record = self._creation_record
+        self.assertEqual(record["returncode"], 0, record)
+        self.assertTrue(self._venv_python.exists())
+        base_site_packages = str(
+            ROOT / ".venv" / "lib"
+            / "python{}.{}".format(*sys.version_info[:2])
+            / "site-packages")
+        probe = _W4_ISOLATION_PROBE.replace(
+            "__BASE_SITEPACKAGES__", base_site_packages)
+        completed = self._run_in_venv(["-c", probe], tag="isolation-probe")
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        facts = json.loads(completed.stdout.strip().splitlines()[-1])
+        # Evidence of isolation from existing site packages: the venv is
+        # its own prefix, the base interpreter's site-packages directory
+        # is NOT on sys.path (its stdlib/lib-dynload entries are normal
+        # venv behavior, not site-package visibility), and packages
+        # installed only in the project .venv (notebooks extras) are not
+        # importable.
+        self.assertEqual(Path(facts["prefix"]), self._venv_dir)
+        self.assertNotEqual(facts["base_prefix"], facts["prefix"])
+        self.assertFalse(facts["base_site_packages_on_path"], facts)
+        self.assertEqual(facts["project_only_importable"],
+                         {"nest_asyncio": False, "pyvisa_sim": False},
+                         facts)
+        _evidence("w4-item1-creation-isolation",
+                  creation_command=" ".join(record["command"]),
+                  creation_exit=record["returncode"],
+                  creation_stdout=record["stdout"].strip(),
+                  creation_stderr=record["stderr"].strip(),
+                  venv_python=str(self._venv_python),
+                  prefix=facts["prefix"],
+                  base_prefix=facts["base_prefix"],
+                  base_site_packages_on_path=facts[
+                      "base_site_packages_on_path"],
+                  project_only_importable=facts["project_only_importable"],
+                  interpreter=facts["executable"],
+                  env_softlab_vars=sorted(
+                      key for key in os.environ
+                      if key.startswith("SOFTLAB")))
+
+    def test_w4_item2_editable_install_resolved_dependency_set(self):
+        self._require_environment()
+        record = self._install_record
+        self.assertEqual(
+            record["returncode"], 0,
+            "pip install failed; per the honesty rule this path is a "
+            "recorded limitation, never a fallback: {}".format(record))
+        self.assertTrue(record["resolved_set_line"],
+                        "no 'Successfully installed' line in pip output:\n"
+                        + record["stdout_tail"])
+        self.assertIn("softlab", record["resolved_set_line"])
+        # The exact pip-resolved dependency set as actually installed,
+        # recorded verbatim (plan item 2 / freeze §6 item 1 evidence of
+        # index reachability).
+        freeze = self._run_in_venv(
+            ["-m", "pip", "list", "--format=freeze"],
+            tag="pip-freeze")
+        self.assertEqual(freeze.returncode, 0, freeze.stderr)
+        _evidence("w4-item2-install",
+                  install_command=" ".join(record["command"]),
+                  install_exit=record["returncode"],
+                  resolved_set_verbatim=record["resolved_set_line"],
+                  pip_freeze_verbatim=freeze.stdout.strip(),
+                  pip_warnings=record["pip_warnings"],
+                  stderr_tail=record["stderr_tail"])
+
+    def test_w4_item3_minimal_workflow_thermal_cli_and_bootstrap(self):
+        self._require_environment()
+        # Documented minimal workflow in the fresh environment: the
+        # thermal example CLI produces a stored run record; the bootstrap
+        # CLI inspects it; the envelope decodes with the frozen identity
+        # semantics (execution_id != group_id, freeze §4).
+        out_dir = Path(self._env_root.name) / "thermal-out"
+        completed = self._run_in_venv(
+            ["examples/thermal_experiment.py",
+             "--output-dir", str(out_dir),
+             "--adapter", "coordinated"],
+            env_extra={"MPLBACKEND": "Agg"},
+            timeout=900,
+            tag="thermal-cli")
+        self.assertEqual(
+            completed.returncode, 0,
+            "thermal example CLI failed in the fresh environment\n"
+            "stdout:\n{}\nstderr:\n{}".format(
+                completed.stdout, completed.stderr))
+        artifact = out_dir / "thermal.h5"
+        self.assertTrue(artifact.exists())
+        sha_before = _sha256_file(str(artifact))
+        # F-A guard: inspection runs on a fresh verified copy, never the
+        # original bytes.
+        copy_path, digest = _fresh_verified_copy(artifact,
+                                                 self._env_root.name)
+        completed = self._run_in_venv(
+            [BOOTSTRAP, copy_path, "--profile", "thermal"],
+            timeout=900,
+            tag="bootstrap-inspection")
+        self.assertEqual(
+            completed.returncode, 0,
+            "bootstrap inspection failed in the fresh environment\n"
+            "stdout:\n{}\nstderr:\n{}".format(
+                completed.stdout, completed.stderr))
+        payload = json.loads(completed.stdout)
+        self.assertEqual(payload["status"], "ok")
+        envelope = payload["envelope"]
+        # Frozen identity semantics (freeze §4): execution_id != group_id
+        # and group_id is consistent across the payload.
+        self.assertNotEqual(envelope["execution_id"], envelope["group_id"])
+        self.assertEqual(payload["group_id"], envelope["group_id"])
+        report = payload["report"]
+        self.assertTrue(report["primary_ok"])
+        self.assertEqual(report["primary"], [])
+        self.assertTrue(report["cleanup_ok"])
+        self.assertEqual(report["cleanup"], [])
+        # Original-byte preservation throughout the inspection.
+        self.assertEqual(_sha256_file(str(artifact)), sha_before)
+        self.assertEqual(payload["original_sha256"], digest)
+        _evidence("w4-item3-minimal-workflow",
+                  cli_command="MPLBACKEND=Agg python "
+                              "examples/thermal_experiment.py "
+                              "--output-dir {} --adapter coordinated"
+                              .format(out_dir),
+                  cli_exit=0,
+                  artifact=str(artifact),
+                  sha256=sha_before,
+                  execution_id=envelope["execution_id"],
+                  group_id=envelope["group_id"],
+                  softlab_version=envelope["software"]["softlab_version"],
+                  python_version=envelope["software"]["python_version"])
+
+    def test_w4_item4_versions_actually_observed(self):
+        self._require_environment()
+        probe = self._probe
+        self.assertIsNotNone(probe)
+        for key in ("python_version", "softlab", "numpy", "pandas", "h5py",
+                    "libhdf5", "matplotlib", "sqlite3_library",
+                    "sqlite3_module"):
+            self.assertTrue(probe.get(key), key)
+        major, minor, _micro = probe["python_info"]
+        # The sqlite3.version read emits exactly one DeprecationWarning on
+        # Python >= 3.13 (approved recorded baseline) and is silent on
+        # older interpreters — both observations asserted as facts.
+        if (major, minor) >= (3, 13):
+            self.assertEqual(len(probe["warnings"]), 1, probe["warnings"])
+            self.assertIn("version is deprecated",
+                          probe["warnings"][0]["message"])
+            self.assertEqual(probe["warnings"][0]["category"],
+                             "DeprecationWarning")
+        else:
+            self.assertEqual(probe["warnings"], [])
+        _evidence("w4-item4-versions",
+                  python=probe["python_version"],
+                  softlab=probe["softlab"],
+                  numpy=probe["numpy"],
+                  pandas=probe["pandas"],
+                  h5py=probe["h5py"],
+                  libhdf5=probe["libhdf5"],
+                  matplotlib=probe["matplotlib"],
+                  sqlite3_module=probe["sqlite3_module"],
+                  sqlite3_library=probe["sqlite3_library"],
+                  probe_warnings=probe["warnings"])
+
+    def test_w4_item5_warnings_verbatim_and_dispositioned(self):
+        self._require_environment()
+        # Every warning observed across all fresh-environment subprocesses
+        # (creation, install, probes, CLI, inspection) is recorded verbatim
+        # and categorized; each must be an approved recorded baseline for
+        # the observed interpreter/pandas versions (freeze §6 item 4 /
+        # install_warning_policy). A new warning fails W4 until
+        # dispositioned — never waived or suppressed.
+        seen = list(self._warnings_seen)
+        for item in seen:
+            _evidence("w4-warning-verbatim", source=item["tag"],
+                      line=item["line"])
+        python_info = (self._probe or {}).get("python_info")
+        pandas_version = (self._probe or {}).get("pandas")
+        undispositioned = [
+            item for item in seen
+            if not self._is_approved_baseline(
+                item["line"], python_info, pandas_version)
+        ]
+        self.assertEqual(
+            undispositioned, [],
+            "new warnings observed in the fresh environment; W4 fails "
+            "until dispositioned (freeze §6 item 5): {}".format(
+                undispositioned))
+        _evidence("w4-item5-warnings-dispositioned",
+                  warning_count=len(seen),
+                  undispositioned=0,
+                  interpreter=".".join(str(part) for part in python_info)
+                  if python_info else None)
+
+    def test_w4_item6_limitations_recorded(self):
+        # Plan W4 item 6: limitations actually encountered are recorded,
+        # not silently scoped away. On the happy path the absence of
+        # limitations is itself the recorded fact.
+        if self._limitation is None:
+            _evidence("w4-item6-limitations", limitation=None,
+                      note="no environment limitations encountered; "
+                           "no optional extras installed (fresh env holds "
+                           "only the core dependency set)")
+            return
+        self.assertIsNotNone(self._creation_record,
+                             "limitation recorded without evidence")
+        _evidence("w4-item6-limitations", limitation=self._limitation,
+                  creation_command=" ".join(
+                      self._creation_record["command"]),
+                  creation_outcome=self._creation_record["returncode"],
+                  creation_stderr=self._creation_record["stderr"].strip())
 
 
 if __name__ == "__main__":
