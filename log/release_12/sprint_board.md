@@ -23,7 +23,7 @@ one closure at release end ([release checklist](../templates/release-checklist.m
 
 | Task | Description | Assigned | Status |
 | --- | --- | --- | --- |
-| P4 — Reference comparison and acceptance | Predeclared oracles/tolerances, both thermal modes + signal client rerun comparison, fresh-environment + clean-process walkthroughs, PO acceptance, single release closure | sw-mike → sw-camille | Awaiting P3 integration, then branch `codex/m03-p4-acceptance` from `dev` |
+| P4 — Reference comparison and acceptance | Walkthroughs W1–W7 all PASS (521 tests OK); oracle freeze, plan, wiring, code review APPROVED; principle inspection 4 PASS. Next: PO acceptance → freeze → candidate CI → integrate `dev` | sw-camille | Branch `codex/m03-p4-acceptance` from `dev` (`7f67373`) |
 
 ## Phase plan (from PRD; four serial gated phases, one release)
 
@@ -32,7 +32,7 @@ one closure at release end ([release checklist](../templates/release-checklist.m
 | 1 — Characterize and decide | DONE — decision: minimal common JSON-text envelope on HDF5, acquisition-snapshot-only, HDF5-only, thermal v1/v2 preserved (`design/p1-boundary-decision.md`, PO concurrence, independent review ACCEPTED). |
 | 2 — Schema and encoding | DONE — codec + group seam implemented, reviewed, tested (459 tests OK). |
 | 3 — Storage and inspection | DONE — `run_storage.py` save/inspect seam, thermal dual-write, hydration, bootstrap CLI; 507 tests OK both interpreters. |
-| 4 — Reference comparison and acceptance | NEXT: predeclared numeric/timing oracles with tolerances and exclusions, both thermal modes + signal client rerun comparison, fresh-environment and clean-process walkthroughs, PO acceptance, release closure. |
+| 4 — Reference comparison and acceptance | EXECUTION DONE — W1–W7 PASS, 521 tests OK, results recorded; PO acceptance and release closure remain. |
 
 ## Done
 
@@ -57,3 +57,7 @@ one closure at release end ([release checklist](../templates/release-checklist.m
 - 2026-11-03: Phase 3 complete — storage/inspection seam (`0217593`), design
   APPROVED after 3 review rounds, code review zero blocking findings, 507 tests
   OK on 3.9+3.13; principle inspection PASS.
+- 2026-11-03: Phase 4 execution complete — signal wiring + guide, code review
+  APPROVED, walkthroughs W1–W7 PASS (fresh env, clean process, both thermal
+  modes + signal original-vs-rerun with frozen oracles), 521 tests OK;
+  principle inspection 4 PASS; PO acceptance next.

@@ -20,8 +20,14 @@ Safety disciplines (frozen by design):
   loss of a plain load is routed around, not repaired).
 - The original's bytes are re-hashed after inspection; a mismatch or a
   re-hash failure is a primary failure, never a silent pass.
-- The target artifact is never deleted or truncated on failure; there
-  is no rollback and no atomic publication.
+- The save seam performs no rollback and no atomic publication, and it
+  never deletes or truncates the target itself; however, the
+  characterized HDF5 writer deletes an existing same-ID group before
+  recreating it, so a failed save over an existing same-ID group can
+  leave the previous group content lost (delete-then-recreate). Write
+  to a fresh target path when preserving prior content matters. The
+  byte-preservation guarantees above concern only the original
+  artifact during inspection, never save atomicity.
 
 The module performs no backend repairs: the tracked backend defects
 (destructive plain load, custom-key loss, io-helper breakage, SQLite
@@ -405,8 +411,11 @@ def save_run_group(group: DataGroup, path: str, *,
     errors by additive instance attachment at the boundary (type and
     message unchanged). A cleanup-only failure never raises: it is
     reported in ``report.cleanup`` with ``cleanup_ok == False``. The
-    target artifact is never deleted or truncated on failure — no
-    rollback.
+    seam performs no rollback and no atomic publication and never
+    deletes or truncates the target itself; however, the characterized
+    HDF5 writer deletes an existing same-ID group before recreating it,
+    so a failed save over an existing same-ID group can leave the
+    previous group content lost (delete-then-recreate).
 
     Steps, in the frozen order: backend resolution; additive-key read;
     pre-connect codec decode (zero HDF5 writes can have occurred on
