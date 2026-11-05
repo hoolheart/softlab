@@ -1,0 +1,9 @@
+# M03 planning validation
+
+Tester | 2026-10-31 Asia/Shanghai | Verdict: **PASS — document scope only**.
+
+Inspected the revised [M03 plan](milestone-03.md), [roadmap](roadmap.md), [plan index](README.md), [architecture review](m03-architecture-review.md) and [product review](m03-product-review.md). A Python standard-library check verified final newlines, no trailing whitespace and **27 local Markdown link targets** across those five documents. It excludes remote links, anchors and inline Git object references; their availability is not implied. An initial check identified trailing spaces and a link to a closure file absent from this `dev` tree; spaces were removed and the closure reference now identifies its verified Git object instead. `git diff --check` passed for tracked changes; the explicit checks above included new untracked files.
+
+The revised no-common-schema branch requires Product/Architect revision before W02, not automatic acceptance. The plan now requires client-specific independent oracles and outcome/storage failure decisions, safe copied HDF5 reads and separately characterized backends. The product reviewer closed PO-M03-01–03 and the Architect closed M03-AR-01–03; those approvals apply to planning only. The closure object `e827e7f:log/release_11/closure.md` was inspected separately and is not a working-tree link. The validation file itself has a final newline, no trailing spaces and its local links were checked separately.
+
+This work changes no production code or executable configuration. Runtime tests, CI, hardware, product implementation acceptance and release promotion are not applicable and were not run. The future increments still require their own reviewed PRDs, evidence, gates and any explicit scope decisions; this report does not claim M03 execution or acceptance.

@@ -1,0 +1,12 @@
+# Release 12 PRD acceptance review
+
+Reviewer: independent product/acceptance reviewer | 2026-11-01 Asia/Shanghai
+Verdict: **APPROVED for user confirmation; not release acceptance**.
+
+Reviewed the [PRD](../prd.md), revised [M03 plan](../../../plan/milestone-03.md), prior [M03 product review](../../../plan/m03-product-review.md), and recorded M02 closure at `e827e7f:log/release_11/closure.md`. The single release with four serial gated phases is consistent with the updated plan: characterization and Product/Architect boundary decision precede schema implementation; storage and client integration follow; one final acceptance, exact-candidate CI, promotion and closure apply to the release. Rejection of a common schema requires an explicit Product/Architect scope revision or stop/replan before Phase 2, not an automatic pass.
+
+The acceptance criteria are observable once the phase decisions choose supported fields, clients, backends and independent numeric/timing oracles. They require separate-process inspection, legacy v1/v2 and absent-versus-invalid behavior, bounded codec failures, stage-qualified outcomes and serialization/save/disconnect/reload evidence. They preserve the distinct execution and persistent identities and do not claim a pre-save snapshot proves later success. The signal monitor's in-memory limitation and ownership of its eventual stored record and rerun inputs are identified as Phase 1 decisions, not existing capabilities. The PRD carries the tracked scheduler, metadata, HDF5, initialization and lookup debt, calls out the `set_meta(None)` mismatch, and limits any blocking repair to independently reviewed scope. UI and physical hardware are outside this synthetic release.
+
+The confirmation hold is explicit: document/source inspection and planning validation may proceed, but no test plan, executable test, design, runtime experiment or Phase 1 work begins until the user confirms the PRD. This approval does not substitute for that confirmation. No review issues remain at PRD acceptance level; actual phase reviews must fix concrete types, field availability, stage/failure semantics, independent oracles, safe original-byte checks and backend scope before their dependent implementation. If evidence cannot support those decisions, revise scope or leave the gate open rather than infer a pass.
+
+This is a document review only. No runtime tests, CI, implementation, promotion or M03 acceptance was performed or claimed.
