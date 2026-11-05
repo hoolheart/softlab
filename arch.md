@@ -29,7 +29,7 @@ descriptions of the additions are
 | --- | --- |
 | `jin` (metal) | Validators, delegated/limited attributes, signal processing and visualization. `dp` is a placeholder. |
 | `mu` (wood) | Applications/services boundary. Current implementations are notebook interaction and file selection; `cli`, `server`, `services` are placeholders. |
-| `shui` (water) | `DatabaseBackend`, data charts/records/groups, HDF5 and SQLite persistence, memory/JSON profiles. |
+| `shui` (water) | `DatabaseBackend`, data charts/records/groups, HDF5 and SQLite persistence, memory/JSON profiles; M03 adds the bounded additive run-record codec/group seam and HDF5-only owned save/copy-based inspection described below. |
 | `huo` (fire) | Asyncio scheduler, `Process`, serial/parallel/branch/sweep composition, count/scan/grid scan. |
 | `tu` (earth) | Experimental objects: parameters, devices, stations, VISA access, theoretical models and ndarray mappings; Release 1 adds versioned descriptions, an opt-in device/VISA lifecycle, an explicit VISA operation path, measurement readings and model inspection/configuration (all additive and opt-in); Release 2 adds the `simulation` subpackage with `SimulatedObject` (additive, zero new dependencies); Release 3 corrects the three Release 2 gaps (bridge readback, malformed callback-key errors, reset claims), adds station object membership and the `ObjectBuilder` registry (`add_object`/`object`/`build_object`; single shared namespace), and adds the opt-in coordinated simulation (`Coordinator`, `Endpoint`, `MockControl`, `MockMeasurement`, `Station.sim_dt`) — additive, zero new dependencies, no changes outside `tu`. |
 
@@ -69,6 +69,80 @@ stdlib only). The direction remains one-way after Release 3: object
 membership makes [station](softlab/tu/station/station.py) a consumer of
 the simulation package
 (`softlab/tu/station/station.py:17-24`), not vice versa.
+
+## Existing `shui` run-record contracts
+
+### Additive record modules (M03, implemented)
+
+Release 12 adds three modules under `shui`, preserving the five-element
+responsibility boundary: `shui` owns the stored-record format, bounded in-memory
+attachment, persistence and inspection; the thermal and signal clients own
+truthful acquisition facts and sample attachment; `huo` continues to own bounded
+execution. The new package-level exports are aggregated in
+[softlab.shui](softlab/shui/__init__.py).
+
+[run_record.py](softlab/shui/run_record.py) owns the closed, bounded JSON-text
+codec and pure dictionary builders for one additive envelope stored under the
+`run_record` metadata key. Its namespace is `softlab.run-record`, format version
+1, with closed thermal and signal profiles and independent payload version 1
+contracts. The standard-library-only module performs no I/O. It enforces bounded
+values and encoded structure, deterministic strict JSON, distinct execution and
+persistent-group UUIDs, ordered record/column/unit declarations, software and
+source availability facts, and the acquisition-only outcome; samples remain in
+record datasets rather than the JSON text. The `softlab.shui` exports are
+`RunRecordCodec`, `JsonRunRecordCodec`, `RunRecordError`, `RecordDecodeError`,
+`RecordValidationError`, `build_envelope`, `build_thermal_payload`,
+`build_signal_payload`, `encode_envelope` and `decode_envelope`. Contract
+constants, including the numeric limits, remain available from the owning
+module. The frozen contract is in the
+[Phase 2 schema design](log/release_12/design/p2-schema-design.md).
+
+[run_group.py](softlab/shui/run_group.py) provides `build_run_group(name,
+envelope)`. It validates and encodes before constructing an empty `DataGroup`,
+takes the group identity from the validated envelope, and attaches exactly the
+encoded `run_record` text through `set_meta`. This D1-safe seam deliberately
+avoids `DataGroup(meta=...)` and `set_meta(key, None)`; it performs no backend or
+file I/O. The caller attaches the acquired `DataRecord` through the existing
+`DataGroup.add_record` API before saving. `build_run_group` is re-exported by
+`softlab.shui`.
+
+[run_storage.py](softlab/shui/run_storage.py) provides the owned HDF5 write and
+inspection seams. `save_run_group` decodes and cross-checks the envelope against
+group identity, record attachment, declared columns and row count before an
+owned `HDF5DataBackend` connect/save/verified-disconnect lifecycle.
+`inspect_run_group` hashes the original, works on a fresh disposable byte copy,
+runs read-only `h5py` preflight, performs at most one legacy load on that copy,
+explicitly hydrates captured additive/requested legacy text, decodes and
+cross-checks the record, then cleans up and re-hashes the original. Primary and
+cleanup diagnostics remain separately observable. The `softlab.shui` exports are
+`save_run_group`, `inspect_run_group`, `StorageReport`, `InspectionResult`,
+`RunStorageError`, `StorageConnectError`, `StorageSaveError`,
+`StorageInspectionError` and `UnsupportedBackendError`. Storage behavior and the
+inspection algorithm are specified in the
+[Phase 3 storage design](log/release_12/design/p3-storage-design.md).
+
+The implemented support boundary is deliberately narrow:
+
+- HDF5 is the only supported backend; SQLite run-record persistence is
+  unsupported. Generic `io.reload_group`/`io.load_groups` and arbitrary metadata
+  round-trip are not certified by these seams.
+- Supported clients are thermal coordinated (legacy manifest v1), thermal direct
+  (legacy manifest v2) and the signal monitor. Thermal dual-writes the unchanged
+  legacy manifest and additive record; the additive format is not a thermal v3.
+- The only stored outcome is `completed_acquisition_before_persistence` with
+  completed acquisition and equal requested/completed rows. Persistence,
+  plotting, cleanup and overall remain `not_yet_established`; there are no later
+  outcome updates or outcome history. Failed, cancelled and partial runs have no
+  supported persisted run record.
+- There is no atomic publication, rollback, retry or same-ID target-preservation
+  guarantee. The existing HDF5 writer can delete/recreate a same-ID group, so a
+  failed save is not guaranteed to preserve pre-existing target content.
+- Destructive plain HDF5 loading and custom-key loss remain unfixed. They are
+  designed around only by copy/preflight/single-load/explicit-hydration
+  inspection; plain or repeated loads of an original are unsupported.
+
+The [run-record maintainer guide](docs/run-record.md) documents supported
+production, separate-process inspection, comparison and the remaining debt.
 
 ## Existing `tu` contracts and extension points
 
@@ -880,3 +954,23 @@ no runner loop exists, so drain/close flags are false and model reset is
 ineligible; this is the explicitly approved W04 compatibility change. The
 [thermal guide](docs/user-guide/thermal-experiment.md) describes usage and
 limitations.
+
+## M03 reproducible run record — implemented (Release 12)
+
+Updated 2026-11-05. Release 12 Phases 1–4 delivered the implemented `shui`
+modules, public exports and support boundary recorded above. The phase artifacts
+are the [requirements](log/release_12/prd.md),
+[Phase 1 boundary decision](log/release_12/design/p1-boundary-decision.md),
+[Phase 2 schema/codec design](log/release_12/design/p2-schema-design.md),
+[Phase 3 storage/inspection design](log/release_12/design/p3-storage-design.md)
+and [Phase 4 oracle/rerun design](log/release_12/design/p4-oracle-design.md).
+Phase 3 wired both thermal adapter modes through the shared owned save seam while
+preserving their legacy manifests; Phase 4 added the signal monitor's owned
+persistence wiring and the frozen comparison/walkthrough artifacts. The
+[maintainer guide](docs/run-record.md) is the usage and ownership reference.
+
+This is an implementation-history entry, not a release-acceptance or closure
+claim. The [Release 12 acceptance record](log/release_12/acceptance.md) remains
+REJECTED with M03 open. Final acceptance-candidate CI, `dev` integration, `main`
+promotion, promoted-state verification and clean-worktree release closure are not
+claimed by this architecture update.
